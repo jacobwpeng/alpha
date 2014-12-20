@@ -1,0 +1,7 @@
+tags
+build/
+examples/
+GPATH
+GRTAGS
+GTAGS
+*.pyc
