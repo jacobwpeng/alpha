@@ -21,7 +21,7 @@ namespace alpha {
     class LoggerFormatter
     {
         public:
-            LoggerFormatter(Logger* logger, const char* filename, 
+            LoggerFormatter(Logger* logger, const char* basename, 
                     const char* funcname, int lineno, int level);
             ~LoggerFormatter();
             std::ostream& stream() { return stream_; }

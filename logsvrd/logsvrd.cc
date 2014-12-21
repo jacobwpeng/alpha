@@ -15,11 +15,16 @@
 #include "bus/process_bus.h"
 #include "logger/log_file.h"
 
-int main() {
-    const char * filepath = "/tmp/example.bus";
+int main(int argc, char * argv[]) {
+    if (argc != 3) {
+        std::cout << "Usage: " << argv[0]
+            << " buspath logpath\n";
+        return -1;
+    }
+    const char * filepath = argv[1];
     const size_t kFileSize = 1 << 25;
 
-    FILE * fp = ::fopen("/tmp/logsvrd.log", "a");
+    FILE * fp = ::fopen(argv[2], "a");
     std::unique_ptr<alpha::ProcessBus> bus(alpha::ProcessBus::ConnectTo(
                 filepath, kFileSize));
 

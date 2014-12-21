@@ -29,10 +29,16 @@ void Output(alpha::LogLevel level, const char* content, int len) {
 }
 
 int main(int argc, char* argv[]) {
+
+    if (argc != 2) {
+        std::cout << "Usage: " << argv[0]
+            << " buspath\n";
+        return -1;
+    }
     using std::chrono::system_clock;
     alpha::Logger::Init(argv[0], Output);
 
-    const char * filepath = "/tmp/example.bus";
+    const char * filepath = argv[1];
     const size_t kFileSize = 1 << 25;
 
     std::unique_ptr<alpha::ProcessBus> bus(alpha::ProcessBus::ConnectTo(
