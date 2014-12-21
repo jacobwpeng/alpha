@@ -32,10 +32,10 @@ namespace alpha {
         LogLevelNames_[1] = "WARNING";
         LogLevelNames_[2] = "INFO";
         LogLevelNames_[3] = "DEBUG";
-        LogLevelBlankSpace_[0] = "     ";
-        LogLevelBlankSpace_[1] = "   ";
-        LogLevelBlankSpace_[2] = "      ";
-        LogLevelBlankSpace_[3] = "     ";
+        LogLevelBlankSpace_[0] = "   ";
+        LogLevelBlankSpace_[1] = " ";
+        LogLevelBlankSpace_[2] = "    ";
+        LogLevelBlankSpace_[3] = "   ";
     }
 
     const char* Logger::GetLogLevelName(int level) {

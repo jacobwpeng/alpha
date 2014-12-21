@@ -16,5 +16,5 @@ list(APPEND srcs
     )
 
 add_library(${LIB} ${srcs})
-add_executable("example" "example.cc")
+add_executable("example" example.cc log_file.cc)
 target_link_libraries("example" ${LIB})
