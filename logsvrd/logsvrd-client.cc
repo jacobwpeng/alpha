@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
     alpha::Logger::Init(argv[0], Output);
 
     const char * filepath = argv[1];
-    const size_t kFileSize = 1 << 25;
+    const size_t kFileSize = 1 << 20;
 
     std::unique_ptr<alpha::ProcessBus> bus(alpha::ProcessBus::ConnectTo(
                 filepath, kFileSize));

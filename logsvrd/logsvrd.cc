@@ -22,7 +22,7 @@ int main(int argc, char * argv[]) {
         return -1;
     }
     const char * filepath = argv[1];
-    const size_t kFileSize = 1 << 25;
+    const size_t kFileSize = 1 << 20;
 
     FILE * fp = ::fopen(argv[2], "a");
     std::unique_ptr<alpha::ProcessBus> bus(alpha::ProcessBus::ConnectTo(
