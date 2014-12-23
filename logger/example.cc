@@ -16,7 +16,7 @@
 #include "logger.h"
 #include "log_file.h"
 
-static alpha::LogFile file("./example.log");
+static alpha::LogFile * file = nullptr;
 static size_t bytes = 0;
 static size_t records = 0;
 
@@ -24,10 +24,17 @@ void Output(alpha::LogLevel level, const char* content, int len) {
     (void)level;
     bytes += len;
     ++records;
-    file.Append(content, len);
+    file->Append(content, len);
 }
 
 int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        std::cout << "Usage: " << argv[0] << " logpath\n";
+        return -1;
+    }
+
+    alpha::LogFile logfile(argv[1]);
+    file = &logfile;
     using std::chrono::system_clock;
     alpha::Logger::Init(argv[0], Output);
     std::string message(480, '&');

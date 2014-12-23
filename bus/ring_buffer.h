@@ -14,6 +14,7 @@
 #define  __RING_BUFFER_H__
 
 #include <memory>
+#include <cstddef>
 
 namespace alpha {
     class RingBuffer {
