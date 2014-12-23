@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <cassert>
 
+#include "base/compiler.h"
 #include "logger.h"
 
 namespace alpha {
@@ -52,15 +53,12 @@ namespace alpha {
         int ret = gettimeofday(&tv, NULL);
         assert (ret == 0);
         (void)ret;
-        if (detail::tid == 0) 
-        {
+        if (unlikely(detail::tid == 0)) {
             detail::tid = syscall(SYS_gettid);
         }
-        if (tv.tv_sec != detail::lasttime)
-        {
+        if (tv.tv_sec != detail::lasttime) {
             detail::lasttime = tv.tv_sec;
-            if (NULL != localtime_r(&tv.tv_sec, &detail::tm))
-            {
+            if (NULL != localtime_r(&tv.tv_sec, &detail::tm)) {
                 strftime(detail::time_fmt, sizeof detail::time_fmt, 
                     "[%Y-%m-%d %H:%M:%S.%%06u %%s:%%d %%s %%5.d][%%s]%%s", 
                     &detail::tm);
@@ -71,6 +69,5 @@ namespace alpha {
                 tv.tv_usec, basename, lineno, funcname, detail::tid, 
                 Logger::GetLogLevelName(level), 
                 Logger::GetLogLevelBlankSpaceNum(level));
-
     }
 }
