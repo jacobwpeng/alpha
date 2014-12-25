@@ -19,7 +19,7 @@ namespace alpha {
     }
 
     std::unique_ptr<ProcessBus> ProcessBus::RestoreFrom (
-        const std::string& filepath, size_t size) {
+        const alpha::Slice& filepath, size_t size) {
         if (size < kHeaderSize) {
             return nullptr;
         }
@@ -41,18 +41,22 @@ namespace alpha {
         assert (bus->file_->size() > kHeaderSize);
         bus->buf_ = std::move (alpha::RingBuffer::RestoreFrom (
                     start, bus->file_->size() - kHeaderSize));
+        bus->filepath_ = filepath.ToString();
         return bus;
     }
 
     std::unique_ptr<ProcessBus> ProcessBus::CreateFrom (
-            const std::string& filepath, size_t size) {
+            const alpha::Slice& filepath, size_t size) {
 
         if (size < kHeaderSize) {
             return nullptr;
         }
+
         std::unique_ptr<ProcessBus> bus (new ProcessBus);
         bus->file_.reset (new MMapFile (filepath, size,
-                          MMapFile::create_if_not_exists | MMapFile::truncate));
+                          MMapFile::create_if_not_exists 
+                              | MMapFile::truncate
+                              | MMapFile::zero_clear ));
 
         if (bus->file_->Inited() == false) {
             return nullptr;
@@ -66,40 +70,15 @@ namespace alpha {
         assert (bus->file_->size() > kHeaderSize);
         bus->buf_ = std::move (RingBuffer::CreateFrom (start, 
                     bus->file_->size() - kHeaderSize));
+        bus->filepath_ = filepath.ToString();
         return bus;
     }
 
-    std::unique_ptr<ProcessBus> ProcessBus::ConnectTo (
-            const std::string& filepath, size_t size) {
-        if (size < kHeaderSize) {
-            return nullptr;
-        }
-
-        std::unique_ptr<ProcessBus> bus (new ProcessBus);
-        bus->file_.reset (new MMapFile (filepath, size, 
-                    MMapFile::create_if_not_exists));
-
-        if (bus->file_->Inited() == false) {
-            return nullptr;
-        }
-
-        ProcessBus::Header* header = reinterpret_cast<ProcessBus::Header*>
-                                     (bus->file_->start());
-
-        bus->header_ = header;
-        void* start = static_cast<char*> (bus->file_->start()) + kHeaderSize;
-        assert (bus->file_->size() > kHeaderSize);
-
-        //BUG: 一边在CreateFrom时另一边ConnectTo，导致同时改写一个文件
-        if (bus->file_->newly_created()) {
-            header->magic_number = ProcessBus::Header::kMagicNumber;
-            bus->buf_ = std::move (RingBuffer::CreateFrom (
-                        start, bus->file_->size() - kHeaderSize));
-        } else if (header->magic_number != ProcessBus::Header::kMagicNumber) {
-            return nullptr;
-        } else {
-            bus->buf_ = std::move (RingBuffer::RestoreFrom (
-                        start, bus->file_->size() - kHeaderSize));
+    std::unique_ptr<ProcessBus> ProcessBus::RestoreOrCreate(
+            const alpha::Slice& filepath, size_t size, bool force) {
+        auto bus = RestoreFrom(filepath, size);
+        if (!bus && force) {
+            bus = CreateFrom(filepath, size);
         }
         return bus;
     }
@@ -118,5 +97,9 @@ namespace alpha {
 
     bool ProcessBus::empty() const {
         return size() == 0;
+    }
+
+    std::string ProcessBus::filepath() const {
+        return filepath_;
     }
 }

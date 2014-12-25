@@ -30,12 +30,12 @@ namespace alpha {
             ProcessBus();
 
         public:
+            static std::unique_ptr<ProcessBus> RestoreOrCreate(
+                const alpha::Slice& filepath, size_t size, bool force = false);
             static std::unique_ptr<ProcessBus> RestoreFrom(
-                    const std::string& filepath, size_t size);
+                    const alpha::Slice& filepath, size_t size);
             static std::unique_ptr<ProcessBus> CreateFrom(
-                    const std::string& filepath, size_t size);
-            static std::unique_ptr<ProcessBus> ConnectTo(
-                    const std::string & filepath, size_t size);
+                    const alpha::Slice& filepath, size_t size);
             static const size_t kMaxBufferBodyLength = 
                 RingBuffer::kMaxBufferBodyLength;
 
@@ -44,7 +44,9 @@ namespace alpha {
 
             size_t size() const;
             bool empty() const;
+            std::string filepath() const;
         private:
+            std::string filepath_;
             Header * header_;
             std::unique_ptr<RingBuffer> buf_;
             std::unique_ptr<MMapFile> file_;

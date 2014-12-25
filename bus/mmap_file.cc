@@ -23,24 +23,26 @@
 #include <sys/mman.h>
 
 namespace alpha {
-    MMapFile::MMapFile(const std::string& path, size_t size, int flags)
-        :path_(path), size_(size), fd_(-1), start_(NULL), newly_created_(false) {
+    MMapFile::MMapFile(const alpha::Slice& path, size_t size, int flags)
+        :path_(path.ToString()), size_(size), fd_(-1), start_(NULL), 
+        newly_created_(false) {
 
         int open_flags = O_RDWR;
-        int fd = ::open(path.c_str(), open_flags, 0644);
+        int fd = ::open(path_.data(), open_flags, 0644);
         if (fd < 0) {
             if (errno != ENOENT or not (flags & create_if_not_exists)) {
-                perror("open");
+                perror("MMapFile open");
                 return;
             }
         }
 
+        /* create if not exists */
         if (fd < 0) {
             open_flags |= O_CREAT;
-            open_flags |= O_EXCL;
-            fd = ::open(path.c_str(), open_flags, 0666);
+            open_flags |= O_EXCL;               /* make sure it's not exists */
+            fd = ::open(path_.data(), open_flags, 0644);
             if (fd < 0) {
-                perror("open create");
+                perror("MMapFile open create");
                 return;
             }
             newly_created_ = true;
@@ -54,7 +56,7 @@ namespace alpha {
             struct stat sb;
             if (fstat(fd, &sb) < 0) {
                 close(fd);
-                perror("fstat");
+                perror("MMapFile fstat");
                 return;
             }
             size_ = sb.st_size;
@@ -64,7 +66,7 @@ namespace alpha {
                 MAP_SHARED, fd, 0);
         if (mem == MAP_FAILED) {
             close(fd);
-            perror("mmap");
+            perror("MMapFile mmap");
             return;
         }
 

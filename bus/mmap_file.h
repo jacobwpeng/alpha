@@ -14,6 +14,7 @@
 #define  __MMAP_FILE_H__
 
 #include <string>
+#include "base/slice.h"
 
 namespace alpha {
     class MMapFile {
@@ -26,7 +27,7 @@ namespace alpha {
             };
 
         public:
-            MMapFile(const std::string& path, size_t size, 
+            MMapFile(const alpha::Slice& path, size_t size, 
                     int flags = none);
             ~MMapFile();
 

@@ -20,4 +20,8 @@
 #define unlikely(x)     __builtin_expect((x),0)
 #endif
 
+#define DISABLE_COPY_ASSIGNMENT(type) \
+    type(const type&) = delete; \
+    type& operator=(const type&) = delete
+
 #endif   /* ----- #ifndef __COMPILER_H__----- */

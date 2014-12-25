@@ -41,11 +41,11 @@ int main(int argc, char* argv[]) {
     const char * filepath = argv[1];
     const size_t kFileSize = 1 << 20;
 
-    std::unique_ptr<alpha::ProcessBus> bus(alpha::ProcessBus::ConnectTo(
+    std::unique_ptr<alpha::ProcessBus> bus(alpha::ProcessBus::RestoreOrCreate(
                 filepath, kFileSize));
 
     if (!bus) {
-        std::cout << "ConnectTo failed\n";
+        std::cout << "RestoreOrCreate failed\n";
         return -1;
     }
 

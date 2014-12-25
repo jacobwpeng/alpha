@@ -24,10 +24,10 @@ int main () {
         "you resolved to effort. \n";
 
     if (fork() == 0) {
-        std::unique_ptr<alpha::ProcessBus> bus(alpha::ProcessBus::ConnectTo(
+        std::unique_ptr<alpha::ProcessBus> bus(alpha::ProcessBus::CreateFrom(
                     filepath, kFileSize));
         if (!bus) {
-            std::cout << "ConnectTo failed.\n";
+            std::cout << "CreateFrom failed.\n";
         }
 
         for (int i = 0; i < kLoopTimes; ++i) {

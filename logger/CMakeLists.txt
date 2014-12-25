@@ -10,4 +10,4 @@ list(APPEND srcs
 
 add_library(${LIB} ${srcs})
 add_executable("example-logger" example.cc)
-target_link_libraries("example-logger" ${LIB})
+target_link_libraries("example-logger" ${LIB} "alpha-base")

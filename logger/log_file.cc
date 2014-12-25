@@ -18,6 +18,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "base/compiler.h"
+
 namespace alpha {
     LogFile::LogFile(const char* file)
     :fd_(-1), file_(file) {

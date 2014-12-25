@@ -4,8 +4,9 @@ list(APPEND srcs
         mmap_file.cc
         ring_buffer.cc
         process_bus.cc
+        bus_manager.cc
     )
 
 add_library(${LIB} ${srcs})
 add_executable("example-bus" example.cc)
-target_link_libraries("example-bus" ${LIB})
+target_link_libraries("example-bus" ${LIB} "alpha-base")
