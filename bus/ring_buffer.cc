@@ -47,7 +47,6 @@ namespace alpha {
         rb->end_ = static_cast<char*>(start) + len;
         rb->set_front(rb->start_);
         rb->set_back(rb->start_);
-        rb->set_size(0);
         return rb;
     }
 
@@ -58,7 +57,6 @@ namespace alpha {
         if (len > space_left()) return false;
 
         this->Write(buf, len);
-        set_size(1 + element_size());
         return true;
     }
 
@@ -70,7 +68,6 @@ namespace alpha {
         }
         else {
             char * buf = Read(plen);
-            set_size(element_size() - 1);
             return buf;
         }
     }
@@ -88,14 +85,6 @@ namespace alpha {
 
     bool RingBuffer::empty() const {
         return get_front() == get_back();
-    }
-
-    size_t RingBuffer::element_size() const {
-        return offset_->element_size;
-    }
-
-    void RingBuffer::set_size(size_t new_size) {
-        offset_->element_size = new_size;
     }
 
     char * RingBuffer::get_front() const {

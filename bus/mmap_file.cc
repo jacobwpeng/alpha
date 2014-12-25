@@ -31,7 +31,7 @@ namespace alpha {
         int fd = ::open(path_.data(), open_flags, 0644);
         if (fd < 0) {
             if (errno != ENOENT or not (flags & create_if_not_exists)) {
-                perror("MMapFile open");
+                //perror("MMapFile open");
                 return;
             }
         }
@@ -42,7 +42,7 @@ namespace alpha {
             open_flags |= O_EXCL;               /* make sure it's not exists */
             fd = ::open(path_.data(), open_flags, 0644);
             if (fd < 0) {
-                perror("MMapFile open create");
+                //perror("MMapFile open create");
                 return;
             }
             newly_created_ = true;
@@ -56,7 +56,7 @@ namespace alpha {
             struct stat sb;
             if (fstat(fd, &sb) < 0) {
                 close(fd);
-                perror("MMapFile fstat");
+                //perror("MMapFile fstat");
                 return;
             }
             size_ = sb.st_size;
@@ -66,7 +66,7 @@ namespace alpha {
                 MAP_SHARED, fd, 0);
         if (mem == MAP_FAILED) {
             close(fd);
-            perror("MMapFile mmap");
+            //perror("MMapFile mmap");
             return;
         }
 

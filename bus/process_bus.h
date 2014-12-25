@@ -42,7 +42,6 @@ namespace alpha {
             bool Write(const char * buf, int len);
             char * Read(int * plen);
 
-            size_t size() const;
             bool empty() const;
             std::string filepath() const;
         private:

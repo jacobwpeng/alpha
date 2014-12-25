@@ -24,7 +24,6 @@ namespace alpha {
             {
                 ptrdiff_t front_offset;
                 ptrdiff_t back_offset;
-                size_t element_size;
             };
 
             RingBuffer();
@@ -46,7 +45,6 @@ namespace alpha {
 
             int space_left() const;
             bool empty() const;
-            size_t element_size() const;
 
         private:
             char * get_front() const;
@@ -54,7 +52,6 @@ namespace alpha {
 
             void set_front(char * front);
             void set_back(char * back);
-            void set_size(size_t size);
 
             int NextBufferLength() const;
             void Write(const char * buf, int len);

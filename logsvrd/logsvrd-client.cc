@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
 
     std::string message(480, '&');
     system_clock::time_point start = system_clock::now();
-    const size_t kLoopTimes = 1 << 20;
+    const size_t kLoopTimes = 1 << 18;
     for (size_t i = 0; i < kLoopTimes; ++i) {
         LOG_INFO << message;
     }

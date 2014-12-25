@@ -17,7 +17,6 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <thread>
-#include <google/gflags.h>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
@@ -151,7 +150,9 @@ namespace alpha {
                     detail::WorkerRoutine, std::move(bus), log_dir_);
         }
 
-        for (auto & thread : threads) thread.join();
+        for (auto & thread : threads) { 
+            thread.join();
+        }
     }
 
     void LogServer::RegisterSignalHandler() {

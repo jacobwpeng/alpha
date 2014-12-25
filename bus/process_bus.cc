@@ -91,12 +91,8 @@ namespace alpha {
         return buf_->Pop (plen);
     }
 
-    size_t ProcessBus::size() const {
-        return buf_->element_size();
-    }
-
     bool ProcessBus::empty() const {
-        return size() == 0;
+        return buf_->empty();
     }
 
     std::string ProcessBus::filepath() const {
