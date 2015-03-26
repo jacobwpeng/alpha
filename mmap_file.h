@@ -14,7 +14,7 @@
 #define  __MMAP_FILE_H__
 
 #include <string>
-#include "base/slice.h"
+#include "slice.h"
 
 namespace alpha {
     class MMapFile {

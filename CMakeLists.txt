@@ -14,9 +14,5 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(CMAKE_EXE_LINKER_FLAGS "-static-libstdc++")
 endif()
 
-include_directories(${PROJECT_SOURCE_DIR})
-
-add_subdirectory(base)
-add_subdirectory(bus)
-add_subdirectory(logger)
-add_subdirectory(logsvrd)
+file(GLOB SRCS "*.cc")
+add_library("alpha" STATIC ${SRCS})

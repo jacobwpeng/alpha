@@ -18,7 +18,7 @@
 #include <cstdio>
 #include <cassert>
 
-#include "base/compiler.h"
+#include "compiler.h"
 #include "logger.h"
 
 namespace alpha {
