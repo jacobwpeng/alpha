@@ -11,8 +11,10 @@
  */
 
 #include "logger.h"
+#include "logger_file.h"
 
 #include <cassert>
+#include <functional>
 
 namespace alpha {
     Logger::Voidify Logger::dummy_;
@@ -20,11 +22,22 @@ namespace alpha {
     const char* Logger::prog_name_ = nullptr;
     const char* Logger::LogLevelNames_[Logger::LogLevelNum_];
     const char* Logger::LogLevelBlankSpace_[Logger::LogLevelNum_];
+
     Logger::Logger(LogLevel level, const Logger::LoggerOutput& output)
         :log_level_(level), logger_output_(output) {
         }
 
     void Logger::Init(const char* prog_name, Logger::LoggerOutput output) {
+        if (output == nullptr) {
+            std::string basename(prog_name);
+            auto pos = basename.rfind("/");
+            if (pos != std::string::npos) {
+                basename = basename.substr(pos + 1);
+            }
+            static LoggerFile file("/tmp", basename);
+            using namespace std::placeholders;
+            output = std::bind(&LoggerFile::Write, &file, _1, _2, _3);
+        }
         static Logger logger(LogLevel::Debug, output);
         instance_ = &logger;
         prog_name_ = prog_name;

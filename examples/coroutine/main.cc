@@ -14,8 +14,15 @@
 #include <ctime>
 #include <cstdlib>
 #include <iostream>
+#include "logger.h"
 
-int main() {
+static void LogOutput(alpha::LogLevel level, const char* content, int len) {
+    ::fwrite(content, 1, len, stdout);
+}
+
+int main(int argc, char* argv[]) {
+    (void)argc;
+    alpha::Logger::Init(argv[0], LogOutput);
     ::srand(::time(NULL));
     int target = 30;
     NormalPlayer jack(target);
@@ -27,10 +34,10 @@ int main() {
         jack.SetCurrentNum(current);
         jack.Resume();
         int choice = jack.GetChosenNum();
-        std::cout << "Jack choose " << choice << '\n';;
+        LOG_INFO << "Jack choose " << choice;
         current += choice;
         if (current == target) {
-            std::cout << "Jack wins!\n";
+            LOG_INFO << "Jack wins!";
             jack.EndGame();
             lucy.EndGame();
             break;
@@ -39,14 +46,14 @@ int main() {
         lucy.SetCurrentNum(current);
         lucy.Resume();
         choice = lucy.GetChosenNum();
-        std::cout << "Lucy choose " << choice << '\n';;
+        LOG_INFO << "Lucy choose " << choice;
         current += choice;
 
         if (current == target) {
-            std::cout << "Lucy wins!\n";
+            LOG_INFO << "Lucy wins!";
             jack.EndGame();
             lucy.EndGame();
         }
-        std::cout << "Round " << round++ << ", current = " << current << '\n';
+        LOG_INFO << "Round " << round++ << ", current = " << current;
     } while (current != target);
 }

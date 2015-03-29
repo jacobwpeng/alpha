@@ -17,7 +17,7 @@
 #include "logger_formatter.h"
 
 namespace alpha {
-    enum class LogLevel {
+    enum class LogLevel : short {
         Error = 0,
         Warning = 1,
         Info = 2,
