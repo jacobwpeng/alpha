@@ -34,6 +34,7 @@ namespace alpha
         int timeout = wait_time_;//ms
         unsigned idle = 0;
 
+        ServerStatus status;
         while (not quit_) {
             Poller::TimeStamp now = poller_->Poll(timeout, &channels);
             (void)now;
@@ -46,10 +47,15 @@ namespace alpha
             else idle = 0;
             channels.clear();
 
-            if (period_functor_) period_functor_(iteration_);
+            if (period_functor_) {
+                status = period_functor_(iteration_);
+            }
 
-            if (idle >= 100) timeout = idle_time_;
-            else timeout = wait_time_;
+            if (idle >= 100 && status == ServerStatus::kIdle) {
+                timeout = idle_time_;
+            } else {
+                timeout = wait_time_;
+            }
         }
         LOG_INFO << "EventLoop exiting...";
     }
