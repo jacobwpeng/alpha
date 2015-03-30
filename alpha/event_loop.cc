@@ -51,7 +51,7 @@ namespace alpha
                 status = period_functor_(iteration_);
             }
 
-            if (idle >= 100 && status == ServerStatus::kIdle) {
+            if (idle >= 100 && status == kIdle) {
                 timeout = idle_time_;
             } else {
                 timeout = wait_time_;

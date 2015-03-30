@@ -27,9 +27,9 @@ namespace alpha
 
     class EventLoop : boost::noncopyable {
         public:
-            enum class ServerStatus {
-                kBusy = 1,
-                kIdle = 2
+            enum ServerStatus {
+                kIdle = 0,
+                kBusy = 1
             };
             typedef boost::function< ServerStatus(uint64_t) > PeriodFunctor;
 
