@@ -34,7 +34,7 @@ namespace alpha
         int timeout = wait_time_;//ms
         unsigned idle = 0;
 
-        ServerStatus status;
+        int status;
         while (not quit_) {
             Poller::TimeStamp now = poller_->Poll(timeout, &channels);
             (void)now;

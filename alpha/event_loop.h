@@ -31,7 +31,7 @@ namespace alpha
                 kIdle = 0,
                 kBusy = 1
             };
-            typedef boost::function< ServerStatus(uint64_t) > PeriodFunctor;
+            typedef boost::function< int(uint64_t) > PeriodFunctor;
 
         public:
             EventLoop();
