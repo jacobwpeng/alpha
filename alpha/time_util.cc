@@ -21,7 +21,7 @@ namespace alpha {
     }
 
     TimeStamp NowInSeconds() {
-        return Now() % kMilliSecondsPerSecond;
+        return Now() / kMilliSecondsPerSecond;
     }
 
     bool InSameHour(TimeStamp lhs, TimeStamp rhs) {
