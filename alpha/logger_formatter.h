@@ -21,8 +21,8 @@ namespace alpha {
     class LoggerFormatter
     {
         public:
-            LoggerFormatter(Logger* logger, const char* basename, 
-                    const char* funcname, int lineno, int level);
+            LoggerFormatter(Logger* logger, const char* basename, const char* funcname, 
+                    int lineno, int level, bool needs_errno_message = false);
             ~LoggerFormatter();
             std::ostream& stream() { return stream_; }
 
@@ -34,6 +34,7 @@ namespace alpha {
             static const size_t kMaxLogLength = 1 << 12;
             Logger* logger_;
             int log_level_;
+            bool needs_errno_message_;
             alpha::LoggerStream stream_;
             size_t header_len_;
             char buf[kMaxLogLength];

@@ -77,24 +77,39 @@ namespace alpha {
     };
 }
 
-#define LOG_COND_IF(level, cond) \
+#define LOG_COND_IF_IMPL(level, cond, errno_message) \
     (alpha::Logger::Instance()->GetLogLevel() < level || (!cond)) ? (void)0 : \
         alpha::Logger::dummy_ & (alpha::LoggerFormatter(\
                     alpha::Logger::Instance(), \
                         alpha::BasenameRetriever(__FILE__).basename, \
-                        __FUNCTION__, __LINE__, static_cast<int>(level) \
+                        __FUNCTION__, __LINE__, static_cast<int>(level), errno_message \
                     ).stream())
 
+
+#define LOG_COND_IF(level, cond) LOG_COND_IF_IMPL(level, cond, false)
+#define PLOG_COND_IF(level, cond) LOG_COND_IF_IMPL(level, cond, true)
+
 #define LOG_LEVEL_IF(level) LOG_COND_IF(level, true)
+#define PLOG_LEVEL_IF(level) PLOG_COND_IF(level, true)
 
 #define LOG_DEBUG LOG_LEVEL_IF(alpha::LogLevel::Debug)
 #define LOG_INFO LOG_LEVEL_IF(alpha::LogLevel::Info)
 #define LOG_WARNING LOG_LEVEL_IF(alpha::LogLevel::Warning)
 #define LOG_ERROR LOG_LEVEL_IF(alpha::LogLevel::Error)
 
+#define PLOG_DEBUG PLOG_LEVEL_IF(alpha::LogLevel::Debug)
+#define PLOG_INFO PLOG_LEVEL_IF(alpha::LogLevel::Info)
+#define PLOG_WARNING PLOG_LEVEL_IF(alpha::LogLevel::Warning)
+#define PLOG_ERROR PLOG_LEVEL_IF(alpha::LogLevel::Error)
+
 #define LOG_DEBUG_IF(cond) LOG_COND_IF(alpha::LogLevel::Debug, (cond))
 #define LOG_INFO_IF(cond) LOG_COND_IF(alpha::LogLevel::Info, (cond))
 #define LOG_WARNING_IF(cond) LOG_COND_IF(alpha::LogLevel::Warning, (cond))
 #define LOG_ERROR_IF(cond) LOG_COND_IF(alpha::LogLevel::Error, (cond))
+
+#define PLOG_DEBUG_IF(cond) PLOG_COND_IF(alpha::LogLevel::Debug, (cond))
+#define PLOG_INFO_IF(cond) PLOG_COND_IF(alpha::LogLevel::Info, (cond))
+#define PLOG_WARNING_IF(cond) PLOG_COND_IF(alpha::LogLevel::Warning, (cond))
+#define PLOG_ERROR_IF(cond) PLOG_COND_IF(alpha::LogLevel::Error, (cond))
 
 #endif   /* ----- #ifndef __LOGGER_H__  ----- */

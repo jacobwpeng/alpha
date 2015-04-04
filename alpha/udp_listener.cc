@@ -67,8 +67,7 @@ namespace alpha {
         ssize_t bytes = ::recvfrom(fd_, in, sizeof(in), MSG_DONTWAIT, 
                 reinterpret_cast<struct sockaddr *>(&ca), &len);
         if (bytes < 0) {
-            //PLOG(WARNING) << "recvfrom failed";
-            LOG_WARNING << "recvfrom failed";
+            PLOG_WARNING << "recvfrom failed";
             return;
         }
         if (mcb_) {

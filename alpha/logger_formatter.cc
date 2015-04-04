@@ -12,6 +12,7 @@
 
 #include "logger_formatter.h"
 
+#include <string.h>
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
@@ -31,8 +32,8 @@ namespace alpha {
     }
 
     LoggerFormatter::LoggerFormatter(Logger* logger, const char* basename, 
-            const char* funcname, int lineno, int level)
-    :logger_(logger), log_level_(level) {
+            const char* funcname, int lineno, int level, bool needs_errno_message)
+    :logger_(logger), log_level_(level), needs_errno_message_(needs_errno_message) {
 
         header_len_ = FormatHeader(basename, funcname, lineno, level);
         stream_.rdbuf()->pubsetbuf(buf + header_len_, 
@@ -40,6 +41,11 @@ namespace alpha {
     }
 
     LoggerFormatter::~LoggerFormatter() {
+        if (needs_errno_message_) {
+            char errno_message[256];
+            char* m = strerror_r(errno, errno_message, sizeof(errno_message));
+            stream_ << ": " << m;
+        }
         int len = header_len_ + stream_.streambuf()->used();
         buf[len] = '\n';
         len += 1;

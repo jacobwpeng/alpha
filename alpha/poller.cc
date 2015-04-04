@@ -19,8 +19,7 @@
 namespace alpha {
     Poller::Poller() {
         epoll_fd_ = ::epoll_create(kMaxFdCount);
-        //PLOG_IF(ERROR, epoll_fd_ < 0) << "epoll_create failed";
-        LOG_ERROR_IF(epoll_fd_ < 0) << "epoll_create failed";
+        PLOG_ERROR_IF(epoll_fd_ < 0) << "epoll_create failed";
         events_.resize(20);
     }
 
@@ -45,8 +44,7 @@ namespace alpha {
         }
         else {
             //Not interupted by a signal or something
-            //PLOG_IF(ERROR, errno != EINTR) << "epoll_wait return error";
-            LOG_ERROR_IF(errno != EINTR) << "epoll_wait return error";
+            PLOG_ERROR_IF(errno != EINTR) << "epoll_wait return error";
         }
         return now;
     }
