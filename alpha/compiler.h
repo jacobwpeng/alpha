@@ -24,4 +24,8 @@
     type(const type&) = delete; \
     type& operator=(const type&) = delete
 
+#define DISABLE_MOVE_ASSIGNMENT(type) \
+    type(type&&) = delete; \
+    type& operator=(type&&) = delete
+
 #endif   /* ----- #ifndef __COMPILER_H__----- */

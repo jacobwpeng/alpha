@@ -28,8 +28,7 @@ namespace alpha {
 
             TcpAcceptor(EventLoop * loop);
             ~TcpAcceptor();
-            TcpAcceptor(TcpAcceptor&&) = delete;
-            TcpAcceptor(const TcpAcceptor&) = delete;
+            DISABLE_COPY_ASSIGNMENT(TcpAcceptor);
 
             void SetOnNewConnection(const NewConnectionCallback & cb) {
                 new_connection_callback_ = cb;

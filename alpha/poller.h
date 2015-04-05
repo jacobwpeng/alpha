@@ -18,6 +18,7 @@
 #include <chrono>
 #include <boost/noncopyable.hpp>
 
+#include "compiler.h"
 #include "time_util.h"
 #include "channel.h"
 
@@ -28,8 +29,7 @@ namespace alpha {
         public:
             Poller();
             ~Poller();
-            Poller(Poller&&) = delete;
-            Poller(const Poller&) = delete;
+            DISABLE_COPY_ASSIGNMENT(Poller);
 
             TimeStamp Poll(int timeout, ChannelList * active_channels);
 

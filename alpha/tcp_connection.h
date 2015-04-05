@@ -17,6 +17,7 @@
 #include <memory>
 #include <functional>
 #include <boost/any.hpp>
+#include "compiler.h"
 #include "net_address.h"
 #include "tcp_connection_buffer.h"
 
@@ -43,8 +44,7 @@ namespace alpha {
 
                 TcpConnection(EventLoop* loop, int fd, State state);
                 ~TcpConnection();
-                TcpConnection(TcpConnection&&) = delete;
-                TcpConnection(const TcpConnection&) = delete;
+                DISABLE_COPY_ASSIGNMENT(TcpConnection);
 
                 void Write(const Slice& data);
                 void Close();

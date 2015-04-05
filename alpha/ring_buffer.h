@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <cstddef>
+#include "compiler.h"
 
 namespace alpha {
     class RingBuffer {
@@ -27,8 +28,7 @@ namespace alpha {
             };
 
             RingBuffer();
-            RingBuffer(const RingBuffer&) = delete;
-            RingBuffer& operator=(const RingBuffer&) = delete;
+            DISABLE_COPY_ASSIGNMENT(RingBuffer);
 
         public:
             static const size_t kMaxBufferBodyLength = 1 << 16; //64KB

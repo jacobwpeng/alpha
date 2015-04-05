@@ -16,6 +16,7 @@
 #include <map>
 #include <memory>
 #include <functional>
+#include "compiler.h"
 #include "tcp_connection.h"
 
 namespace alpha {
@@ -34,8 +35,7 @@ namespace alpha {
         public:
             TcpServer(EventLoop* loop, const NetAddress& addr);
             ~TcpServer();
-            TcpServer(TcpServer&&) = delete;
-            TcpServer(const TcpServer&) = delete;
+            DISABLE_COPY_ASSIGNMENT(TcpServer);
 
             bool Run();
             void SetOnRead(const ReadCallback& cb) {

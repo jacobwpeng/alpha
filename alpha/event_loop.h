@@ -18,9 +18,9 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include "compiler.h"
 
-namespace alpha
-{
+namespace alpha {
     class Poller;
     class Channel;
 
@@ -36,8 +36,7 @@ namespace alpha
         public:
             EventLoop();
             ~EventLoop();
-            EventLoop(EventLoop&&) = delete;
-            EventLoop(const EventLoop&) = delete;
+            DISABLE_COPY_ASSIGNMENT(EventLoop);
 
             void Run();
             void Quit();
