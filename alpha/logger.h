@@ -57,11 +57,11 @@ namespace alpha {
 
             static void Init(const char* prog_name,
                     LoggerOutput output = nullptr);
+            static void LogToStderr(LogLevel level, const char* content, int len);
 
             LogLevel GetLogLevel() const { return log_level_; }
             void Append(LogLevel level, const char* content, int len);
             static const char* GetLogLevelName(int level);
-            static const char* GetLogLevelBlankSpaceNum(int level);
             static Logger* Instance() { return instance_; }
 
             static Voidify dummy_;
@@ -72,7 +72,6 @@ namespace alpha {
             static const char* prog_name_;
             static const int LogLevelNum_ = 4;
             static const char* LogLevelNames_[LogLevelNum_];
-            static const char* LogLevelBlankSpace_[LogLevelNum_];
             static Logger* instance_;
     };
 }
@@ -111,5 +110,25 @@ namespace alpha {
 #define PLOG_INFO_IF(cond) PLOG_COND_IF(alpha::LogLevel::Info, (cond))
 #define PLOG_WARNING_IF(cond) PLOG_COND_IF(alpha::LogLevel::Warning, (cond))
 #define PLOG_ERROR_IF(cond) PLOG_COND_IF(alpha::LogLevel::Error, (cond))
+
+#ifdef NDEBUG
+#define DLOG_DEBUG_IF(cond) LOG_DEBUG_IF(false)
+#define DLOG_INFO_IF(cond) LOG_INFO_IF(false)
+#define DLOG_WARNING_IF(cond) LOG_WARNING_IF(false)
+#define DLOG_ERROR_IF(cond) LOG_ERROR_IF(false)
+#define LOG_DEBUG DLOG_DEBUG_IF(false)
+#define LOG_INFO DLOG_INFO_IF(false)
+#define LOG_WARNING DLOG_WARNING_IF(false)
+#define LOG_ERROR DLOG_ERROR_IF(false)
+#else
+#define DLOG_DEBUG_IF LOG_DEBUG_IF
+#define DLOG_INFO_IF LOG_INFO_IF
+#define DLOG_WARNING_IF LOG_WARNING_IF
+#define DLOG_ERROR_IF LOG_ERROR_IF
+#define DLOG_DEBUG LOG_DEBUG
+#define DLOG_INFO LOG_INFO
+#define DLOG_WARNING LOG_WARNING
+#define DLOG_ERROR LOG_ERROR
+#endif
 
 #endif   /* ----- #ifndef __LOGGER_H__  ----- */
