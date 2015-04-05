@@ -34,11 +34,11 @@ namespace alpha
 
         int status;
         while (not quit_) {
-            Poller::TimeStamp now = poller_->Poll(timeout, &channels);
+            alpha::TimeStamp now = poller_->Poll(timeout, &channels);
             (void)now;
             ++iteration_;
             DLOG_INFO_IF(!channels.empty()) << "channels.size() = " << channels.size()
-                << ", now = " << now.time_since_epoch().count();
+                << ", now = " << now;
 
             for(auto channel : channels) {
                 channel->HandleEvents();

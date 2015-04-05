@@ -27,12 +27,12 @@ namespace alpha {
         if (epoll_fd_ >= 0) ::close(epoll_fd_);
     }
 
-    Poller::TimeStamp Poller::Poll(int timeout_in_ms, 
+    alpha::TimeStamp Poller::Poll(int timeout_in_ms, 
             ChannelList * active_channels) {
         assert (active_channels);
 
         int nevents = ::epoll_wait(epoll_fd_, &events_[0], events_.size(), timeout_in_ms);
-        Poller::TimeStamp now  = std::chrono::system_clock::now();
+        alpha::TimeStamp now  = alpha::Now();
         if (nevents > 0) {
             FillActiveChannels(nevents, active_channels);
             if (static_cast<size_t>(nevents) == events_.size()) {

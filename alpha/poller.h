@@ -18,16 +18,18 @@
 #include <chrono>
 #include <boost/noncopyable.hpp>
 
+#include "time_util.h"
 #include "channel.h"
 
 struct epoll_event;
 
 namespace alpha {
-    class Poller : boost::noncopyable {
+    class Poller {
         public:
-            using TimeStamp = std::chrono::system_clock::time_point;
             Poller();
             ~Poller();
+            Poller(Poller&&) = delete;
+            Poller(const Poller&) = delete;
 
             TimeStamp Poll(int timeout, ChannelList * active_channels);
 
