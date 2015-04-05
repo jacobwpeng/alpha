@@ -12,8 +12,6 @@
 
 #include "event_loop.h"
 
-#include <boost/foreach.hpp>
-
 #include "logger.h"
 #include "channel.h"
 #include "poller.h"
@@ -39,6 +37,8 @@ namespace alpha
             Poller::TimeStamp now = poller_->Poll(timeout, &channels);
             (void)now;
             ++iteration_;
+            DLOG_INFO_IF(!channels.empty()) << "channels.size() = " << channels.size()
+                << ", now = " << now.time_since_epoch().count();
 
             for(auto channel : channels) {
                 channel->HandleEvents();
@@ -50,6 +50,12 @@ namespace alpha
             if (period_functor_) {
                 status = period_functor_(iteration_);
             }
+
+            for (const auto & functor : queued_functors_) {
+                functor();
+            }
+
+            queued_functors_.clear();
 
             if (idle >= 100 && status == kIdle) {
                 timeout = idle_time_;
@@ -70,5 +76,9 @@ namespace alpha
 
     void EventLoop::RemoveChannel(Channel * channel) {
         poller_->RemoveChannel(channel);
+    }
+
+    void EventLoop::QueueInLoop(const EventLoop::Functor& functor) {
+        queued_functors_.push_back(functor);
     }
 }

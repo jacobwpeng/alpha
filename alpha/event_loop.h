@@ -15,30 +15,33 @@
 
 #include <stdint.h>
 #include <signal.h>
-#include <boost/scoped_ptr.hpp>
-#include <boost/noncopyable.hpp>
-#include <boost/scoped_ptr.hpp>
-#include <boost/function.hpp>
+#include <vector>
+#include <memory>
+#include <functional>
 
 namespace alpha
 {
     class Poller;
     class Channel;
 
-    class EventLoop : boost::noncopyable {
+    class EventLoop {
         public:
             enum ServerStatus {
                 kIdle = 0,
                 kBusy = 1
             };
-            typedef boost::function< int(uint64_t) > PeriodFunctor;
+            using PeriodFunctor = std::function<int(uint64_t)>;
+            using Functor = std::function<void(void)>;
 
         public:
             EventLoop();
             ~EventLoop();
+            EventLoop(EventLoop&&) = delete;
+            EventLoop(const EventLoop&) = delete;
 
             void Run();
             void Quit();
+            void QueueInLoop(const Functor& functors);
             void UpdateChannel(Channel * channel);
             void RemoveChannel(Channel * channel);
 
@@ -49,11 +52,12 @@ namespace alpha
             }
 
         private:
-            boost::scoped_ptr<Poller> poller_;
+            std::unique_ptr<Poller> poller_;
             sig_atomic_t quit_;
             uint64_t iteration_;
             int wait_time_;
             int idle_time_;
+            std::vector<Functor> queued_functors_;
             PeriodFunctor period_functor_;
     };
 }
