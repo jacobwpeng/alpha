@@ -15,7 +15,7 @@
 
 #include <vector>
 #include <string>
-#include <boost/function.hpp>
+#include <functional>
 
 namespace alpha {
 
@@ -23,9 +23,9 @@ namespace alpha {
     class Channel
     {
         public:
-            typedef boost::function< void(void) > ReadCallback;
-            typedef boost::function< void(void) > WriteCallback;
-            typedef boost::function< void(void) > ErrorCallback;
+            typedef std::function< void(void) > ReadCallback;
+            typedef std::function< void(void) > WriteCallback;
+            typedef std::function< void(void) > ErrorCallback;
 
         public:
             Channel(EventLoop * loop, int fd);
