@@ -106,7 +106,7 @@ namespace alpha {
                         
                 }
             }
-            DLOG_INFO << "Read bytes from " << *peer_addr_;
+            DLOG_INFO << "Read " << bytes << " bytes from " << *peer_addr_;
             if (read_callback_) {
                 read_callback_(shared_from_this(), &read_buffer_);
             }
