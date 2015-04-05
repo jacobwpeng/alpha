@@ -46,7 +46,7 @@ namespace alpha {
         instance_ = &logger;
         prog_name_ = prog_name;
         LogLevelNames_[0] = "ERROR";
-        LogLevelNames_[1] = "WARNING";
+        LogLevelNames_[1] = "WARN";
         LogLevelNames_[2] = "INFO";
         LogLevelNames_[3] = "DEBUG";
     }

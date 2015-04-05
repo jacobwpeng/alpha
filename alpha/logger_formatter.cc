@@ -66,13 +66,13 @@ namespace alpha {
             detail::lasttime = tv.tv_sec;
             if (NULL != localtime_r(&tv.tv_sec, &detail::tm)) {
                 strftime(detail::time_fmt, sizeof detail::time_fmt, 
-                    "[%Y-%m-%d %H:%M:%S.%%06u %%s:%%d %%s %%5.d][%%s] ", 
+                    "[%Y-%m-%d %H:%M:%S.%%06u %%s %%s %%s:%%d %%d] ", 
                     &detail::tm);
             }
         }
 
         return snprintf(buf, LoggerFormatter::kMaxLogLength, detail::time_fmt, 
-                tv.tv_usec, basename, lineno, funcname, detail::tid, 
-                Logger::GetLogLevelName(level));
+                tv.tv_usec, Logger::GetLogLevelName(level), funcname, basename, lineno,
+                detail::tid);
     }
 }
