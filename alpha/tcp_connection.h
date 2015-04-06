@@ -26,7 +26,7 @@ namespace alpha {
     class EventLoop;
     class TcpConnection;
     using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
-    using TcpConnectionWeekPtr = std::weak_ptr<TcpConnection>;
+    using TcpConnectionWeakPtr = std::weak_ptr<TcpConnection>;
 
     class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
             public:
