@@ -10,6 +10,10 @@
  * ==============================================================================
  */
 
+
+#ifndef  __TIME_UTIL_H__
+#define  __TIME_UTIL_H__
+
 #include <cstdint>
 
 namespace alpha {
@@ -26,3 +30,5 @@ namespace alpha {
 
     bool InSameHour(TimeStamp lhs, TimeStamp rhs);
 }
+
+#endif   /* ----- #ifndef __TIME_UTIL_H__  ----- */

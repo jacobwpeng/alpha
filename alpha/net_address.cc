@@ -42,7 +42,7 @@ namespace alpha {
             assert (false);
         }
 
-        port_ = ::ntohs(sa.sin_port);
+        port_ = ntohs(sa.sin_port);
         ip_ = buf;
     }
 

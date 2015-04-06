@@ -116,10 +116,10 @@ namespace alpha {
 #define DLOG_INFO_IF(cond) LOG_INFO_IF(false)
 #define DLOG_WARNING_IF(cond) LOG_WARNING_IF(false)
 #define DLOG_ERROR_IF(cond) LOG_ERROR_IF(false)
-#define LOG_DEBUG DLOG_DEBUG_IF(false)
-#define LOG_INFO DLOG_INFO_IF(false)
-#define LOG_WARNING DLOG_WARNING_IF(false)
-#define LOG_ERROR DLOG_ERROR_IF(false)
+#define DLOG_DEBUG DLOG_DEBUG_IF(false)
+#define DLOG_INFO DLOG_INFO_IF(false)
+#define DLOG_WARNING DLOG_WARNING_IF(false)
+#define DLOG_ERROR DLOG_ERROR_IF(false)
 #else
 #define DLOG_DEBUG_IF LOG_DEBUG_IF
 #define DLOG_INFO_IF LOG_INFO_IF
