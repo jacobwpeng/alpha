@@ -36,28 +36,8 @@ class EchoServer {
 
     private:
         void OnNewConnection(alpha::TcpConnectionPtr conn) {
+            LOG_INFO << "New connection from " << conn->PeerAddr();
             UpdateTimer(conn);
-        }
-
-        void KickOff(alpha::TcpConnectionWeakPtr weak_conn) {
-            if (alpha::TcpConnectionPtr conn = weak_conn.lock()) {
-                auto ctx = conn->GetContext();
-                auto timer_id = boost::any_cast<alpha::TimerManager::TimerId>(ctx);
-                loop_->RemoveTimer(timer_id);
-                conn->Write("Timeout\n");
-                conn->Close();
-            }
-        }
-
-        void UpdateTimer(alpha::TcpConnectionPtr& conn) {
-            auto ctx = conn->GetContext();
-            if (!ctx.empty()) {
-                auto timer_id = boost::any_cast<alpha::TimerManager::TimerId>(ctx);
-                loop_->RemoveTimer(timer_id);
-            }
-            auto timer_id = loop_->RunAfter(kDefaultTimeout, std::bind(&EchoServer::KickOff, 
-                                this, alpha::TcpConnectionWeakPtr(conn)));
-            conn->SetContext(timer_id);
         }
 
         void OnRead(alpha::TcpConnectionPtr conn, alpha::TcpConnectionBuffer* buffer) {
@@ -71,7 +51,29 @@ class EchoServer {
             UpdateTimer(conn);
         }
 
-        const uint32_t kDefaultTimeout = 1000;
+        void UpdateTimer(alpha::TcpConnectionPtr& conn) {
+            auto ctx = conn->GetContext();
+            if (!ctx.empty()) {
+                auto timer_id = boost::any_cast<alpha::TimerManager::TimerId>(ctx);
+                loop_->RemoveTimer(timer_id);
+            }
+            auto timer_id = loop_->RunAfter(kDefaultTimeout, std::bind(&EchoServer::KickOff, 
+                                this, alpha::TcpConnectionWeakPtr(conn)));
+            conn->SetContext(timer_id);
+        }
+
+        void KickOff(alpha::TcpConnectionWeakPtr weak_conn) {
+            if (alpha::TcpConnectionPtr conn = weak_conn.lock()) {
+                LOG_INFO << "Kickoff " << conn->PeerAddr();
+                auto ctx = conn->GetContext();
+                auto timer_id = boost::any_cast<alpha::TimerManager::TimerId>(ctx);
+                loop_->RemoveTimer(timer_id);
+                conn->Write("Timeout\n");
+                conn->Close();
+            }
+        }
+
+        const uint32_t kDefaultTimeout = 3000;
         alpha::EventLoop* loop_;
         alpha::TcpServer server_;
 };
