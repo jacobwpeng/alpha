@@ -69,6 +69,18 @@ namespace alpha {
         }
     }
 
+    void TcpConnection::CloseByPeer() {
+        assert (state_ == State::kConnected);
+        channel_->DisableReading();
+        channel_->DisableWriting();
+        state_ = State::kDisconnected;
+        DLOG_INFO << "TcpConnection closed by peer, fd = " << fd_;
+        if (close_callback_) {
+            //给个机会把connection里面缓存的写数据写出去
+            loop_->QueueInLoop(std::bind(close_callback_, fd_));
+        }
+    }
+
     void TcpConnection::ReadFromPeer() {
         static const size_t kLocalBufferSize = 1 << 16; // 使用栈内存和readv尽快读取数据
         char local_buffer[kLocalBufferSize];
@@ -87,7 +99,7 @@ namespace alpha {
         if (nbytes == 0) {
             LOG_INFO << "Peer closed connection, local_addr_ = " << *local_addr_
                 << ", peer_addr_ = " << *peer_addr_;
-            Close();
+            CloseByPeer();
         } else if (nbytes == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
             PLOG_WARNING << "readv failed";
         } else {
@@ -170,7 +182,7 @@ namespace alpha {
     void TcpConnection::HandleError() {
         int err = SocketOps::GetAndClearError(fd_);
         char buf[128];
-        LOG_WARNING << "Error: " << ::strerror_r(err, buf, sizeof(buf))
+        LOG_WARNING_IF(err) << "Error: " << ::strerror_r(err, buf, sizeof(buf))
             << ", peer_addr_ = " << *peer_addr_;
     }
 

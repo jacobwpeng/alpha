@@ -83,6 +83,7 @@ namespace alpha {
 
                 void InitConnected();
                 void InitConnecting();
+                void CloseByPeer();
 
             private:
                 EventLoop* loop_;
