@@ -24,26 +24,54 @@
 class EchoServer {
     public:
         EchoServer(alpha::EventLoop* loop, const alpha::NetAddress& addr)
-            :server_(loop, addr) {
+            :loop_(loop), server_(loop, addr) {
         }
 
         bool Run() {
             using namespace std::placeholders;
+            server_.SetOnNewConnection(std::bind(&EchoServer::OnNewConnection, this, _1));
             server_.SetOnRead(std::bind(&EchoServer::OnRead, this, _1, _2));
             return server_.Run();
         }
 
     private:
+        void OnNewConnection(alpha::TcpConnectionPtr conn) {
+            UpdateTimer(conn);
+        }
+
+        void KickOff(alpha::TcpConnectionWeakPtr weak_conn) {
+            if (alpha::TcpConnectionPtr conn = weak_conn.lock()) {
+                auto ctx = conn->GetContext();
+                auto timer_id = boost::any_cast<alpha::TimerManager::TimerId>(ctx);
+                loop_->RemoveTimer(timer_id);
+                conn->Write("Timeout\n");
+                conn->Close();
+            }
+        }
+
+        void UpdateTimer(alpha::TcpConnectionPtr& conn) {
+            auto ctx = conn->GetContext();
+            if (!ctx.empty()) {
+                auto timer_id = boost::any_cast<alpha::TimerManager::TimerId>(ctx);
+                loop_->RemoveTimer(timer_id);
+            }
+            auto timer_id = loop_->RunAfter(kDefaultTimeout, std::bind(&EchoServer::KickOff, 
+                                this, alpha::TcpConnectionWeakPtr(conn)));
+            conn->SetContext(timer_id);
+        }
+
         void OnRead(alpha::TcpConnectionPtr conn, alpha::TcpConnectionBuffer* buffer) {
             alpha::Slice data = buffer->Read();
             DLOG_INFO << "Receive from " << conn->PeerAddr()
                 << ", data.size() = " << data.size();
             std::vector<char> input(data.size());
             size_t n = buffer->ReadAndClear(input.data(), input.size());
-            assert (n == input.size());
+            assert (n == input.size()); (void)n;
             conn->Write(alpha::Slice(input.data(), input.size()));
+            UpdateTimer(conn);
         }
 
+        const uint32_t kDefaultTimeout = 1000;
         alpha::EventLoop* loop_;
         alpha::TcpServer server_;
 };
