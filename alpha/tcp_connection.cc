@@ -38,6 +38,7 @@ namespace alpha {
 
     TcpConnection::~TcpConnection() {
         DLOG_INFO << "TcpConnection destroyed, fd = " << fd_;
+        channel_->Remove();
         ::close(fd_);
     }
 
