@@ -182,8 +182,13 @@ namespace alpha {
     void TcpConnection::HandleError() {
         int err = SocketOps::GetAndClearError(fd_);
         char buf[128];
-        LOG_WARNING_IF(err) << "Error: " << ::strerror_r(err, buf, sizeof(buf))
-            << ", peer_addr_ = " << *peer_addr_;
+        if (err == ECONNRESET) {
+            // 不把这个当做是错误
+            LOG_INFO << "Connection reset by " << *peer_addr_;
+        } else {
+            LOG_WARNING_IF(err) << "Error: " << ::strerror_r(err, buf, sizeof(buf))
+                << ", peer_addr_ = " << *peer_addr_;
+        }
     }
 
     void TcpConnection::GetAddressInfo() {
