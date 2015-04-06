@@ -57,10 +57,12 @@ namespace alpha
                 status = period_functor_(iteration_);
             }
 
+            
+            std::vector<Functor> queued_functors;
+            std::swap(queued_functors, queued_functors_);
             //再处理延时调用函数
-            std::for_each(queued_functors_.begin(), queued_functors_.end(), 
+            std::for_each(queued_functors.begin(), queued_functors.end(), 
                     [](const Functor& f){ f(); });
-            queued_functors_.clear();
 
             //最后处理超时函数
             std::for_each(timer_functors.begin(), timer_functors.end(), 
