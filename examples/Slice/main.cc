@@ -25,4 +25,7 @@ int main() {
     alpha::Slice data(&obj);
     assert (reinterpret_cast<intptr_t>(data.data()) == reinterpret_cast<intptr_t>(&obj));
     assert (data.size() == sizeof(obj));
+
+    auto pobj = data.as<PODType>();
+    assert (pobj == &obj);
 }
