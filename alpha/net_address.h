@@ -26,6 +26,8 @@ namespace alpha {
             NetAddress(const Slice& ip, int port);
             NetAddress(const sockaddr_in& sa);
 
+            bool operator== (const NetAddress& rhs);
+
             std::string ip() const { return ip_; }
             int port() const { return port_; }
             std::string FullAddress() const;

@@ -46,6 +46,10 @@ namespace alpha {
         ip_ = buf;
     }
 
+    bool NetAddress::operator==(const NetAddress& rhs) {
+        return ip_ == rhs.ip_ && port_ == rhs.port_;
+    }
+
     std::string NetAddress::FullAddress() const {
         if (addr_.empty()) {
             // 255.255.255.255:65535
