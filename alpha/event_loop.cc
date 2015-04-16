@@ -34,6 +34,7 @@ namespace alpha
     void EventLoop::Run() {
         ChannelList channels;
 
+        static const int kMaxLoopBeforeIdle = 100;
         int timeout = wait_time_;//ms
         unsigned idle = 0;
 
@@ -43,9 +44,6 @@ namespace alpha
             ++iteration_;
             DLOG_INFO_IF(!channels.empty()) << "channels.size() = " << channels.size()
                 << ", now = " << now;
-
-            auto timer_functors = timer_manager_->Step(now);
-
             //先处理网络消息
             std::for_each(channels.begin(), channels.end(), [](Channel* channel){
                     channel->HandleEvents();
@@ -64,11 +62,15 @@ namespace alpha
             std::for_each(queued_functors.begin(), queued_functors.end(), 
                     [](const Functor& f){ f(); });
 
+            auto timer_functors = timer_manager_->Step(now);
             //最后处理超时函数
             std::for_each(timer_functors.begin(), timer_functors.end(), 
                     [](const Functor& f){ f(); });
 
-            timeout = (idle >= 100 && status == kIdle) ? idle_time_ : wait_time_;
+            timeout = wait_time_;
+            if (idle >= kMaxLoopBeforeIdle && status == kIdle) {
+                timeout = idle_time_;
+            }
         }
         LOG_INFO << "EventLoop exiting...";
     }
