@@ -194,10 +194,19 @@ namespace alpha {
     void TcpConnection::GetAddressInfo() {
         assert (state_ == State::kConnected);
         assert(!local_addr_);
-        assert(!peer_addr_);
 
         local_addr_.reset(new NetAddress(NetAddress::GetLocalAddr(fd_)));
-        peer_addr_.reset(new NetAddress(NetAddress::GetPeerAddr(fd_)));
+        auto peer_addr = NetAddress::GetPeerAddr(fd_);
+        if (peer_addr_) {
+            assert (*peer_addr_ == peer_addr);
+        } else {
+            SetPeerAddr(NetAddress::GetPeerAddr(fd_));
+        }
+    }
+
+    void TcpConnection::SetPeerAddr(const alpha::NetAddress& addr) {
+        assert (!peer_addr_);
+        peer_addr_.reset (new NetAddress(addr));
     }
 
     void TcpConnection::InitConnecting() {

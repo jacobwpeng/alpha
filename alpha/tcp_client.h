@@ -26,6 +26,7 @@ namespace alpha {
             using ConnectedCallback = TcpConnection::ConnectedCallback;
             using ReadCallback = TcpConnection::ReadCallback;
             using CloseCallback = std::function<void(TcpConnectionPtr)>;
+            using ErrorCallback = std::function<void(const NetAddress& addr)>;
 
             TcpClient(EventLoop* loop);
             ~TcpClient();
@@ -41,9 +42,12 @@ namespace alpha {
             void SetOnClose(const CloseCallback& cb) {
                 close_callback_ = cb;
             }
+            void SetOnError(const ErrorCallback& cb) {
+                error_callback_ = cb;
+            }
 
         private:
-            void OnConnect(int fd, bool connected);
+            void OnConnect(int fd, bool connected, const NetAddress& addr);
             void OnConnected(TcpConnectionPtr conn);
             void OnConnectError(const NetAddress& addr);
             void OnClose(int fd);
@@ -55,6 +59,7 @@ namespace alpha {
             ConnectedCallback connected_callback_;
             ReadCallback read_callback_;
             CloseCallback close_callback_;
+            ErrorCallback error_callback_;
     };
 }
 

@@ -31,6 +31,7 @@ namespace alpha {
     }
 
     void TcpConnector::ConnectTo(const alpha::NetAddress& addr) {
+        assert (connect_callback_);
         int fd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (unlikely(fd == -1)) {
             PLOG_ERROR << "Create socket failed, addr = " << addr;
@@ -43,9 +44,8 @@ namespace alpha {
                 sizeof(sock_addr));
         if (err) {
             if (errno == EINPROGRESS) {
-                assert (connect_callback_);
                 DLOG_INFO << "connect inprogress to " << addr;
-                connect_callback_(fd, false);
+                connect_callback_(fd, false, addr);
             } else {
                 ::close(fd);
                 PLOG_WARNING << "connect to " << addr << ", failed";
@@ -54,9 +54,8 @@ namespace alpha {
                 }
             }
         } else {
-            assert (connect_callback_);
             DLOG_INFO << "connected to " << addr;
-            connect_callback_(fd, true);
+            connect_callback_(fd, true, addr);
         }
     }
 }

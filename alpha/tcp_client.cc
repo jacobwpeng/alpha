@@ -26,21 +26,26 @@ namespace alpha {
         connector_.reset (new TcpConnector(loop));
 
         using namespace std::placeholders;
-        connector_->SetOnConnect(std::bind(&TcpClient::OnConnect, this, _1, _2));
+        connector_->SetOnConnect(std::bind(&TcpClient::OnConnect, this, _1, _2, _3));
         connector_->SetOnError(std::bind(&TcpClient::OnConnectError, this, _1));
     }
     
-    TcpClient::~TcpClient() = default;
+    TcpClient::~TcpClient() {
+        for (auto & p : connections_) {
+            ::close(p.first);
+        }
+    }
 
     void TcpClient::ConnectTo(const NetAddress& addr) {
         loop_->QueueInLoop(std::bind(&TcpConnector::ConnectTo, connector_.get(), addr));
     }
 
-    void TcpClient::OnConnect(int fd, bool connected) {
+    void TcpClient::OnConnect(int fd, bool connected, const NetAddress& peer_addr) {
         assert (connections_.find(fd) == connections_.end());
         TcpConnection::State state = connected ? TcpConnection::State::kConnected
             : TcpConnection::State::kConnecting;
         TcpConnectionPtr conn = std::make_shared<TcpConnection>(loop_, fd, state);
+        conn->SetPeerAddr(peer_addr);
         if (connected) {
             OnConnected(conn);
         } else {
@@ -59,6 +64,9 @@ namespace alpha {
 
     void TcpClient::OnConnectError(const NetAddress& addr) {
         LOG_INFO << "Connect to " << addr << " failed";
+        if (error_callback_) {
+            error_callback_(addr);
+        }
     }
 
     void TcpClient::OnClose(int fd) {

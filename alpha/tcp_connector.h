@@ -20,7 +20,7 @@ namespace alpha {
     class NetAddress;
     class TcpConnector {
         public:
-            using ConnectCallback = std::function<void(int, bool)>;
+            using ConnectCallback = std::function<void(int, bool, const NetAddress&)>;
             using ErrorCallback = std::function<void(const NetAddress&)>;
 
             TcpConnector(EventLoop* loop);

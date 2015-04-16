@@ -77,6 +77,8 @@ namespace alpha {
                     return *peer_addr_;
                 }
 
+                void SetPeerAddr(const NetAddress& addr);
+
             private:
                 void ReadFromPeer();
                 void WriteToPeer();
