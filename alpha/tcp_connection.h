@@ -64,7 +64,7 @@ namespace alpha {
                 void ClearContext() { ctx_ = Context(); }
                 Context GetContext() const { return ctx_; }
                 template<typename T>
-                T GetContext() const { return boost::any_cast<T>(ctx_); }
+                T* GetContext() { return boost::any_cast<T>(&ctx_); }
 
                 int fd() const { return fd_; }
                 EventLoop* loop() const { return loop_; }

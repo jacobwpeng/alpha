@@ -52,10 +52,9 @@ class EchoServer {
         }
 
         void UpdateTimer(alpha::TcpConnectionPtr& conn) {
-            auto ctx = conn->GetContext();
-            if (!ctx.empty()) {
-                auto timer_id = boost::any_cast<alpha::TimerManager::TimerId>(ctx);
-                loop_->RemoveTimer(timer_id);
+            auto timerid = conn->GetContext<alpha::TimerManager::TimerId>();
+            if (timerid) {
+                loop_->RemoveTimer(*timerid);
             }
             auto timer_id = loop_->RunAfter(kDefaultTimeout, std::bind(&EchoServer::KickOff, 
                                 this, alpha::TcpConnectionWeakPtr(conn)));
