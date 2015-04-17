@@ -91,6 +91,7 @@ namespace alpha {
         } else {
             LOG_WARNING << msg << ", addr = " << addr;
         }
+        ::close(fd);
         if (error_callback_) {
             error_callback_(addr);
         }
