@@ -29,6 +29,11 @@ namespace alpha {
         return os;
     }
 
+    bool operator==(const NetAddress& lhs, const NetAddress& rhs) {
+        return lhs.ip() == rhs.ip() && lhs.port() == rhs.port();
+    }
+
+
     NetAddress::NetAddress(const alpha::Slice& ip, int port)
         :ip_(ip.ToString()), port_(port) {
     }
@@ -44,10 +49,6 @@ namespace alpha {
 
         port_ = ntohs(sa.sin_port);
         ip_ = buf;
-    }
-
-    bool NetAddress::operator==(const NetAddress& rhs) {
-        return ip_ == rhs.ip_ && port_ == rhs.port_;
     }
 
     std::string NetAddress::FullAddress() const {
