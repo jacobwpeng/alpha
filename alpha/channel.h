@@ -63,6 +63,7 @@ namespace alpha {
 
             int events_;
             int revents_;
+            bool handling_events_;
             ReadCallback rcb_;
             WriteCallback wcb_;
             ErrorCallback ecb_;

@@ -13,6 +13,7 @@
 #include "channel.h"
 
 #include <sys/epoll.h>
+#include <cassert>
 #include <sstream>
 
 #include "logger.h"
@@ -25,10 +26,14 @@ namespace alpha {
     const int Channel::kNoneEvents = 0;
 
     Channel::Channel(EventLoop * loop, int fd)
-        :loop_(loop), fd_(fd), events_(0), revents_(0) {
+        :loop_(loop), fd_(fd), events_(0), revents_(0), handling_events_(false) {
     }
 
     Channel::~Channel() {
+        LOG_ERROR_IF(handling_events_) << "Destroy Channel when handling events"
+            << ", fd = " << fd_;
+        assert (!handling_events_);
+        DLOG_INFO << "Channel destroyed, fd = " << fd_;
     }
 
     void Channel::Remove() {
@@ -40,6 +45,7 @@ namespace alpha {
     }
 
     void Channel::HandleEvents() {
+        handling_events_ = true;
         if (revents_ & (EPOLLERR | EPOLLHUP)) {
             if (ecb_) ecb_();
             else {
@@ -54,6 +60,7 @@ namespace alpha {
         if (revents_ & Channel::kReadEvents) {
             if (rcb_) rcb_();
         }
+        handling_events_ = false;
     }
 
     std::string Channel::ReadableEvents() const {
