@@ -26,14 +26,8 @@ namespace alpha {
             assert (loop_);
             assert (fd_);
             channel_.reset (new Channel(loop, fd));
-            assert ( state_ != State::kDisconnected);
-            if (state_ == State::kConnecting) {
-                InitConnecting();
-            } else {
-                assert (state_ == State::kConnected);
-                InitConnected();
-            }
-            channel_->set_error_callback(std::bind(&TcpConnection::HandleError, this));
+            assert (state_ == State::kConnected);
+            Init();
         }
 
     TcpConnection::~TcpConnection() {
@@ -56,9 +50,6 @@ namespace alpha {
         if (state_ == State::kConnected) {
             channel_->DisableReading();
             SocketOps::DisableReading(fd_);
-        } else {
-            assert (state_ == State::kConnecting);
-            channel_->DisableWriting();
         }
 
         state_ = State::kDisconnected;
@@ -100,7 +91,7 @@ namespace alpha {
             LOG_INFO << "Peer closed connection, local_addr_ = " << *local_addr_
                 << ", peer_addr_ = " << *peer_addr_;
             CloseByPeer();
-        } else if (nbytes == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
+        } else if (nbytes == -1) {
             PLOG_WARNING << "readv failed";
         } else {
             size_t bytes = static_cast<size_t>(nbytes);
@@ -156,37 +147,15 @@ namespace alpha {
         }
     }
 
-    void TcpConnection::ConnectedToPeer() {
-        assert (state_ == State::kConnecting);
-        int err = SocketOps::GetAndClearError(fd_);
-        if (err != 0) {
-            char buf[128];
-            LOG_WARNING << "Error: " << ::strerror_r(err, buf, sizeof(buf))
-                << ", peer_addr_ = " << *peer_addr_;
-        } else {
-            state_ = State::kConnected;
-            GetAddressInfo();
-            channel_->EnableReading();
-            //TcpConnection生命周期大于channel_
-            channel_->set_read_callback(std::bind(&TcpConnection::ReadFromPeer, this));
-            channel_->DisableWriting();
-            channel_->set_write_callback(std::bind(&TcpConnection::WriteToPeer, this));
-
-            DLOG_INFO << "Connected to " << *peer_addr_;
-            if (connected_callback_) {
-                connected_callback_(shared_from_this());
-            }
-        }
-    }
-
     void TcpConnection::HandleError() {
         int err = SocketOps::GetAndClearError(fd_);
         char buf[128];
-        if (err == ECONNRESET) {
-            // 不把这个当做是错误
-            LOG_INFO << "Connection reset by " << *peer_addr_;
+        if (err == ECONNRESET || err == ECONNREFUSED) {
+            // 不把这个当做是异常
+            LOG_INFO << ::strerror_r(err, buf, sizeof(buf))
+                << ", peer_addr_ = " << *peer_addr_;
         } else {
-            LOG_WARNING_IF(err) << "Error: " << ::strerror_r(err, buf, sizeof(buf))
+            LOG_WARNING_IF(err) << ::strerror_r(err, buf, sizeof(buf))
                 << ", peer_addr_ = " << *peer_addr_;
         }
     }
@@ -209,14 +178,10 @@ namespace alpha {
         peer_addr_.reset (new NetAddress(addr));
     }
 
-    void TcpConnection::InitConnecting() {
-        channel_->set_write_callback(std::bind(&TcpConnection::ConnectedToPeer, this));
-        channel_->EnableWriting();
-    }
-
-    void TcpConnection::InitConnected() {
+    void TcpConnection::Init() {
         channel_->set_read_callback(std::bind(&TcpConnection::ReadFromPeer, this));
         channel_->set_write_callback(std::bind(&TcpConnection::WriteToPeer, this));
+        channel_->set_error_callback(std::bind(&TcpConnection::HandleError, this));
         channel_->EnableReading();
         GetAddressInfo();
     }

@@ -20,7 +20,6 @@ class PingPongClient {
             :loop_(loop), client_(loop), connections(0) {
             using namespace std::placeholders;
             client_.SetOnConnected(std::bind(&PingPongClient::OnConnected, this, _1));
-            client_.SetOnRead(std::bind(&PingPongClient::OnRead, this, _1, _2));
         }
 
         void Run() {
@@ -33,6 +32,8 @@ class PingPongClient {
 
     private:
         void OnConnected(alpha::TcpConnectionPtr conn) {
+            using namespace std::placeholders;
+            conn->SetOnRead(std::bind(&PingPongClient::OnRead, this, _1, _2));
             LOG_INFO << "Connected to " << conn->PeerAddr();
             ++connections;
             conn->Write("Hello, Server!");

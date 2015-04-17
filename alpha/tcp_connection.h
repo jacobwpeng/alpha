@@ -31,16 +31,15 @@ namespace alpha {
     class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
             public:
                 enum class State {
-                    kConnecting = 1,
-                    kConnected = 2,
-                    kDisconnected = 3,
+                    kConnected = 1,
+                    kDisconnected = 2,
                 };
 
                 using Context = boost::any;
-                using ConnectedCallback = std::function<void(TcpConnectionPtr)>;
                 using ReadCallback = 
                     std::function<void(TcpConnectionPtr, TcpConnectionBuffer* buf)>;
                 using CloseCallback = std::function<void(int)>;
+                using ConnectErrorCallback = std::function<void(TcpConnectionPtr)>;
 
                 TcpConnection(EventLoop* loop, int fd, State state);
                 ~TcpConnection();
@@ -49,14 +48,14 @@ namespace alpha {
                 void Write(const Slice& data);
                 void Close();
 
-                void SetOnConnected(const ConnectedCallback& cb) {
-                    connected_callback_ = cb;
-                }
                 void SetOnRead(const ReadCallback& cb) {
                     read_callback_ = cb;
                 }
                 void SetOnClose(const CloseCallback& cb) {
                     close_callback_ = cb;
+                }
+                void SetOnConnectError(const ConnectErrorCallback& cb) {
+                    connect_error_callback_ = cb;
                 }
 
                 void SetContext( const Context & ctx ) { ctx_ = ctx; }
@@ -87,7 +86,7 @@ namespace alpha {
                 void GetAddressInfo();
 
                 void InitConnected();
-                void InitConnecting();
+                void Init();
                 void CloseByPeer();
 
             private:
@@ -99,9 +98,9 @@ namespace alpha {
                 std::unique_ptr<NetAddress> peer_addr_;
                 TcpConnectionBuffer read_buffer_;
                 TcpConnectionBuffer write_buffer_;
-                ConnectedCallback connected_callback_;
                 ReadCallback read_callback_;
                 CloseCallback close_callback_;
+                ConnectErrorCallback connect_error_callback_;
                 Context ctx_;
     };
 }

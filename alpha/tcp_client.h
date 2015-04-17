@@ -18,15 +18,15 @@
 #include <map>
 
 namespace alpha {
+    class Channel;
     class EventLoop;
     class NetAddress;
     class TcpConnector;
     class TcpClient {
         public:
-            using ConnectedCallback = TcpConnection::ConnectedCallback;
-            using ReadCallback = TcpConnection::ReadCallback;
+            using ConnectedCallback = std::function<void(TcpConnectionPtr)>;
             using CloseCallback = std::function<void(TcpConnectionPtr)>;
-            using ErrorCallback = std::function<void(const NetAddress& addr)>;
+            using ConnectErrorCallback = std::function<void(const NetAddress&)>;
 
             TcpClient(EventLoop* loop);
             ~TcpClient();
@@ -36,30 +36,24 @@ namespace alpha {
             void SetOnConnected(const ConnectedCallback& cb) {
                 connected_callback_ = cb;
             }
-            void SetOnRead(const ReadCallback& cb) {
-                read_callback_ = cb;
-            }
             void SetOnClose(const CloseCallback& cb) {
                 close_callback_ = cb;
             }
-            void SetOnError(const ErrorCallback& cb) {
-                error_callback_ = cb;
+            void SetOnConnectError(const ConnectErrorCallback& cb) {
+                connect_error_callback_ = cb;
             }
-
         private:
-            void OnConnect(int fd, bool connected, const NetAddress& addr);
-            void OnConnected(TcpConnectionPtr conn);
-            void OnConnectError(const NetAddress& addr);
+            void OnConnected(int fd);
             void OnClose(int fd);
+            void OnConnectError(const NetAddress&);
 
             using TcpConnectionMap = std::map<int, TcpConnectionPtr>;
             EventLoop* loop_;
             TcpConnectionMap connections_;
             std::unique_ptr<TcpConnector> connector_;
             ConnectedCallback connected_callback_;
-            ReadCallback read_callback_;
             CloseCallback close_callback_;
-            ErrorCallback error_callback_;
+            ConnectErrorCallback connect_error_callback_;
     };
 }
 

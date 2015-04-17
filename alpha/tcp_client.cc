@@ -26,7 +26,7 @@ namespace alpha {
         connector_.reset (new TcpConnector(loop));
 
         using namespace std::placeholders;
-        connector_->SetOnConnect(std::bind(&TcpClient::OnConnect, this, _1, _2, _3));
+        connector_->SetOnConnected(std::bind(&TcpClient::OnConnected, this, _1));
         connector_->SetOnError(std::bind(&TcpClient::OnConnectError, this, _1));
     }
     
@@ -40,33 +40,15 @@ namespace alpha {
         loop_->QueueInLoop(std::bind(&TcpConnector::ConnectTo, connector_.get(), addr));
     }
 
-    void TcpClient::OnConnect(int fd, bool connected, const NetAddress& peer_addr) {
+    void TcpClient::OnConnected(int fd) {
         assert (connections_.find(fd) == connections_.end());
-        TcpConnection::State state = connected ? TcpConnection::State::kConnected
-            : TcpConnection::State::kConnecting;
+        TcpConnection::State state = TcpConnection::State::kConnected;
         TcpConnectionPtr conn = std::make_shared<TcpConnection>(loop_, fd, state);
-        conn->SetPeerAddr(peer_addr);
-        if (connected) {
-            OnConnected(conn);
-        } else {
-            using namespace std::placeholders;
-            conn->SetOnConnected(std::bind(&TcpClient::OnConnected, this, _1));
-        }
-        connections_.emplace(fd, conn);
-    }
 
-    void TcpClient::OnConnected(TcpConnectionPtr conn) {
         using namespace std::placeholders;
         connected_callback_(conn);
-        conn->SetOnRead(read_callback_);
         conn->SetOnClose(std::bind(&TcpClient::OnClose, this, _1));
-    }
-
-    void TcpClient::OnConnectError(const NetAddress& addr) {
-        LOG_INFO << "Connect to " << addr << " failed";
-        if (error_callback_) {
-            error_callback_(addr);
-        }
+        connections_.emplace(fd, conn);
     }
 
     void TcpClient::OnClose(int fd) {
@@ -78,6 +60,12 @@ namespace alpha {
         DLOG_INFO << "Connection to " << it->second->PeerAddr() << " is closed";
         if (close_callback_) {
             close_callback_(conn);
+        }
+    }
+
+    void TcpClient::OnConnectError(const NetAddress& addr) {
+        if (connect_error_callback_) {
+            connect_error_callback_(addr);
         }
     }
 }
