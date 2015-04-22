@@ -45,7 +45,7 @@ namespace alpha {
                 ~TcpConnection();
                 DISABLE_COPY_ASSIGNMENT(TcpConnection);
 
-                void Write(const Slice& data);
+                bool Write(const Slice& data);
                 void Close();
 
                 void SetOnRead(const ReadCallback& cb) {
@@ -65,6 +65,7 @@ namespace alpha {
                 template<typename T>
                 T* GetContext() { return boost::any_cast<T>(&ctx_); }
 
+                bool closed() const { return state_ == State::kDisconnected; }
                 int fd() const { return fd_; }
                 EventLoop* loop() const { return loop_; }
                 State state() const { return state_; }

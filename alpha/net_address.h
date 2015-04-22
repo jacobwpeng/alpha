@@ -43,6 +43,7 @@ namespace alpha {
     };
     std::ostream & operator << (std::ostream& os, const NetAddress & addr);
     bool operator== (const NetAddress& lhs, const NetAddress& rhs);
+    bool operator< (const NetAddress& lhs, const NetAddress& rhs);
 }
 
 #endif   /* ----- #ifndef __NET_ADDRESS_H__  ----- */

@@ -33,6 +33,10 @@ namespace alpha {
         return lhs.ip() == rhs.ip() && lhs.port() == rhs.port();
     }
 
+    bool operator< (const NetAddress& lhs, const NetAddress& rhs) {
+        return lhs.ToSockAddr().sin_addr.s_addr 
+            < rhs.ToSockAddr().sin_addr.s_addr;
+    }
 
     NetAddress::NetAddress(const alpha::Slice& ip, int port)
         :ip_(ip.ToString()), port_(port) {

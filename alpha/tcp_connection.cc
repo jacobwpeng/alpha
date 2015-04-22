@@ -36,13 +36,15 @@ namespace alpha {
         ::close(fd_);
     }
 
-    void TcpConnection::Write(const alpha::Slice& data) {
+    bool TcpConnection::Write(const alpha::Slice& data) {
         if (unlikely(write_buffer_.Append(data) == false)) {
             LOG_WARNING << "Write failed, data.size() = " << data.size()
                 << ", local_addr_ = " << *local_addr_
                 << ", peer_addr_ = " << *peer_addr_;
+            return false;
         }
         channel_->EnableWriting();
+        return true;
     }
     
     void TcpConnection::Close() {
