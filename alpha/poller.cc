@@ -12,8 +12,9 @@
 
 #include "poller.h"
 
-#include <cassert>
+#include <unistd.h>
 #include <sys/epoll.h>
+#include <cassert>
 #include "logger.h"
 
 namespace alpha {
