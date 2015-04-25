@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include <signal.h>
+#include <map>
 #include <vector>
 #include <memory>
 #include <functional>
@@ -51,6 +52,7 @@ namespace alpha {
             TimerManager::TimerId RunEvery(uint32_t milliseconds, const Functor& f);
             void RemoveTimer(TimerManager::TimerId);
             bool Expired(TimerManager::TimerId) const;
+            bool TrapSignal(int signal, const Functor& cb);
 
             void set_wait_time(int wait_time) { wait_time_ = wait_time; }
             void set_idle_wait_time(int idle_time) { idle_time_ = idle_time; }
@@ -60,13 +62,14 @@ namespace alpha {
 
         private:
             std::unique_ptr<Poller> poller_;
-            sig_atomic_t quit_;
+            bool quit_;
             uint64_t iteration_;
             int wait_time_;
             int idle_time_;
             std::unique_ptr<TimerManager> timer_manager_;
             PeriodFunctor period_functor_;
             std::vector<Functor> queued_functors_;
+            std::map<int, Functor> signal_handlers_;
     };
 }
 
