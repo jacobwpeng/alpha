@@ -71,8 +71,8 @@ namespace alpha
             channels.clear();
 
             //然后是周期函数
-            if (period_functor_) {
-                status = period_functor_(iteration_);
+            if (cron_functor_) {
+                status = cron_functor_(iteration_);
             }
             
             //再处理延时调用函数

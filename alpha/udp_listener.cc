@@ -11,14 +11,15 @@
  */
 
 #include "udp_listener.h"
-#include "channel.h"
-#include "event_loop.h"
 
+#include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <boost/bind.hpp>
 #include "logger.h"
+#include "net_address.h"
+#include "channel.h"
+#include "event_loop.h"
 
 namespace alpha {
     UdpListener::UdpListener(EventLoop * loop)
@@ -32,36 +33,29 @@ namespace alpha {
         }
     }
 
-    void UdpListener::BindOrAbort(const std::string& ip, int port) {
+    bool UdpListener::Run(const NetAddress& addr) {
         fd_ = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        assert (fd_ >= 0);
-        //PCHECK(fd_ >= 0) << "create socket failed";
-
-        struct sockaddr_in sa;
-
-        memset(&sa, 0x0, sizeof(sa));
-
-        sa.sin_family = AF_INET;
-        int ret = ::inet_pton(AF_INET, ip.c_str(), &sa.sin_addr);
-        assert (ret == 1);
-        //PCHECK(ret == 1) << "inet_pton failed, ip[" << ip << "], port[" << port << "]";
-
-        sa.sin_port = htons(port);
-        ret = bind(fd_, reinterpret_cast<const struct sockaddr *>(&sa), sizeof(sa));
-        assert (ret == 0);
-        //PCHECK(ret == 0) << "bind failed";
-    }
-
-    void UdpListener::Start() {
+        if (unlikely(fd_ == -1)) {
+            PLOG_WARNING << "Create socket failed";
+            return false;
+        }
+        auto sa = addr.ToSockAddr();
+        int err = ::bind(fd_, reinterpret_cast<const sockaddr*>(&sa), sizeof(sa));
+        if (err) {
+            PLOG_WARNING << "bind failed, addr = " << addr;
+            return false;
+        }
         channel_.reset(new Channel(loop_, fd_));
-        channel_->set_read_callback(boost::bind(&UdpListener::OnMessage, this));
+        channel_->set_read_callback(std::bind(&UdpListener::OnMessage, this));
         channel_->EnableReading();
         channel_->DisableWriting();
+        return true;
     }
 
     void UdpListener::OnMessage() {
         const size_t kMaxUdpMessageSize = 1 << 16; //64KiB
         char in[kMaxUdpMessageSize];
+        char out[kMaxUdpMessageSize];
         struct sockaddr_in ca;
         socklen_t len = sizeof(ca);
         ssize_t bytes = ::recvfrom(fd_, in, sizeof(in), MSG_DONTWAIT, 
@@ -70,22 +64,18 @@ namespace alpha {
             PLOG_WARNING << "recvfrom failed";
             return;
         }
-        if (mcb_) {
-            std::string out;
-            int ret = mcb_(in, bytes, &out);
-            if (ret < 0) {
-                LOG_WARNING << "MessageCallback return " << ret;
+        if (message_callback_) {
+            ssize_t n = message_callback_(Slice(in, bytes), out);
+            assert (n <= static_cast<ssize_t>(kMaxUdpMessageSize));
+            if (n <= 0) {
+                //不回复消息
+                DLOG_INFO << "message_callback_ returns n = " << n;
+            } else {
+                ::sendto(fd_, out, n, MSG_DONTWAIT,
+                        reinterpret_cast<struct sockaddr*>(&ca), sizeof(ca));
             }
-            else if (out.size() > kMaxUdpMessageSize) {
-                LOG_WARNING << "reply size[" << out.size() 
-                    << "] is too larger, truncate reply to 64KiB";
-                ::sendto(fd_, out.data(), kMaxUdpMessageSize, MSG_DONTWAIT, 
-                        reinterpret_cast<struct sockaddr *>(&ca), sizeof(ca));
-            }
-            else {
-                ::sendto(fd_, out.data(), out.size(), MSG_DONTWAIT, 
-                        reinterpret_cast<struct sockaddr *>(&ca), sizeof(ca));
-            }
+        } else {
+            LOG_INFO << "Receive " << bytes << " from " << NetAddress(ca);
         }
     }
 }

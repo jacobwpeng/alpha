@@ -14,33 +14,33 @@
 #define  __UDP_SERVER_H__
 
 #include <string>
-#include <boost/function.hpp>
-#include <boost/scoped_ptr.hpp>
-#include <boost/noncopyable.hpp>
+#include <memory>
+#include <functional>
+#include "compiler.h"
+#include "net_address.h"
+#include "slice.h"
+#include "udp_listener.h"
 
 namespace alpha {
     class Buffer;
     class EventLoop;
     class UdpListener;
+    class NetAddress;
 
-    class UdpServer : boost::noncopyable {
+    class UdpServer {
         public:
-            typedef boost::function< int(const char*, size_t, std::string*) > ReadCallback;
+            using MessageCallback = UdpListener::MessageCallback;
 
         public:
-            UdpServer(EventLoop * loop, const std::string& ip, int port);
+            UdpServer(EventLoop * loop);
             ~UdpServer();
+            DISABLE_COPY_ASSIGNMENT(UdpServer);
 
-            void Start();
-            void set_read_callback(const ReadCallback& rcb) { rcb_ = rcb; }
+            bool Start(const NetAddress& addr, const MessageCallback& cb);
 
         private:
             EventLoop * loop_;
-            ReadCallback rcb_;
-            boost::scoped_ptr<UdpListener> listener_;
-
-            const std::string ip_;
-            const int port_;
+            std::unique_ptr<UdpListener> listener_;
     };
 }
 

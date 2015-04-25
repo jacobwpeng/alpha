@@ -14,25 +14,26 @@
 #define  __UDP_LISTENER_H__
 
 #include <string>
-#include <boost/scoped_ptr.hpp>
-#include <boost/function.hpp>
-#include <boost/noncopyable.hpp>
+#include <memory>
+#include <functional>
+#include "compiler.h"
+#include "slice.h"
 
 namespace alpha {
     class Channel;
     class EventLoop;
-    class UdpListener : boost::noncopyable {
+    class NetAddress;
+    class UdpListener {
         public:
-            typedef boost::function< int(const char*, size_t, std::string*) > 
-                MessageCallback;
+            using MessageCallback = std::function<ssize_t (Slice data, char* out)>;;
 
         public:
             UdpListener(EventLoop * loop);
             ~UdpListener();
+            DISABLE_COPY_ASSIGNMENT(UdpListener);
 
-            void set_message_callback(const MessageCallback& mcb) { mcb_ = mcb; }
-            void BindOrAbort(const std::string& ip, int port);
-            void Start();
+            void set_message_callback(const MessageCallback& cb) { message_callback_ = cb; }
+            bool Run(const NetAddress& addr);
 
         private:
             void OnMessage();
@@ -40,8 +41,8 @@ namespace alpha {
         private:
             EventLoop * loop_;
             int fd_;
-            boost::scoped_ptr<Channel> channel_;
-            MessageCallback mcb_;
+            std::unique_ptr<Channel> channel_;
+            MessageCallback message_callback_;
     };
 }
 #endif   /* ----- #ifndef __UDP_LISTENER_H__  ----- */
