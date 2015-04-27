@@ -14,6 +14,8 @@
 #define  __MMAP_FILE_H__
 
 #include <string>
+#include <memory>
+#include "compiler.h"
 #include "slice.h"
 
 namespace alpha {
@@ -23,15 +25,18 @@ namespace alpha {
                 none = 0,
                 truncate = 1,
                 create_if_not_exists = 1 << 1,
-                zero_clear = 1 << 2
+                zero_clear = 1 << 2,
+                kDefault = 0,
+                kTruncate = 1 << 0,
+                kCreateIfNotExists = 1 << 1,
+                kZeroClear = 1 << 2,
             };
 
         public:
-            MMapFile(const alpha::Slice& path, size_t size, 
-                    int flags = none);
+            static std::unique_ptr<MMapFile> Open(Slice path, size_t size, int flags = none);
+            DISABLE_COPY_ASSIGNMENT(MMapFile);
             ~MMapFile();
 
-            bool Inited() const;
             bool newly_created() const {
                 return newly_created_;
             }
@@ -41,11 +46,8 @@ namespace alpha {
             size_t size() const;
 
         private:
-            MMapFile(const MMapFile&);
-            MMapFile& operator=(const MMapFile&);
-
-        private:
-            const std::string path_;
+            MMapFile();
+            std::string path_;
             size_t size_;
             int fd_;
             void * start_;

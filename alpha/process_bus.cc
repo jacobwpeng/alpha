@@ -25,8 +25,8 @@ namespace alpha {
         }
 
         std::unique_ptr<ProcessBus> bus (new ProcessBus);
-        bus->file_.reset (new MMapFile (filepath, size));
-        if (bus->file_->Inited() == false) {
+        bus->file_ =  std::move(MMapFile::Open(filepath, size));
+        if (bus->file_ == nullptr) {
             return nullptr;
         }
 
@@ -53,12 +53,12 @@ namespace alpha {
         }
 
         std::unique_ptr<ProcessBus> bus (new ProcessBus);
-        bus->file_.reset (new MMapFile (filepath, size,
+        bus->file_ = MMapFile::Open(filepath, size,
                           MMapFile::create_if_not_exists 
                               | MMapFile::truncate
-                              | MMapFile::zero_clear ));
+                              | MMapFile::zero_clear );
 
-        if (bus->file_->Inited() == false) {
+        if (bus->file_ == nullptr) {
             return nullptr;
         }
 

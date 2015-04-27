@@ -14,6 +14,7 @@
 #define  __SKIP_LIST_H__
 
 #include <cstdlib>
+#include <random>
 #include <iterator>
 #include <iostream>
 #include <type_traits>
@@ -60,16 +61,13 @@ namespace alpha {
                 LevelArray levels;
                 value_type val;
 
-                void RandomLevel() {
-                    level = ::rand() % kMaxLevel + 1;
-                }
-
                 NodeId next() const {
                     return levels[0];
                 }
             };
 
-            template<typename DerivedType, typename ContainerType, typename Pointer, typename Reference>
+            template<typename DerivedType, typename ContainerType, 
+                typename Pointer, typename Reference>
             class IteratorBase {
                 public:
                     DerivedType& operator++();
@@ -78,23 +76,30 @@ namespace alpha {
                     const DerivedType operator--(int);
                     Reference operator* () const;
                     Pointer operator-> () const;
-                    template<typename DerivedType2, typename ContainerType2, typename Pointer2, typename Reference2>
-                    bool operator == (const IteratorBase<DerivedType2, ContainerType2, Pointer2, Reference2> & rhs) const;
-                    template<typename DerivedType2, typename ContainerType2, typename Pointer2, typename Reference2>
-                    bool operator != (const IteratorBase<DerivedType2, ContainerType2, Pointer2, Reference2> & rhs) const;
+                    template<typename DerivedType2, typename ContainerType2, 
+                        typename Pointer2, typename Reference2>
+                    bool operator == (const IteratorBase<DerivedType2, 
+                            ContainerType2, Pointer2, Reference2> & rhs) const;
+                    template<typename DerivedType2, typename ContainerType2, 
+                        typename Pointer2, typename Reference2>
+                    bool operator != (const IteratorBase<DerivedType2, 
+                            ContainerType2, Pointer2, Reference2> & rhs) const;
                 protected:
-                    template<typename DerivedType2, typename ContainerType2, typename Pointer2, typename Reference2>
+                    template<typename DerivedType2, typename ContainerType2, 
+                        typename Pointer2, typename Reference2>
                     friend class IteratorBase;
                     IteratorBase(ContainerType* c, NodeId node_id);
                     ContainerType* c_;
                     NodeId node_id_;
             };
-            template<typename DerivedType, typename ContainerType, typename Pointer, typename Reference>
+            template<typename DerivedType, typename ContainerType, 
+                typename Pointer, typename Reference>
             friend class IteratorBase;
 
-            class ConstIterator : public std::iterator<std::bidirectional_iterator_tag, value_type>
-                                    , public IteratorBase<ConstIterator, const SkipList, 
-                                                            const value_type*, const value_type&> {
+            class ConstIterator : public std::iterator<
+                                      std::bidirectional_iterator_tag, value_type>
+                                , public IteratorBase<ConstIterator, const SkipList, 
+                                                    const value_type*, const value_type&> {
                 public:
                     ConstIterator();
                 private:
@@ -103,8 +108,10 @@ namespace alpha {
                     friend class Iterator;
             };
 
-            class Iterator : public std::iterator<std::bidirectional_iterator_tag, value_type>
-                                , public IteratorBase<Iterator, SkipList, value_type*, value_type&> {
+            class Iterator : public std::iterator<
+                                     std::bidirectional_iterator_tag, value_type>
+                                , public IteratorBase<Iterator, SkipList, 
+                                                    value_type*, value_type&> {
                 public:
                     Iterator();
                     Iterator(const ConstIterator&);
@@ -138,7 +145,7 @@ namespace alpha {
             void Dump() const;
 
         private:
-            SkipList() = default;
+            SkipList();
             void InitHeader();
             bool RestoreHeader(char* start, size_type size);
             NodeId PrevNode(NodeId node_id) const;
@@ -147,22 +154,27 @@ namespace alpha {
             NodeId FindNode(const key_type& key, NodeId* path) const;
             void EraseNode(NodeId node_id, NodeId* path);
             bool NotGoBefore(const key_type& key, NodeId node_id, bool* equal) const;
+            size_type RandomLevel() const;
 
             Header* header_;
 
         private:
-            key_compare comparator_;
             using MemoryListType = MemoryList<Node, size_type>;
+
+            std::random_device rd_;
+            std::mt19937 mt_;
+            std::uniform_int_distribution<int> dist_;
+            key_compare comparator_;
             std::unique_ptr<MemoryListType> nodes_;
 
             static_assert (std::is_same<NodeId, typename MemoryListType::NodeId>::value,
                     "type NodeId must be same as MemoryList<Node, size_type>::NodeId");
     };
 
-#define SkipListType                                                                          \
-    SkipList<Key, Value, kMaxLevel, Comparator,                                               \
-        typename std::enable_if<std::is_pod<Key>::value && std::is_pod<Value>::value          \
-              && !std::is_pointer<Key>::value && !std::is_pointer<Value>::value>::type>       \
+#define SkipListType                                                                      \
+    SkipList<Key, Value, kMaxLevel, Comparator,                                           \
+        typename std::enable_if<std::is_pod<Key>::value && std::is_pod<Value>::value      \
+              && !std::is_pointer<Key>::value && !std::is_pointer<Value>::value>::type>   \
 
 #define SizeType typename SkipListType::size_type
 #define IteratorType typename SkipListType::iterator
@@ -209,6 +221,11 @@ namespace alpha {
     }
 
     template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
+    SkipListType::SkipList()
+        :mt_(rd_()) {
+    }
+
+    template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
     void SkipListType::InitHeader() {
         header_->magic = kMagic;
         header_->max_level = kMaxLevel;
@@ -249,7 +266,8 @@ namespace alpha {
     }
 
     template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
-    std::pair<IteratorType, bool> SkipListType::insert (const std::pair<key_type, mapped_type>& p) {
+    std::pair<IteratorType, bool> SkipListType::insert (
+                const std::pair<key_type, mapped_type>& p) {
         LevelArray path;
         auto node_id = FindNode(p.first, path);
         bool exists;
@@ -261,7 +279,7 @@ namespace alpha {
             auto node = nodes_->Get(node_id);
             node->val.first = p.first;
             node->val.second = p.second;
-            node->RandomLevel();
+            node->level = RandomLevel();
             node->prev = path[0];
             for (auto level = 0; level < node->level; ++level) {
                 auto prev_node = nodes_->Get(path[level]);
@@ -366,7 +384,7 @@ namespace alpha {
 
     template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
     void SkipListType::Dump() const {
-        std::cout << "********************************************************************************\n";
+        std::cout << "************************************************************\n";
         for (auto node_id = header_->head; node_id != MemoryListType::kInvalidNodeId; ) {
             auto node = nodes_->Get(node_id);
             printf("id = %10d, prev = %10d, next = %10d, level = %10d, levels = [", 
@@ -479,21 +497,33 @@ namespace alpha {
         }
     }
 
+    template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
+    SizeType SkipListType::RandomLevel() const {
+        size_type level = 1;
+        while ((dist_(mt_) & 0xFFFF) < 0.25 * 0xFFFF) {
+            ++level;
+        }
+        return level < kMaxLevel ? level : kMaxLevel;
+    }
+
 #define IteratorBaseType IteratorBase<DerivedType, ContainerType, Pointer, Reference>
     template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
-    template<typename DerivedType, typename ContainerType, typename Pointer, typename Reference>
+    template<typename DerivedType, typename ContainerType, 
+        typename Pointer, typename Reference>
     SkipListType::IteratorBaseType::IteratorBase(ContainerType* c, NodeId node_id)
         :c_(c), node_id_(node_id) {
     }
 
     template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
-    template<typename DerivedType, typename ContainerType, typename Pointer, typename Reference>
+    template<typename DerivedType, typename ContainerType, 
+        typename Pointer, typename Reference>
     DerivedType& SkipListType::IteratorBaseType::operator++() {
         node_id_ = c_->NextNode(node_id_);
         return static_cast<DerivedType&>(*this);
     }
     template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
-    template<typename DerivedType, typename ContainerType, typename Pointer, typename Reference>
+    template<typename DerivedType, typename ContainerType, 
+        typename Pointer, typename Reference>
     const DerivedType SkipListType::IteratorBaseType::operator++(int) {
         auto res = static_cast<DerivedType&>(*this);
         ++*this;
@@ -501,14 +531,16 @@ namespace alpha {
     }
 
     template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
-    template<typename DerivedType, typename ContainerType, typename Pointer, typename Reference>
+    template<typename DerivedType, typename ContainerType, 
+        typename Pointer, typename Reference>
     DerivedType& SkipListType::IteratorBaseType::operator--() {
         node_id_ = c_->PrevNode(node_id_);
         return static_cast<DerivedType&>(*this);
     }
 
     template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
-    template<typename DerivedType, typename ContainerType, typename Pointer, typename Reference>
+    template<typename DerivedType, typename ContainerType, 
+        typename Pointer, typename Reference>
     const DerivedType SkipListType::IteratorBaseType::operator--(int) {
         auto res = static_cast<DerivedType&>(*this);
         --*this;
@@ -516,30 +548,38 @@ namespace alpha {
     }
 
     template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
-    template<typename DerivedType, typename ContainerType, typename Pointer, typename Reference>
+    template<typename DerivedType, typename ContainerType, 
+        typename Pointer, typename Reference>
     Reference SkipListType::IteratorBaseType::operator* () const {
         return c_->NodeValue(node_id_);
     }
 
     template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
-    template<typename DerivedType, typename ContainerType, typename Pointer, typename Reference>
+    template<typename DerivedType, typename ContainerType, 
+        typename Pointer, typename Reference>
     Pointer SkipListType::IteratorBaseType::operator-> () const {
         return &**this;
     }
 
     template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
-    template<typename DerivedType, typename ContainerType, typename Pointer, typename Reference>
-    template<typename DerivedType2, typename ContainerType2, typename Pointer2, typename Reference2>
+    template<typename DerivedType, typename ContainerType, 
+        typename Pointer, typename Reference>
+    template<typename DerivedType2, typename ContainerType2, 
+        typename Pointer2, typename Reference2>
     bool SkipListType::IteratorBaseType::operator == (
-            const IteratorBase<DerivedType2, ContainerType2, Pointer2, Reference2> & rhs) const {
+            const IteratorBase<DerivedType2, ContainerType2, Pointer2, Reference2> & rhs) 
+        const {
         return c_ == rhs.c_ && node_id_ == rhs.node_id_;
     }
 
     template<typename Key, typename Value, size_t kMaxLevel, typename Comparator>
-    template<typename DerivedType, typename ContainerType, typename Pointer, typename Reference>
-    template<typename DerivedType2, typename ContainerType2, typename Pointer2, typename Reference2>
+    template<typename DerivedType, typename ContainerType, 
+        typename Pointer, typename Reference>
+    template<typename DerivedType2, typename ContainerType2, 
+    typename Pointer2, typename Reference2>
     bool SkipListType::IteratorBaseType::operator != (
-            const IteratorBase<DerivedType2, ContainerType2, Pointer2, Reference2> & rhs) const {
+            const IteratorBase<DerivedType2, ContainerType2, Pointer2, Reference2> & rhs) 
+        const {
         return !(*this == rhs);
     }
 

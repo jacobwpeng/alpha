@@ -23,85 +23,86 @@
 #include <sys/mman.h>
 
 namespace alpha {
-    MMapFile::MMapFile(const alpha::Slice& path, size_t size, int flags)
-        :path_(path.ToString()), size_(size), fd_(-1), start_(NULL), 
-        newly_created_(false) {
-
+    std::unique_ptr<MMapFile> MMapFile::Open(Slice path, size_t size, int flags) {
         int open_flags = O_RDWR;
-        int fd = ::open(path_.data(), open_flags, 0644);
-        if (fd < 0) {
-            if (errno != ENOENT or not (flags & create_if_not_exists)) {
-                //perror("MMapFile open");
-                return;
+        const int kDefaultMode = 0644;
+        int fd = ::open(path.data(), size, kDefaultMode);
+        if (fd == -1) {
+            if (errno != ENOENT) {
+                ::perror("open");
+                return nullptr;
+            } else if (!(flags & kCreateIfNotExists)) {
+                return nullptr;
             }
         }
 
-        /* create if not exists */
-        if (fd < 0) {
+        bool newly_created = false;
+        if (fd == -1) {
+            assert (flags & kCreateIfNotExists);
             open_flags |= O_CREAT;
-            open_flags |= O_EXCL;               /* make sure it's not exists */
-            fd = ::open(path_.data(), open_flags, 0644);
-            if (fd < 0) {
-                //perror("MMapFile open create");
-                return;
+            open_flags |= O_EXCL;
+            fd = ::open(path.data(), open_flags, kDefaultMode);
+            if (fd == -1) {
+                ::perror("open");
+                return nullptr;
             }
-            newly_created_ = true;
+            newly_created = true;
         }
 
-        assert (fd >= 0);
-        if ((flags & truncate) or newly_created_) {
-            ::ftruncate(fd, size_);
-        }
-        else {
+        off_t real_size = size;
+        if ((flags & kTruncate) || newly_created) {
+            ::ftruncate(fd, real_size);
+        } else {
             struct stat sb;
             if (fstat(fd, &sb) < 0) {
                 close(fd);
                 //perror("MMapFile fstat");
-                return;
+                return nullptr;
             }
-            size_ = sb.st_size;
+            real_size = sb.st_size;
         }
 
-        void * mem = ::mmap(NULL, size_, PROT_READ | PROT_WRITE, 
+        void * mem = ::mmap(NULL, real_size, PROT_READ | PROT_WRITE,
                 MAP_SHARED, fd, 0);
         if (mem == MAP_FAILED) {
-            close(fd);
-            //perror("MMapFile mmap");
-            return;
+            ::close(fd);
+            perror("mmap");
+            return nullptr;
         }
 
-        if (flags & zero_clear) {
-            ::memset(mem, 0x0, size_);
+        if (flags & kZeroClear) {
+            ::memset(mem, 0x0, real_size);
         }
-        fd_ = fd;
-        start_ = mem;
+
+        std::unique_ptr<MMapFile> file(new MMapFile);
+        file->path_ = path.ToString();
+        file->size_ = real_size;
+        file->fd_ = fd;
+        file->start_ = mem;
+        file->newly_created_ = newly_created;
+        return std::move(file);
     }
 
     MMapFile::~MMapFile() {
-        if (Inited()) {
+        if (fd_ != -1) {
             ::munmap(start_, size_);
             close(fd_);
-            start_ =  NULL;
-            fd_ = -1;
         }
     }
 
-    bool MMapFile::Inited() const {
-        return fd_ >= 0 and start_ != NULL;
+    MMapFile::MMapFile()
+        :fd_(-1) {
     }
 
     void * MMapFile::start() const {
-        assert (Inited());
         return start_;
     }
 
     void * MMapFile::end() const {
-        assert (Inited());
         return reinterpret_cast<char*>(start_) + size_;
     }
 
     size_t MMapFile::size() const {
-        assert (Inited());
         return size_;
     }
 }
