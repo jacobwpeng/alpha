@@ -22,10 +22,6 @@ namespace alpha {
     class MMapFile {
         public:
             enum Flags {
-                none = 0,
-                truncate = 1,
-                create_if_not_exists = 1 << 1,
-                zero_clear = 1 << 2,
                 kDefault = 0,
                 kTruncate = 1 << 0,
                 kCreateIfNotExists = 1 << 1,
@@ -33,7 +29,8 @@ namespace alpha {
             };
 
         public:
-            static std::unique_ptr<MMapFile> Open(Slice path, size_t size, int flags = none);
+            static std::unique_ptr<MMapFile> Open(Slice path, size_t size,
+                    int flags = kDefault);
             DISABLE_COPY_ASSIGNMENT(MMapFile);
             ~MMapFile();
 

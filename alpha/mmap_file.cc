@@ -26,7 +26,7 @@ namespace alpha {
     std::unique_ptr<MMapFile> MMapFile::Open(Slice path, size_t size, int flags) {
         int open_flags = O_RDWR;
         const int kDefaultMode = 0644;
-        int fd = ::open(path.data(), size, kDefaultMode);
+        int fd = ::open(path.data(), open_flags, kDefaultMode);
         if (fd == -1) {
             if (errno != ENOENT) {
                 ::perror("open");
@@ -56,7 +56,7 @@ namespace alpha {
             struct stat sb;
             if (fstat(fd, &sb) < 0) {
                 close(fd);
-                //perror("MMapFile fstat");
+                perror("fstat");
                 return nullptr;
             }
             real_size = sb.st_size;
