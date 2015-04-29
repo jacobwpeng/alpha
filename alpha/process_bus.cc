@@ -54,9 +54,9 @@ namespace alpha {
 
         std::unique_ptr<ProcessBus> bus (new ProcessBus);
         bus->file_ = MMapFile::Open(filepath, size,
-                          MMapFile::create_if_not_exists 
-                              | MMapFile::truncate
-                              | MMapFile::zero_clear );
+                          MMapFile::kCreateIfNotExists
+                              | MMapFile::kTruncate
+                              | MMapFile::kZeroClear );
 
         if (bus->file_ == nullptr) {
             return nullptr;

@@ -25,6 +25,7 @@ namespace alpha {
     class NetAddress;
     class UdpListener {
         public:
+            static const size_t kOutputBufferSize = 1 << 16; //64KiB
             using MessageCallback = std::function<ssize_t (Slice data, char* out)>;;
 
         public:

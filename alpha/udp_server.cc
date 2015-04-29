@@ -18,6 +18,7 @@
 #include "udp_listener.h"
 
 namespace alpha {
+    const int UdpServer::kOutputBufferSize = kOutputBufferSize;
     UdpServer::UdpServer(EventLoop * loop)
         :loop_(loop) {
     }

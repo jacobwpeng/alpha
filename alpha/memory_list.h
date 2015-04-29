@@ -196,13 +196,13 @@ namespace alpha {
     bool MemoryListType::RestoreHeader(char* start, SizeType size, SizeType* capacity) {
         assert (size >= kMinBufferSize);
         header_ = reinterpret_cast<Header*>(start);
-        if (header_->magic != kMagic 
+        if (header_->magic != kMagic
                 || header_->node_size != kNodeSize
                 || header_->buffer_size != size) {
             return false;
         }
         auto expected_capacity = (header_->buffer_size - kMinBufferSize) / kNodeSize;
-        auto padding = (reinterpret_cast<uintptr_t>(end_) - 
+        SizeType padding = (reinterpret_cast<uintptr_t>(end_) -
                 reinterpret_cast<uintptr_t>(data_start_)) % kNodeSize;
 
         if (header_->padding != padding) {

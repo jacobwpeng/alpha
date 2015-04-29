@@ -53,7 +53,7 @@ namespace alpha {
     }
 
     void UdpListener::OnMessage() {
-        const size_t kMaxUdpMessageSize = 1 << 16; //64KiB
+        const int kMaxUdpMessageSize = kOutputBufferSize;
         char in[kMaxUdpMessageSize];
         char out[kMaxUdpMessageSize];
         struct sockaddr_in ca;

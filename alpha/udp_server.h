@@ -30,6 +30,7 @@ namespace alpha {
     class UdpServer {
         public:
             using MessageCallback = UdpListener::MessageCallback;
+            static const int kOutputBufferSize;
 
         public:
             UdpServer(EventLoop * loop);
