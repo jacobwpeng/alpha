@@ -13,6 +13,7 @@
 #include "coroutine.h"
 #include <cassert>
 #include <cstring>
+#include "logger.h"
 
 namespace alpha {
     __thread char shared_stack[Coroutine::kMaxStackSize];
@@ -45,17 +46,17 @@ namespace alpha {
     void Coroutine::Resume() {
         assert (IsSuspended());
         if (stack_.empty()) {
-            ucontext_t done_point;
-            getcontext(&done_point);
-
             if (IsDead()) {
                 /* Do cleanup */
             } else {
-                getcontext(&execution_point_);
-                execution_point_.uc_link = &done_point;
+                int err = getcontext(&execution_point_);
+                assert (err != -1);
+                (void)err;
+                execution_point_.uc_link = &yield_recovery_point_;
                 execution_point_.uc_stack.ss_sp = shared_stack;
                 execution_point_.uc_stack.ss_size = sizeof(shared_stack);
-                makecontext(&execution_point_, (void (*)(void)) Coroutine::InternalRoutine, 1, this);
+                auto routine = (void (*)(void)) Coroutine::InternalRoutine;
+                makecontext(&execution_point_, routine, 1, this);
                 status_ = Status::kRunning;
                 swapcontext(&yield_recovery_point_, &execution_point_);
             }

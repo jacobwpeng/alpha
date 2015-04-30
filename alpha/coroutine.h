@@ -25,7 +25,7 @@ namespace alpha {
                 kRunning = 2,
                 kDead = 3
             };
-            static const size_t kMaxStackSize = 1 << 13;
+            static const size_t kMaxStackSize = 1 << 23;
 
             Coroutine();
             virtual ~Coroutine();
