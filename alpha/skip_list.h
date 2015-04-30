@@ -442,11 +442,13 @@ namespace alpha {
         NodeId target = header_->tail;
         while (current_level >= 0) {
             bool equal;
+            assert (current_node->level >= current_level);
             while (current_level >= 0 
                     && NotGoBefore(key, current_node->levels[current_level], &equal)) {
                 if (equal) {
                     prev_node_id = current_node_id;
                     target = current_node->levels[current_level];
+                    break;
                 } else {
                     prev_node_id = current_node->levels[current_level];
                 }
