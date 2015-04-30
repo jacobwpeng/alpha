@@ -76,6 +76,9 @@ namespace alpha {
                 NetAddress PeerAddr() const {
                     return *peer_addr_;
                 }
+                TcpConnectionBuffer* ReadBuffer() {
+                    return &read_buffer_;
+                }
 
                 void SetPeerAddr(const NetAddress& addr);
 
