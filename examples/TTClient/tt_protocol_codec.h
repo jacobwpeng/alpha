@@ -76,14 +76,29 @@ namespace tokyotyrant {
     class ProtocolCodec {
         public:
             void AddUnit(ProtocolCodecUnit* unit);
+            //每次Process完成后外层传入的Buffer都应该加上一个ConsumedBytes的offset
+            //同时调用ClearConsumed
+            //eg:
+            //      char * data_from_somewhere;
+            //      int data_size;
+            //      int offset = 0;
+            //      ProtocolCodec codec;
+            //      while (1) {
+            //          auto err = codec.Process(data_from_somewhere + offset,
+            //                              data_size - offset);
+            //          if (err && err != kNeedsMore) return err;
+            //          offset += codec.ConsumedBytes();
+            //          assert (offset <= data_size);
+            //          codec.ClearConsumed();
+            //      }
             int Process(const uint8_t* buffer, int size);
             int ConsumedBytes() const;
             void ClearConsumed();
 
         private:
-            int current_pos_ = 0;
-            size_t current_unit_index_ = 0;
+            bool parsed_code_ = false;
             int consumed_ = 0;
+            size_t current_unit_index_ = 0;
             std::vector<ProtocolCodecUnit*> units_;
     };
 }

@@ -69,17 +69,20 @@ namespace tokyotyrant {
     }
 
     int ProtocolCodec::Process(const uint8_t* buffer, int size) {
-        if (current_pos_ == 0) {
+        int pos = 0;
+        if (!parsed_code_) {
             CodedInputStream stream(buffer, size);
             int8_t err;
             if (!stream.ReadBigEndianInt8(&err)) {
                 return CodecStatus::kNeedsMore;
-            } else if (err != kOk) {
-                ++consumed_;
-                return err;
             } else {
                 ++consumed_;
-                current_pos_ += sizeof(int8_t);
+                parsed_code_ = true;
+                if(err) {
+                    return err;
+                } else {
+                    pos += sizeof(int8_t);
+                }
             }
         }
 
@@ -87,11 +90,11 @@ namespace tokyotyrant {
             for (size_t idx = current_unit_index_; idx < units_.size(); ++idx) {
                 int consumed = 0;
                 auto unit = units_[idx];
-                auto status = unit->Process(buffer + current_pos_,
-                        size - current_pos_, &consumed);
+                auto status = unit->Process(buffer + pos,
+                        size - pos, &consumed);
                 switch(status) {
                     case CodecStatus::kOk:
-                        current_pos_ += consumed;
+                        pos += consumed;
                         consumed_ += consumed;
                         ++current_unit_index_;
                         break;
@@ -100,8 +103,8 @@ namespace tokyotyrant {
                 }
             }
         }
-        LOG_INFO << "size = " << size << ", current_pos_ = " << current_pos_;
-        return size == current_pos_ ? kOk : kNotConsumed;
+        LOG_INFO << "size = " << size << ", pos = " << pos;
+        return size == pos ? kOk : kNotConsumed;
     }
 
     int ProtocolCodec::ConsumedBytes() const {
@@ -109,7 +112,6 @@ namespace tokyotyrant {
     }
 
     void ProtocolCodec::ClearConsumed() {
-        current_pos_ = 0;
         consumed_ = 0;
     }
 }

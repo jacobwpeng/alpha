@@ -14,12 +14,16 @@
 #include <libgen.h>
 #include <map>
 #include <memory>
+#include <gflags/gflags.h>
 #include <alpha/slice.h>
 #include <alpha/logger.h>
 #include <alpha/event_loop.h>
 #include <alpha/coroutine.h>
 #include <alpha/tcp_client.h>
 #include "tt_client.h"
+
+DEFINE_string(server_ip, "10.6.224.81", "Remote tokyotyrant server ip");
+DEFINE_int32(server_port, 8080, "Remote tokyotyrant server port");
 
 class BackupCoroutine final : public alpha::Coroutine {
     public:
@@ -35,7 +39,7 @@ BackupCoroutine::BackupCoroutine(tokyotyrant::Client* client)
 }
 
 void BackupCoroutine::Routine() {
-    auto addr = alpha::NetAddress("10.6.224.81", 8080);
+    auto addr = alpha::NetAddress(FLAGS_server_ip, FLAGS_server_port);
     if (!client_->Connected()) {
         bool ok = client_->Connnect(addr);
         if (!ok) {
@@ -75,6 +79,9 @@ void BackupRoutine(alpha::EventLoop* loop, const std::string& key,
 }
 
 int main(int argc, char* argv[]) {
+    std::string usage = "Show remote tokyotyrant server stat";
+    gflags::SetUsageMessage(usage);
+    gflags::ParseCommandLineFlags(&argc, &argv, false);
     std::string key = basename(argv[0]);
     std::string value = argv[0];
     alpha::Logger::Init(argv[0], alpha::Logger::LogToStderr);
