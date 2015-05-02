@@ -17,24 +17,8 @@
 #include <alpha/tcp_client.h>
 #include <alpha/coroutine.h>
 #include <alpha/net_address.h>
+#include <alpha/format.h>
 #include "tt_protocol_codec.h"
-void hexdump(const void *ptr, int buflen) {
-  const unsigned char *buf = (unsigned char*)ptr;
-  int i, j;
-  for (i=0; i<buflen; i+=16) {
-    printf("%06x: ", i);
-    for (j=0; j<16; j++) 
-      if (i+j < buflen)
-        printf("%02x ", buf[i+j]);
-      else
-        printf("   ");
-    printf(" ");
-    for (j=0; j<16; j++) 
-      if (i+j < buflen)
-        printf("%c", isprint(buf[i+j]) ? buf[i+j] : '.');
-    printf("\n");
-  }
-}
 
 namespace tokyotyrant {
     Client::Client(alpha::EventLoop* loop)
@@ -60,7 +44,6 @@ namespace tokyotyrant {
             tcp_client_->ConnectTo(addr);
             state_ = ConnectionState::kConnecting;
             co_->Yield();
-            LOG_INFO_IF(!Connected()) << "Connect failed";
             return Connected() ? kOk : kRefused;
         }
     }
@@ -226,7 +209,7 @@ namespace tokyotyrant {
     }
 
     void Client::OnConnected(alpha::TcpConnectionPtr conn) {
-        LOG_INFO << "Connected to " << conn->PeerAddr();
+        DLOG_INFO << "Connected to " << conn->PeerAddr();
         using namespace std::placeholders;
         conn_ = conn;
         conn_->SetOnRead(std::bind(&Client::OnMessage, this, _1, _2));
@@ -243,9 +226,8 @@ namespace tokyotyrant {
     void Client::OnMessage(alpha::TcpConnectionPtr conn, 
             alpha::TcpConnectionBuffer* buffer) {
         assert (conn == conn_);
-        DLOG_INFO << "New data, size = " << buffer->Read().size();
-        //auto data = buffer->Read();
-        //hexdump(data.data(), data.size());
+        auto data = buffer->Read();
+        DLOG_INFO << "size = " << data.size() << ", data = \n" << alpha::HexDump(data);
         co_->Resume();
     }
 
@@ -298,10 +280,10 @@ namespace tokyotyrant {
             alpha::Slice data = conn_->ReadBuffer()->Read();
             auto buffer = reinterpret_cast<const uint8_t*>(data.data());
             status = static_cast<CodecStatus>(codec->Decode(buffer, data.size()));
-            LOG_INFO << "status = " << status;
+            DLOG_INFO << "Decode return status = " << status;
             if (status == 0 || status == kNeedsMore) {
                 auto nbytes = codec->ConsumedBytes();
-                LOG_INFO << "ConsumedBytes = " << nbytes;
+                DLOG_INFO << "ConsumedBytes = " << nbytes;
                 codec->ClearConsumed();
                 conn_->ReadBuffer()->ConsumeBytes(nbytes);
             } else {
@@ -317,7 +299,7 @@ namespace tokyotyrant {
         if (status == 1 || status == 0) {
             return status;
         } else {
-            LOG_INFO << "kMiscellaneous, status = " << status;
+            LOG_WARNING << "kMiscellaneous, status = " << status;
             return kMiscellaneous;
         }
     }
