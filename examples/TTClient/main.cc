@@ -14,6 +14,7 @@
 #include <libgen.h>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <gflags/gflags.h>
 #include <alpha/slice.h>
 #include <alpha/logger.h>
@@ -41,19 +42,98 @@ BackupCoroutine::BackupCoroutine(tokyotyrant::Client* client)
 void BackupCoroutine::Routine() {
     auto addr = alpha::NetAddress(FLAGS_server_ip, FLAGS_server_port);
     if (!client_->Connected()) {
-        bool ok = client_->Connnect(addr);
-        if (!ok) {
+        auto err = client_->Connnect(addr);
+        if (err) {
             LOG_ERROR << "Connnect to " << addr << " failed.";
             return;
         }
     }
-    std::string stat;
-    int err = client_->Stat(&stat);
-    if (err) {
-        LOG_WARNING << "Stat failed, err = " << err;
-    } else {
-        LOG_INFO << "stat = \n" << stat;
+
+    auto it = client_->NewIterator();
+    int rnum = 0;
+    while (it->status() == tokyotyrant::kSuccess) {
+        LOG_INFO << "New key, size = " << it->key().size()
+            << " rnum = " << rnum;
+        it->Next();
+        ++rnum;
     }
+    LOG_INFO << "rnum = " << rnum << ", status = " << it->status();
+
+    {
+        int64_t rnum;
+        int err = client_->RecordNumber(&rnum);
+        if (err) {
+            LOG_WARNING << "Get RecordNumber failed, err = " << err;
+        } else {
+            LOG_INFO << "rnum = " << rnum;
+        }
+    }
+
+#if 0
+    int err = 0;
+    alpha::Slice key("2191195");
+    int32_t vsize;
+    int64_t rnum;
+
+    err = client_->RecordNumber(&rnum);
+    if (err) {
+        LOG_WARNING << "Get RecordNumber failed, err = " << err;
+    } else {
+        LOG_INFO << "rnum = " << rnum;
+    }
+
+    err = client_->ValueSize(key, &vsize);
+    if (err && err != tokyotyrant::kNoRecord) {
+        LOG_WARNING << "VSize failed, err = " << err;
+    } else if (err == tokyotyrant::kNoRecord) {
+        LOG_INFO << "No record of key 2191195";
+    } else {
+        LOG_INFO << "Size = " << vsize;
+    }
+
+    std::string val;
+    err = client_->Get(key, &val);
+    if (err && err != tokyotyrant::kNoRecord) {
+        LOG_WARNING << "Get failed, err = " << err;
+    } else if (err == tokyotyrant::kNoRecord) {
+        LOG_INFO << "No record of key 2191195";
+    } else {
+        LOG_INFO << "val = " << val;
+    }
+
+    std::ostringstream oss;
+    oss << alpha::Now();
+
+    err = client_->Put(key, oss.str());
+    if (err) {
+        LOG_WARNING << "Put failed, err = " << err;
+    } else {
+        LOG_INFO << "Put done";
+    }
+
+    err = client_->RecordNumber(&rnum);
+    if (err) {
+        LOG_WARNING << "Get RecordNumber failed, err = " << err;
+    } else {
+        LOG_INFO << "rnum = " << rnum;
+    }
+
+    err = client_->ValueSize(key, &vsize);
+    if (err && err != tokyotyrant::kNoRecord) {
+        LOG_WARNING << "VSize failed, err = " << err;
+    } else if (err == tokyotyrant::kNoRecord) {
+        LOG_INFO << "No record of key 2191195";
+    } else {
+        LOG_INFO << "Size = " << vsize;
+    }
+
+    err = client_->Out(key);
+    if (err) {
+        LOG_WARNING << "Out failed, err = " << err;
+    } else {
+        LOG_INFO << "Out done";
+    }
+#endif
 }
 
 void BackupRoutine(alpha::EventLoop* loop, const std::string& key, 
@@ -87,7 +167,7 @@ int main(int argc, char* argv[]) {
     alpha::Logger::Init(argv[0], alpha::Logger::LogToStderr);
 
     alpha::EventLoop loop;
-    loop.RunEvery(1000, std::bind(BackupRoutine, &loop, key, value));
+    loop.RunAfter(500, std::bind(BackupRoutine, &loop, key, value));
     loop.Run();
     return EXIT_SUCCESS;
 }

@@ -24,18 +24,41 @@ namespace alpha {
 }
 
 namespace tokyotyrant {
+    class ProtocolCodec;
+    enum Code {
+        kSuccess = 0,
+        kInvalidOperation = 1,
+        kNoHost = 2,
+        kRefused = 3,
+        kSendError = 4,
+        kRecvError = 5,
+        kExisting = 6,
+        kNoRecord = 7,
+        kMiscellaneous = 9999
+    };
+
+    class Iterator;
     class Client {
         public:
-            enum Code {
-                kOk = 1,
-                kConn = 100,
-            };
+            using MatchKeysCallback = std::function<void(alpha::Slice)>;
             Client(alpha::EventLoop* loop);
+            ~Client();
             void SetCoroutine(alpha::Coroutine* co);
-            bool Connnect(const alpha::NetAddress& addr);
+            int Connnect(const alpha::NetAddress& addr);
             bool Connected() const;
-            //int Put(alpha::Slice key, alpha::Slice value);
+            int Put(alpha::Slice key, alpha::Slice value);
+            int PutKeep(alpha::Slice key, alpha::Slice value);
+            int PutCat(alpha::Slice key, alpha::Slice value);
+            int PutNR(alpha::Slice key, alpha::Slice value);
+            int Out(alpha::Slice key);
+            int Get(alpha::Slice key, std::string* val);
             int Stat(std::string* stat);
+            int ValueSize(alpha::Slice key, int32_t* size);
+            int RecordNumber(int64_t* rnum);
+            std::unique_ptr<Iterator> NewIterator();
+            int GetForwardMatchKeys(alpha::Slice key, int max_size, MatchKeysCallback cb);
+            //Iterator GetForwardMatchKeys(alpha::Slice key);
+            //int GetIterator(alpha::Slice key);
 
         private:
             enum class ConnectionState {
@@ -48,6 +71,14 @@ namespace tokyotyrant {
             void OnDisconnected(alpha::TcpConnectionPtr conn);
             void OnMessage(alpha::TcpConnectionPtr conn, alpha::TcpConnectionBuffer* buffer);
             void OnTimeout();
+
+            void Next(Iterator* it);
+            std::unique_ptr<ProtocolCodec> CreateCodec(int magic);
+            int Request(ProtocolCodec* codec);
+            size_t MaxBytesCanWrite();
+            bool Write(const uint8_t* buffer, int size);
+
+            friend class Iterator;
             bool connect_error_;
             alpha::EventLoop* loop_;
             alpha::Coroutine* co_;
@@ -55,6 +86,20 @@ namespace tokyotyrant {
             ConnectionState state_;
             std::unique_ptr<alpha::NetAddress> addr_;
             std::unique_ptr<alpha::TcpClient> tcp_client_;
+    };
+
+    class Iterator {
+        public:
+            void Next();
+            std::string key() const;
+            int status() const;
+
+        private:
+            Iterator(Client* client);
+            friend class Client;
+            Client* client_;
+            int status_ = kSuccess;
+            std::string key_;
     };
 }
 
