@@ -43,7 +43,7 @@ namespace alpha {
 
             void Run();
             void Quit();
-            void QueueInLoop(const Functor& functors);
+            void QueueInLoop(const Functor& functor);
             void UpdateChannel(Channel * channel);
             void RemoveChannel(Channel * channel);
 

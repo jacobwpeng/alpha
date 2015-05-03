@@ -63,6 +63,9 @@ namespace alpha
             ++iteration_;
             DLOG_INFO_IF(!channels.empty()) << "channels.size() = " << channels.size()
                 << ", now = " << now;
+            std::vector<Functor> queued_functors;
+            std::swap(queued_functors, queued_functors_);
+
             //再处理网络消息
             std::for_each(channels.begin(), channels.end(), [](Channel* channel){
                     channel->HandleEvents();
@@ -76,8 +79,6 @@ namespace alpha
             }
             
             //再处理延时调用函数
-            std::vector<Functor> queued_functors;
-            std::swap(queued_functors, queued_functors_);
             std::for_each(queued_functors.begin(), queued_functors.end(), 
                     [](const Functor& f){ f(); });
 
