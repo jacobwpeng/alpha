@@ -47,11 +47,15 @@ namespace alpha {
 
             Slice subslice(size_t pos = 0, size_t len = npos);
 
-            bool empty() const { return buf_ == NULL; }
+            bool empty() const { return buf_ == NULL || len_ == 0; }
             const char * data() const { return buf_; }
             size_t size() const { return len_; }
             /* KMP style find using next array */
             size_t find(const Slice& s) const;
+            bool StartsWith(Slice prefix) const;
+            bool EndsWith(Slice suffix) const;
+            Slice RemovePrefix(size_t n) const;
+            Slice RemoveSuffix(size_t n) const;
 
             std::string ToString() const;
 

@@ -106,6 +106,26 @@ namespace alpha {
         }
     }
 
+    bool Slice::StartsWith(alpha::Slice prefix) const {
+        return len_ >= prefix.len_
+            && memcmp(buf_, prefix.buf_, prefix.len_) == 0;
+    }
+
+    bool Slice::EndsWith(Slice suffix) const {
+        return len_ >= suffix.len_
+            && memcmp(buf_ + len_ - suffix.len_, suffix.buf_, suffix.len_) == 0;
+    }
+
+    Slice Slice::RemovePrefix(size_t n) const {
+        assert (size() >= n);
+        return Slice(buf_ + n, len_ - n);
+    }
+
+    Slice Slice::RemoveSuffix(size_t n) const {
+        assert (size() >= n);
+        return Slice(buf_, len_ - n);
+    }
+
     std::string Slice::ToString() const {
         return std::string (buf_, len_);
     }
