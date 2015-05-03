@@ -31,7 +31,8 @@ namespace alpha {
         :log_level_(level), logger_output_(output) {
         }
 
-    void Logger::Init(const char* prog_name, Logger::LoggerOutput output) {
+    void Logger::Init(const char* prog_name, Logger::LoggerOutput output
+            , LogLevel level) {
         if (output == nullptr) {
             std::string basename(prog_name);
             auto pos = basename.rfind("/");
@@ -42,13 +43,13 @@ namespace alpha {
             using namespace std::placeholders;
             output = std::bind(&LoggerFile::Write, &file, _1, _2, _3);
         }
-        static Logger logger(LogLevel::Debug, output);
+        static Logger logger(level, output);
         instance_ = &logger;
         prog_name_ = prog_name;
-        LogLevelNames_[0] = "ERROR";
-        LogLevelNames_[1] = "WARN";
-        LogLevelNames_[2] = "INFO";
-        LogLevelNames_[3] = "DEBUG";
+        LogLevelNames_[0] = "FATAL";
+        LogLevelNames_[1] = "ERROR";
+        LogLevelNames_[2] = "WARN";
+        LogLevelNames_[3] = "INFO";
     }
 
     const char* Logger::GetLogLevelName(int level) {
