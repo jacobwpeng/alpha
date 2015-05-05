@@ -20,6 +20,7 @@ namespace alpha {
     class TcpConnectionBuffer {
         public:
             TcpConnectionBuffer();
+            ~TcpConnectionBuffer();
 
             //不触发扩容的写
             size_t GetContiguousSpace() const;
@@ -28,6 +29,7 @@ namespace alpha {
 
             //写入(可能会扩容, 超限返回false)
             bool Append(const alpha::Slice& data);
+            int SpaceBeforeFull() const;
 
             alpha::Slice Read() const;
             size_t ReadAndClear(char* buf, size_t len);
@@ -38,10 +40,10 @@ namespace alpha {
             void CheckIndex() const;
 
             static const size_t kDefaultBufferSize = 1 << 16; // 64KiB
-            static const size_t kMaxBufferSize = 1 << 20; // 1MiB
+            static const size_t kMaxBufferSize;
             std::vector<char> internal_buffer_;
-            size_t read_index_;
-            size_t write_index_;
+            size_t read_index_ = 0;
+            size_t write_index_ = 0;
     };
 }
 

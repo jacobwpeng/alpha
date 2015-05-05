@@ -16,9 +16,12 @@
 #include "compiler.h"
 
 namespace alpha {
+    const size_t TcpConnectionBuffer::kMaxBufferSize = 1 << 20; // 1MiB
     TcpConnectionBuffer::TcpConnectionBuffer()
-        :internal_buffer_(kDefaultBufferSize), read_index_(0), write_index_(0) {
+        :internal_buffer_(kDefaultBufferSize) {
     }
+
+    TcpConnectionBuffer::~TcpConnectionBuffer() = default;
 
     size_t TcpConnectionBuffer::GetContiguousSpace() const {
         CheckIndex();
@@ -43,6 +46,10 @@ namespace alpha {
         ::memcpy(WriteBegin(), data.data(), data.size());
         AddBytes(data.size());
         return true;
+    }
+
+    int TcpConnectionBuffer::SpaceBeforeFull() const {
+        return kMaxBufferSize - internal_buffer_.size() + GetContiguousSpace();
     }
 
     alpha::Slice TcpConnectionBuffer::Read() const {
@@ -74,16 +81,17 @@ namespace alpha {
         size_t space_left = GetContiguousSpace();
         if (space_left < n) {
             size_t space_more = (n - space_left) * 2;
-            if (unlikely(internal_buffer_.size() + space_more > kMaxBufferSize)) {
+            auto new_size = std::min(kMaxBufferSize, internal_buffer_.size() + space_more);
+            if (unlikely(new_size - internal_buffer_.size() + space_left < n)) {
                 return false;
             }
-            internal_buffer_.resize (internal_buffer_.size() + space_more);
+            internal_buffer_.resize (new_size);
         }
         return true;
     }
 
     void TcpConnectionBuffer::CheckIndex() const {
         assert (read_index_ <= write_index_);
-        assert (write_index_ < internal_buffer_.size());
+        assert (write_index_ <= internal_buffer_.size());
     }
 }
