@@ -40,6 +40,7 @@ namespace alpha {
                     std::function<void(TcpConnectionPtr, TcpConnectionBuffer* buf)>;
                 using CloseCallback = std::function<void(int)>;
                 using ConnectErrorCallback = std::function<void(TcpConnectionPtr)>;
+                using WriteDoneCallback = std::function<void(TcpConnectionPtr)>;
 
                 TcpConnection(EventLoop* loop, int fd, State state);
                 ~TcpConnection();
@@ -56,6 +57,9 @@ namespace alpha {
                 }
                 void SetOnConnectError(const ConnectErrorCallback& cb) {
                     connect_error_callback_ = cb;
+                }
+                void SetOnWriteDone(const WriteDoneCallback& cb) {
+                    write_done_callback_ = cb;
                 }
 
                 void SetContext( const Context & ctx ) { ctx_ = ctx; }
@@ -79,7 +83,10 @@ namespace alpha {
                 TcpConnectionBuffer* ReadBuffer() {
                     return &read_buffer_;
                 }
-
+                TcpConnectionBuffer* WriteBuffer() {
+                    return &write_buffer_;
+                }
+                int BytesCanBytes() const;
                 void SetPeerAddr(const NetAddress& addr);
 
             private:
@@ -105,6 +112,7 @@ namespace alpha {
                 ReadCallback read_callback_;
                 CloseCallback close_callback_;
                 ConnectErrorCallback connect_error_callback_;
+                WriteDoneCallback write_done_callback_;
                 Context ctx_;
     };
 }

@@ -122,11 +122,12 @@ namespace alpha {
 
     void TcpConnection::WriteToPeer() {
         alpha::Slice data = write_buffer_.Read();
+        const char* buffer = data.data();
         size_t bytes = data.size();
 
         while (bytes != 0) {
             //TODO: 使用writev调整Buffer写入策略，同时快速递送消息
-            ssize_t nbytes = ::write(fd_, data.data(), bytes);
+            ssize_t nbytes = ::write(fd_, buffer, bytes);
             if (nbytes == -1) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     //写满了
@@ -141,11 +142,15 @@ namespace alpha {
             }
             write_buffer_.ConsumeBytes(nbytes);
             bytes -= nbytes;
+            buffer += nbytes;
             DLOG_INFO << "Write " << nbytes << " bytes to " << *peer_addr_;
         }
 
         if (bytes == 0) {
             channel_->DisableWriting();
+            if (write_done_callback_) {
+                write_done_callback_(shared_from_this());
+            }
         }
     }
 
@@ -173,6 +178,10 @@ namespace alpha {
         } else {
             SetPeerAddr(NetAddress::GetPeerAddr(fd_));
         }
+    }
+
+    int TcpConnection::BytesCanBytes() const {
+        return write_buffer_.SpaceBeforeFull();
     }
 
     void TcpConnection::SetPeerAddr(const alpha::NetAddress& addr) {
