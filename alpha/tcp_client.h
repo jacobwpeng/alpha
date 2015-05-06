@@ -13,9 +13,12 @@
 #ifndef  __TCP_CLIENT_H__
 #define  __TCP_CLIENT_H__
 
-#include "compiler.h"
-#include "tcp_connection.h"
 #include <map>
+#include <set>
+#include "compiler.h"
+#include "net_address.h"
+#include "tcp_connection.h"
+#include "timer_manager.h"
 
 namespace alpha {
     class Channel;
@@ -32,7 +35,7 @@ namespace alpha {
             ~TcpClient();
             DISABLE_COPY_ASSIGNMENT(TcpClient);
 
-            void ConnectTo(const NetAddress& addr);
+            void ConnectTo(const NetAddress& addr, bool auto_reconnect = false);
             void SetOnConnected(const ConnectedCallback& cb) {
                 connected_callback_ = cb;
             }
@@ -46,10 +49,18 @@ namespace alpha {
             void OnConnected(int fd);
             void OnClose(int fd);
             void OnConnectError(const NetAddress&);
+            void MaybeReconnect(const NetAddress& addr);
+            void RemoveAutoReconnect(const NetAddress& addr);
 
+            static const int kDefaultReconnectInterval = 1000; //ms
             using TcpConnectionMap = std::map<int, TcpConnectionPtr>;
+            using ReconnectAddressSet = std::set<NetAddress>;
+            using ReconnectTimerIdMap = std::map<NetAddress, TimerManager::TimerId>;
+            int reconnect_interval_ = kDefaultReconnectInterval;
             EventLoop* loop_;
             TcpConnectionMap connections_;
+            ReconnectAddressSet auto_reconnect_addresses_;
+            ReconnectTimerIdMap auto_reconnect_timer_ids_;
             std::unique_ptr<TcpConnector> connector_;
             ConnectedCallback connected_callback_;
             CloseCallback close_callback_;

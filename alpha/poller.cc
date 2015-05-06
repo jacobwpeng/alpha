@@ -26,6 +26,7 @@ namespace alpha {
 
     Poller::~Poller() {
         if (epoll_fd_ >= 0) ::close(epoll_fd_);
+        DLOG_INFO << "Poller destroied";
     }
 
     alpha::TimeStamp Poller::Poll(int timeout_in_ms, 

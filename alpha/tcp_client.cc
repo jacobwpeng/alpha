@@ -34,10 +34,19 @@ namespace alpha {
         for (auto & p : connections_) {
             ::close(p.first);
         }
+
+        for (const auto& p: auto_reconnect_timer_ids_) {
+            loop_->RemoveTimer(p.second);
+        }
     }
 
-    void TcpClient::ConnectTo(const NetAddress& addr) {
+    void TcpClient::ConnectTo(const NetAddress& addr, bool auto_reconnect) {
         loop_->QueueInLoop(std::bind(&TcpConnector::ConnectTo, connector_.get(), addr));
+        if (auto_reconnect) {
+            auto_reconnect_addresses_.insert(addr);
+        } else {
+            RemoveAutoReconnect(addr);
+        }
     }
 
     void TcpClient::OnConnected(int fd) {
@@ -61,11 +70,44 @@ namespace alpha {
         if (close_callback_) {
             close_callback_(conn);
         }
+        MaybeReconnect(conn->PeerAddr());
     }
 
     void TcpClient::OnConnectError(const NetAddress& addr) {
         if (connect_error_callback_) {
             connect_error_callback_(addr);
+        }
+        DLOG_INFO << "MaybeReconnect, addr = " << addr;
+        MaybeReconnect(addr);
+    }
+
+
+    void TcpClient::MaybeReconnect(const NetAddress& addr) {
+        if (auto_reconnect_addresses_.find(addr) != auto_reconnect_addresses_.end()) {
+            DLOG_INFO << "Connect to " << addr << " failed, try to reconnect";
+            auto timer_id = loop_->RunAfter(reconnect_interval_
+                                , std::bind(&TcpClient::ConnectTo, this, addr, true));
+            auto it = auto_reconnect_timer_ids_.find(addr);
+            if (it == auto_reconnect_timer_ids_.end()) {
+                auto_reconnect_timer_ids_.insert(std::make_pair(addr, timer_id));
+            } else {
+                it->second = timer_id;
+            }
+        } else {
+            DLOG_INFO << "Giveup reconnect to addr";
+        }
+    }
+
+    void TcpClient::RemoveAutoReconnect(const NetAddress& addr) {
+        DLOG_INFO << "RemoveAutoReconnect, addr = " << addr;
+        auto it = auto_reconnect_addresses_.find(addr);
+        if (it != auto_reconnect_addresses_.end()) {
+            auto_reconnect_addresses_.erase(it);
+        }
+
+        auto timer_iter = auto_reconnect_timer_ids_.find(addr);
+        if (timer_iter != auto_reconnect_timer_ids_.end()) {
+            loop_->RemoveTimer(timer_iter->second);
         }
     }
 }
