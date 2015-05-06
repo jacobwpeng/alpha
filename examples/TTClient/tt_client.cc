@@ -40,7 +40,7 @@ namespace tokyotyrant {
             return false;
         } else {
             addr_.reset (new alpha::NetAddress(addr));
-            tcp_client_->ConnectTo(addr);
+            tcp_client_->ConnectTo(addr, true);
             state_ = ConnectionState::kConnecting;
             co_->Yield();
             return Connected() ? kOk : kRefused;
@@ -52,7 +52,7 @@ namespace tokyotyrant {
     }
 
     int Client::Put(alpha::Slice key, alpha::Slice value) {
-        if (state_ == ConnectionState::kDisconnected) {
+        if (ConnectionError()) {
             return kInvalidOperation;
         }
         const int16_t kMagic = 0xC810;
@@ -64,7 +64,7 @@ namespace tokyotyrant {
     }
 
     int Client::PutKeep(alpha::Slice key, alpha::Slice value) {
-        if (state_ == ConnectionState::kDisconnected) {
+        if (ConnectionError()) {
             return kInvalidOperation;
         }
         const int16_t kMagic = 0xC811;
@@ -81,7 +81,7 @@ namespace tokyotyrant {
     }
 
     int Client::PutCat(alpha::Slice key, alpha::Slice value) {
-        if (state_ == ConnectionState::kDisconnected) {
+        if (ConnectionError()) {
             return kInvalidOperation;
         }
         const int16_t kMagic = 0xC812;
@@ -93,7 +93,7 @@ namespace tokyotyrant {
     }
 
     int Client::PutNR(alpha::Slice key, alpha::Slice value) {
-        if (state_ == ConnectionState::kDisconnected) {
+        if (ConnectionError()) {
             return kInvalidOperation;
         }
         const int16_t kMagic = 0xC818;
@@ -106,7 +106,7 @@ namespace tokyotyrant {
     }
 
     int Client::Out(alpha::Slice key) {
-        if (state_ == ConnectionState::kDisconnected) {
+        if (ConnectionError()) {
             return kInvalidOperation;
         }
         const int16_t kMagic = 0xC820;
@@ -118,7 +118,7 @@ namespace tokyotyrant {
     }
 
     int Client::Vanish() {
-        if (state_ == ConnectionState::kDisconnected) {
+        if (ConnectionError()) {
             return kInvalidOperation;
         }
         const int16_t kMagic = 0xC872;
@@ -128,7 +128,7 @@ namespace tokyotyrant {
 
     int Client::Get(alpha::Slice key, std::string* val) {
         assert (val);
-        if (state_ == ConnectionState::kDisconnected) {
+        if (ConnectionError()) {
             return kInvalidOperation;
         }
         const int16_t kMagic = 0xC830;
@@ -147,7 +147,7 @@ namespace tokyotyrant {
     }
 
     int Client::Stat(std::string* stat) {
-        if (state_ == ConnectionState::kDisconnected) {
+        if (ConnectionError()) {
             return kInvalidOperation;
         }
         const int16_t kMagic = 0xC888;
@@ -159,7 +159,7 @@ namespace tokyotyrant {
 
     int Client::ValueSize(alpha::Slice key, int32_t* size) {
         assert (size);
-        if (state_ == ConnectionState::kDisconnected) {
+        if (ConnectionError()) {
             return kInvalidOperation;
         }
         const int16_t kMagic = 0xC838;
@@ -174,7 +174,7 @@ namespace tokyotyrant {
 
     int Client::RecordNumber(int64_t* rnum) {
         assert (rnum);
-        if (state_ == ConnectionState::kDisconnected) {
+        if (ConnectionError()) {
             return kInvalidOperation;
         }
         const int16_t kMagic = 0xC880;
@@ -186,7 +186,7 @@ namespace tokyotyrant {
     }
 
     std::unique_ptr<Iterator> Client::NewIterator() {
-        if (state_ == ConnectionState::kDisconnected) {
+        if (ConnectionError()) {
             return nullptr;
         }
         const int16_t kMagic = 0xC850;
@@ -207,7 +207,7 @@ namespace tokyotyrant {
 
     void Client::OnConnectError(const alpha::NetAddress& addr) {
         assert (addr_ && *addr_ == addr);
-        state_ = ConnectionState::kDisconnected;
+        ResetConnection();
         LOG_WARNING << "Connect to " << addr << " failed";
         co_->Resume();
     }
@@ -219,13 +219,15 @@ namespace tokyotyrant {
         conn_->SetOnRead(std::bind(&Client::OnMessage, this, _1, _2));
         conn_->SetOnWriteDone(std::bind(&Client::OnWriteDone, this, _1));
         state_ = ConnectionState::kConnected;
+        expired_ = false; //干掉超时造成的重连标志
         co_->Resume();
     }
 
     void Client::OnDisconnected(alpha::TcpConnectionPtr conn) {
         assert (conn_ == conn);
-        state_ = ConnectionState::kDisconnected;
-        conn_.reset();
+        ResetConnection();
+        LOG_WARNING << "Connection to Remote server closed, addr = " << *addr_;
+        co_->Resume();
     }
 
     void Client::OnMessage(alpha::TcpConnectionPtr conn, 
@@ -243,6 +245,21 @@ namespace tokyotyrant {
     }
 
     void Client::OnTimeout() {
+        expired_ = true;
+        conn_->Close();
+        conn_.reset();
+    }
+
+    void Client::ResetConnection() {
+        if (conn_ && !conn_->closed()) {
+            conn_->Close();
+        }
+        conn_.reset();
+        state_ = ConnectionState::kDisconnected;
+    }
+
+    bool Client::ConnectionError() const {
+        return conn_ == nullptr || conn_->closed();
     }
 
     void Client::Next(Iterator* it) {
@@ -273,10 +290,15 @@ namespace tokyotyrant {
         const auto magic = codec->magic();
         DLOG_INFO << "codec->magic() = " << magic;
         while (!codec->Encode()) {
-            if (unlikely(conn_ == nullptr || conn_->closed())) {
+            if (unlikely(ConnectionError())) {
                 return kSendError;
             } else {
                 co_->Yield();
+                if (unlikely(expired_)) {
+                    return kTimeout;
+                } else if (unlikely(ConnectionError())) {
+                    return kSendError;
+                }
             }
         }
         DLOG_INFO << "Encode done";
@@ -301,6 +323,11 @@ namespace tokyotyrant {
                     return kOk;
                 } else {
                     co_->Yield();
+                    if (unlikely(expired_)) {
+                        return kTimeout;
+                    } else if (unlikely(ConnectionError())) {
+                        return kRecvError;
+                    }
                 }
             }
         }

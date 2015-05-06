@@ -34,6 +34,7 @@ namespace tokyotyrant {
         kRecvError = 5,
         kExisting = 6,
         kNoRecord = 7,
+        kTimeout = 8,
         kMiscellaneous = 9999
     };
 
@@ -111,6 +112,8 @@ namespace tokyotyrant {
             void OnMessage(alpha::TcpConnectionPtr conn, alpha::TcpConnectionBuffer* buffer);
             void OnWriteDone(alpha::TcpConnectionPtr conn);
             void OnTimeout();
+            void ResetConnection();
+            bool ConnectionError() const;
 
             void Next(Iterator* it);
             std::unique_ptr<ProtocolCodec> CreateCodec(int magic);
@@ -120,7 +123,7 @@ namespace tokyotyrant {
             alpha::Slice Read();
 
             friend class Iterator;
-            bool connect_error_;
+            bool expired_ = false;
             alpha::EventLoop* loop_;
             alpha::Coroutine* co_;
             //顺序很重要

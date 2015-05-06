@@ -73,17 +73,14 @@ BackupCoroutine::BackupCoroutine(tokyotyrant::Client* client)
 
 void BackupCoroutine::Routine() {
     auto addr = alpha::NetAddress(FLAGS_server_ip, FLAGS_server_port);
-    if (!client_->Connected()) {
-        auto err = client_->Connnect(addr);
-        if (err) {
-            LOG_ERROR << "Connnect to " << addr << " failed.";
-            return;
-        }
+    client_->Connnect(addr);
+    while (!client_->Connected()) {
+        LOG_ERROR << "Connnect to " << addr << " failed.";
+        Yield();
     }
-
     RandomStream stream;
 
-    int err = client_->Vanish();
+    auto err = client_->Vanish();
     assert (!err);
 
     int64_t rnum;
@@ -265,23 +262,21 @@ void BackupCoroutine::Routine() {
     LOG_INFO << "All tests passed";
 }
 
-void BackupRoutine(alpha::EventLoop* loop, const std::string& key, 
-        const std::string& value) {
-    static std::unique_ptr<tokyotyrant::Client> client;
-    static std::unique_ptr<BackupCoroutine> co;
+void BackupRoutine(alpha::EventLoop* loop, alpha::Coroutine* co) {
 
-    if (client == nullptr) {
-        client.reset (new tokyotyrant::Client(loop));
-    }
+    co->Resume();
+    //if (client == nullptr) {
+    //    client.reset (new tokyotyrant::Client(loop));
+    //}
 
-    if (co == nullptr) {
-        co.reset (new BackupCoroutine(client.get()));
-        client->SetCoroutine(co.get());
-        co->Resume();
-    }
+    //if (co == nullptr) {
+    //    co.reset (new BackupCoroutine(client.get()));
+    //    client->SetCoroutine(co.get());
+    //    co->Resume();
+    //}
 
     if (co->IsDead()) {
-        co.reset();
+        //co.reset();
         loop->Quit();
     }
 }
@@ -290,15 +285,16 @@ int main(int argc, char* argv[]) {
     std::string usage = "Show remote tokyotyrant server stat";
     gflags::SetUsageMessage(usage);
     gflags::ParseCommandLineFlags(&argc, &argv, false);
-    std::string key = basename(argv[0]);
-    std::string value = argv[0];
     alpha::Logger::Init(argv[0], alpha::Logger::LogToStderr);
 
     alpha::EventLoop loop;
     loop.TrapSignal(SIGINT, [&loop]{
         loop.Quit();
     });
-    loop.RunEvery(1000, std::bind(BackupRoutine, &loop, key, value));
+    std::unique_ptr<tokyotyrant::Client> client(new tokyotyrant::Client(&loop));
+    std::unique_ptr<BackupCoroutine> co(new BackupCoroutine(client.get()));
+    client->SetCoroutine(co.get());
+    loop.RunAfter(1000, std::bind(BackupRoutine, &loop, co.get()));
     loop.Run();
     return EXIT_SUCCESS;
 }
