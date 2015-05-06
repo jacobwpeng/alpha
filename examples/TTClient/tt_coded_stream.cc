@@ -13,6 +13,7 @@
 #include "tt_coded_stream.h"
 #include <arpa/inet.h>
 #include <cassert>
+#include <alpha/compiler.h>
 #include "tt_protocol_codec.h"
 
 namespace tokyotyrant {
@@ -104,7 +105,7 @@ namespace tokyotyrant {
         if (nbytes < sizeof(int16_t)) {
             return false;
         }
-        auto real_val = ::htons(val);
+        auto real_val = htons(val);
         bool ok = codec_->Write(reinterpret_cast<const uint8_t*>(&real_val), 
                 sizeof(real_val));
         assert (ok);
@@ -136,6 +137,16 @@ namespace tokyotyrant {
         return ok;
     }
 
+    size_t CodedOutputStream::WriteRaw(alpha::Slice val) {
+        auto nbytes = std::min<int>(codec_->MaxBytesCanWrite(), val.size());
+        bool ok = codec_->Write(reinterpret_cast<const uint8_t*>(val.data()), nbytes);
+        if (unlikely(!ok)) {
+            return 0;
+        } else {
+            return nbytes;
+        }
+    }
+#if 0
     bool CodedOutputStream::WriteLengthPrefixedString(alpha::Slice val) {
         auto nbytes = codec_->MaxBytesCanWrite();
         if (nbytes < (sizeof(int32_t) + val.size())) {
@@ -158,4 +169,5 @@ namespace tokyotyrant {
             && codec_->Write(reinterpret_cast<const uint8_t*>(key.data()), key.size())
             && codec_->Write(reinterpret_cast<const uint8_t*>(val.data()), val.size());
     }
+#endif
 }

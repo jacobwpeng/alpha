@@ -46,8 +46,10 @@ namespace tokyotyrant {
             bool WriteBigEndianInt16(int16_t val);
             bool WriteBigEndianInt32(int32_t val);
             bool WriteBigEndianInt64(int64_t val);
-            bool WriteLengthPrefixedString(alpha::Slice val);
-            bool WriteKeyValuePair(alpha::Slice key, alpha::Slice val);
+            size_t WriteRaw(alpha::Slice val);
+            //bool WriteLengthPrefixedString(alpha::Slice val);
+            //bool WriteKeyValuePair(alpha::Slice key, alpha::Slice val);
+            //void WritePartialLengthPrefixedString(alpha::Slice val)
 
         private:
             ProtocolCodec* codec_;

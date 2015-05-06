@@ -15,6 +15,7 @@
 
 #include <alpha/slice.h>
 #include <alpha/tcp_connection.h>
+#include "tt_protocol_codec.h"
 
 namespace alpha {
     class NetAddress;
@@ -24,7 +25,6 @@ namespace alpha {
 }
 
 namespace tokyotyrant {
-    class ProtocolCodec;
     enum Code {
         kSuccess = 0,
         kInvalidOperation = 1,
@@ -51,13 +51,52 @@ namespace tokyotyrant {
             int PutCat(alpha::Slice key, alpha::Slice value);
             int PutNR(alpha::Slice key, alpha::Slice value);
             int Out(alpha::Slice key);
+            int Vanish();
             int Get(alpha::Slice key, std::string* val);
+            template<typename InputIterator, typename MapType>
+            int MultiGet(InputIterator first, InputIterator last, MapType* map) {
+                if (state_ == ConnectionState::kDisconnected) {
+                    return kInvalidOperation;
+                }
+                const int16_t kMagic = 0xC831;
+                auto codec = CreateCodec(kMagic);
+                int32_t rnum;
+                RepeatedLengthPrefixedEncodeUnit<InputIterator> unit(first, last);
+                Int32DecodeUnit size_decode_unit(&rnum);
+                RepeatedKeyValuePairDecodeUnit<MapType> 
+                    repeated_key_value_pair_decode_unit(&rnum, map);
+                codec->AddEncodeUnit(&unit);
+                codec->AddDecodeUnit(&size_decode_unit);
+                codec->AddDecodeUnit(&repeated_key_value_pair_decode_unit);
+
+                return Request(codec.get());
+            }
             int Stat(std::string* stat);
             int ValueSize(alpha::Slice key, int32_t* size);
             int RecordNumber(int64_t* rnum);
             std::unique_ptr<Iterator> NewIterator();
-            int GetForwardMatchKeys(alpha::Slice key, int max_size, MatchKeysCallback cb);
-            //Iterator GetForwardMatchKeys(alpha::Slice key);
+            template<typename OutputIterator>
+            int GetForwardMatchKeys(alpha::Slice prefix, int32_t max, OutputIterator out) {
+                if (state_ == ConnectionState::kDisconnected) {
+                    return kInvalidOperation;
+                }
+                const int16_t kMagic = 0xC858;
+                auto codec = CreateCodec(kMagic);
+                IntegerEncodeUnit<int32_t> psize_encode_unit(prefix.size());
+                IntegerEncodeUnit<int32_t> max_encode_unit(max);
+                RawDataEncodedUnit prefix_encode_unit(prefix);
+                int32_t knum;
+                Int32DecodeUnit knum_decode_unit(&knum);
+                RepeatedLengthPrefixedDecodeUnit<OutputIterator> 
+                    keys_decode_unit(&knum, out);
+                codec->AddEncodeUnit(&psize_encode_unit);
+                codec->AddEncodeUnit(&max_encode_unit);
+                codec->AddEncodeUnit(&prefix_encode_unit);
+                codec->AddDecodeUnit(&knum_decode_unit);
+                codec->AddDecodeUnit(&keys_decode_unit);
+
+                return Request(codec.get());
+            }
             //int GetIterator(alpha::Slice key);
 
         private:
@@ -70,6 +109,7 @@ namespace tokyotyrant {
             void OnConnected(alpha::TcpConnectionPtr conn);
             void OnDisconnected(alpha::TcpConnectionPtr conn);
             void OnMessage(alpha::TcpConnectionPtr conn, alpha::TcpConnectionBuffer* buffer);
+            void OnWriteDone(alpha::TcpConnectionPtr conn);
             void OnTimeout();
 
             void Next(Iterator* it);
@@ -77,15 +117,17 @@ namespace tokyotyrant {
             int Request(ProtocolCodec* codec);
             size_t MaxBytesCanWrite();
             bool Write(const uint8_t* buffer, int size);
+            alpha::Slice Read();
 
             friend class Iterator;
             bool connect_error_;
             alpha::EventLoop* loop_;
             alpha::Coroutine* co_;
+            //顺序很重要
+            std::unique_ptr<alpha::TcpClient> tcp_client_;
             alpha::TcpConnectionPtr conn_;
             ConnectionState state_;
             std::unique_ptr<alpha::NetAddress> addr_;
-            std::unique_ptr<alpha::TcpClient> tcp_client_;
     };
 
     class Iterator {

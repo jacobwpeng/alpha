@@ -15,10 +15,13 @@
 
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <vector>
 #include <string>
 #include <type_traits>
 #include <functional>
+#include <alpha/logger.h>
+#include <alpha/format.h>
 #include "tt_coded_stream.h"
 
 namespace tokyotyrant {
@@ -27,6 +30,8 @@ namespace tokyotyrant {
         kNeedsMore = 100,
         kNotConsumed = 101,
         kFullBuffer = 102,
+        kNoData = 103,
+        kErrorFromServer = 104
     };
 
     class ProtocolDecodeUnit {
@@ -69,30 +74,107 @@ namespace tokyotyrant {
             std::string* val_;
     };
 
-    class KeyValuePairDecodeUnit final : public ProtocolDecodeUnit {
-        public:
-            using ResultMap = std::map<std::string, std::string>;
-            KeyValuePairDecodeUnit(ResultMap* m, int* rnum);
-            virtual CodecStatus Decode(const uint8_t* buffer, int size, int* consumed) 
-                override;
-        private:
-            std::map<std::string, std::string>* m_;
-            int* rnum_;
-    };
-
     template<typename OutputIterator>
     class RepeatedLengthPrefixedDecodeUnit final : public ProtocolDecodeUnit {
         public:
-            RepeatedLengthPrefixedDecodeUnit(OutputIterator it)
-                :it_(it) {
+            RepeatedLengthPrefixedDecodeUnit(int32_t* knum, OutputIterator it)
+                :knum_(knum), it_(it) {
+            }
+            virtual CodecStatus Decode(const uint8_t* buffer, int size, 
+                    int* consumed) override {
+                *consumed = 0;
+                if (*knum_ != 0 && unit_ == nullptr) {
+                    val_.reset(new std::string());
+                    unit_.reset(new LengthPrefixedDecodeUnit(val_.get()));
+                }
+
+                while (*knum_ != 0) {
+                    int nbytes = 0;
+                    auto status = unit_->Decode(buffer, size, &nbytes);
+                    *consumed += nbytes;
+                    buffer += nbytes;
+                    size -= nbytes;
+
+                    if (status != kOk && status != kNeedsMore) {
+                        return status;
+                    } else if (status == kOk) {
+                        *it_ = *val_;
+                        ++it_;
+                        val_->clear();
+                        unit_.reset(new LengthPrefixedDecodeUnit(val_.get()));
+                        --*knum_;
+                    } else {
+                        return kNeedsMore;
+                    }
+                }
+
+                return kOk;
+            }
+
+        private:
+            int32_t* knum_;
+            std::unique_ptr<std::string> val_;
+            std::unique_ptr<LengthPrefixedDecodeUnit> unit_;
+            OutputIterator it_;
+    };
+
+    class KeyValuePairDecodeUnit final : public ProtocolDecodeUnit {
+        public:
+            KeyValuePairDecodeUnit(std::string* key, std::string* val);
+            CodecStatus Decode(const uint8_t* buffer, int size, int* consumed);
+
+        private:
+            int ksize_ = -1;
+            int vsize_ = -1;
+            std::string* key_;
+            std::string* val_;
+    };
+
+    template<typename MapType>
+    class RepeatedKeyValuePairDecodeUnit final : public ProtocolDecodeUnit {
+        public:
+            RepeatedKeyValuePairDecodeUnit(int* num, MapType* map)
+                :num_(num), map_(map) {
             }
 
             virtual CodecStatus Decode(const uint8_t* buffer, int size, int* consumed) 
                 override {
+                    *consumed = 0;
+                    if (*num_ != 0 && single_unit_ == nullptr) {
+                        key_.reset (new std::string);
+                        val_.reset (new std::string);
+                        single_unit_.reset (new KeyValuePairDecodeUnit(
+                                    key_.get(), val_.get()));
+                    }
+
+                    while (*num_ != 0) {
+                        int nbytes = 0;
+                        auto status = single_unit_->Decode(buffer, size, &nbytes);
+                        *consumed += nbytes;
+                        buffer += nbytes;
+                        size -= nbytes;
+                        if (status != kOk && status != kNeedsMore) {
+                            return status;
+                        } else if (status == kOk) {
+                            map_->emplace(*key_, *val_);
+                            key_->clear();
+                            val_->clear();
+                            single_unit_.reset (new KeyValuePairDecodeUnit(
+                                        key_.get(), val_.get()));
+                            --*num_;
+                        } else {
+                            return status;
+                        }
+                    }
+                    return kOk;
             }
 
         private:
-            OutputIterator it_;
+            int* num_;
+            MapType* map_;
+            std::unique_ptr<std::string> key_;
+            std::unique_ptr<std::string> val_;
+            std::unique_ptr<KeyValuePairDecodeUnit> single_unit_;
     };
 
     template<typename IntegerType>
@@ -106,14 +188,23 @@ namespace tokyotyrant {
 
             virtual CodecStatus Encode(CodedOutputStream* stream) {
                 if (std::is_same<IntegerType, int32_t>::value) {
-                    stream->WriteBigEndianInt32(val_);
+                    return stream->WriteBigEndianInt32(val_) ? kOk : kFullBuffer;
                 } else {
-                    stream->WriteBigEndianInt64(val_);
+                   return stream->WriteBigEndianInt64(val_) ? kOk : kFullBuffer;
                 }
             }
 
         private:
             IntegerType val_;
+    };
+
+    class RawDataEncodedUnit final : public ProtocolEncodeUnit {
+        public:
+            RawDataEncodedUnit(alpha::Slice data);
+            virtual CodecStatus Encode(CodedOutputStream* stream);
+
+        private:
+            alpha::Slice data_;
     };
 
     //所有传入*EncodeUnit的参数必须保证在对应Encode调用前保持有效
@@ -123,6 +214,8 @@ namespace tokyotyrant {
             virtual CodecStatus Encode(CodedOutputStream* stream);
 
         private:
+            bool done_key_size_ = false;
+            bool done_val_size_ = false;
             alpha::Slice key_;
             alpha::Slice val_;
     };
@@ -133,63 +226,62 @@ namespace tokyotyrant {
             virtual CodecStatus Encode(CodedOutputStream* stream);
 
         private:
+            void Reset(alpha::Slice val);
+            template<typename InputIterator>
+            friend class RepeatedLengthPrefixedEncodeUnit;
+            bool done_size_ = false;
             alpha::Slice val_;
     };
 
-    template<typename InputIterator, typename SizeType>
+    template<typename InputIterator>
     class RepeatedLengthPrefixedEncodeUnit final : public ProtocolEncodeUnit  {
         public:
-            RepeatedLengthPrefixedEncodeUnit(InputIterator begin, InputIterator end
-                    , SizeType size)
-                :encode_size_done_(false), it_(begin), end_(end), size_(size) {
-#ifndef NDEBUG
-                assert (std::distance(begin, end) == size);
-#endif
+            RepeatedLengthPrefixedEncodeUnit(InputIterator begin, InputIterator end)
+                :encode_size_done_(false), it_(begin), end_(end){
+                size_ = std::distance(begin, end);
             }
 
             virtual CodecStatus Encode(CodedOutputStream* stream) {
+                if (size_ == 0) {
+                    return kNoData;
+                }
                 if (!encode_size_done_ && !stream->WriteBigEndianInt32(size_)) {
                     return kFullBuffer;
                 }
+                if (single_unit_ == nullptr) {
+                    single_unit_.reset (new LengthPrefixedEncodeUnit(*it_));
+                }
                 while (it_ != end_) {
-                    if (!stream->WriteLengthPrefixedString(*it_)) {
-                        return kFullBuffer;
+                    auto status = single_unit_->Encode(stream);
+                    if (status == kOk) {
+                        ++it_;
+                        if (it_ != end_) {
+                            single_unit_->Reset(*it_);
+                        }
+                    } else {
+                        return status;
                     }
-                    ++it_;
                 }
                 return kOk;
             }
 
         private:
             bool encode_size_done_;
+            std::unique_ptr<LengthPrefixedEncodeUnit> single_unit_;
             InputIterator it_;
             InputIterator end_;
-            SizeType size_;
+            int size_ = 0;
     };
 
     class ProtocolCodec {
         public:
             using WriteFunctor = std::function<bool (const uint8_t*, int size)>;
             using LeftSpaceFunctor = std::function<size_t ()>;
-            ProtocolCodec(int16_t magic, WriteFunctor, LeftSpaceFunctor);
+            using ReadFunctor = std::function<alpha::Slice ()>;
+            ProtocolCodec(int16_t magic, WriteFunctor, LeftSpaceFunctor, ReadFunctor);
             void AddDecodeUnit(ProtocolDecodeUnit* unit);
             void AddEncodeUnit(ProtocolEncodeUnit* unit);
-            //每次Decode完成后外层传入的Buffer都应该加上一个ConsumedBytes的offset
-            //同时调用ClearConsumed
-            //eg:
-            //      char * data_from_somewhere;
-            //      int data_size;
-            //      int offset = 0;
-            //      ProtocolCodec codec;
-            //      while (1) {
-            //          auto err = codec.Decode(data_from_somewhere + offset,
-            //                              data_size - offset);
-            //          if (err && err != kNeedsMore) return err;
-            //          offset += codec.ConsumedBytes();
-            //          assert (offset <= data_size);
-            //          codec.ClearConsumed();
-            //      }
-            int Decode(const uint8_t* buffer, int size);
+            CodecStatus Decode(int* consumed);
             int ConsumedBytes() const;
             void ClearConsumed();
             int16_t magic() const;
@@ -197,15 +289,22 @@ namespace tokyotyrant {
             bool Encode();
             size_t MaxBytesCanWrite() const;
             bool Write(const uint8_t* buffer, int size);
+            void SetNoReply();
+            bool NoReply() const;
+            int8_t err() const;
 
         private:
+            int8_t err_;
             int16_t magic_;
             bool encoded_magic_ = false;
             bool parsed_code_ = false;
+            bool no_reply_ = false;
             int consumed_ = 0;
-            size_t current_unit_index_ = 0;
+            size_t current_decode_unit_index_ = 0;
+            size_t current_encode_unit_index_ = 0;
             WriteFunctor w_;
             LeftSpaceFunctor l_;
+            ReadFunctor r_;
             std::vector<ProtocolDecodeUnit*> decode_units_;
             std::vector<ProtocolEncodeUnit*> encode_units_;
     };

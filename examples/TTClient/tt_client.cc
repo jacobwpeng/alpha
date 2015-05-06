@@ -18,7 +18,6 @@
 #include <alpha/coroutine.h>
 #include <alpha/net_address.h>
 #include <alpha/format.h>
-#include "tt_protocol_codec.h"
 
 namespace tokyotyrant {
     Client::Client(alpha::EventLoop* loop)
@@ -102,6 +101,7 @@ namespace tokyotyrant {
         KeyValuePairEncodeUnit unit(key, value);
         codec->AddEncodeUnit(&unit);
 
+        codec->SetNoReply();
         return Request(codec.get());
     }
 
@@ -114,6 +114,15 @@ namespace tokyotyrant {
         LengthPrefixedEncodeUnit unit(key);
         codec->AddEncodeUnit(&unit);
 
+        return Request(codec.get());
+    }
+
+    int Client::Vanish() {
+        if (state_ == ConnectionState::kDisconnected) {
+            return kInvalidOperation;
+        }
+        const int16_t kMagic = 0xC872;
+        auto codec = CreateCodec(kMagic);
         return Request(codec.get());
     }
 
@@ -160,12 +169,7 @@ namespace tokyotyrant {
         Int32DecodeUnit res(size);
         codec->AddDecodeUnit(&res);
 
-        int err = Request(codec.get());
-        if (err == 1) {
-            return kNoRecord;
-        } else {
-            return err;
-        }
+        return Request(codec.get());
     }
 
     int Client::RecordNumber(int64_t* rnum) {
@@ -213,6 +217,7 @@ namespace tokyotyrant {
         using namespace std::placeholders;
         conn_ = conn;
         conn_->SetOnRead(std::bind(&Client::OnMessage, this, _1, _2));
+        conn_->SetOnWriteDone(std::bind(&Client::OnWriteDone, this, _1));
         state_ = ConnectionState::kConnected;
         co_->Resume();
     }
@@ -226,8 +231,14 @@ namespace tokyotyrant {
     void Client::OnMessage(alpha::TcpConnectionPtr conn, 
             alpha::TcpConnectionBuffer* buffer) {
         assert (conn == conn_);
-        auto data = buffer->Read();
-        DLOG_INFO << "size = " << data.size() << ", data = \n" << alpha::HexDump(data);
+        //auto data = buffer->Read();
+        //DLOG_INFO << "size = " << data.size() << ", data = \n" << alpha::HexDump(data);
+        co_->Resume();
+    }
+
+    void Client::OnWriteDone(alpha::TcpConnectionPtr conn) {
+        assert (conn == conn_);
+        DLOG_INFO << "Write done";
         co_->Resume();
     }
 
@@ -243,10 +254,8 @@ namespace tokyotyrant {
         codec->AddDecodeUnit(&unit);
 
         int err = Request(codec.get());
-        if (err && err != 1) {
+        if (err) {
             it->status_ = err;
-        } else if (err == 1) {
-            it->status_ = kNoRecord;
         } else {
             it->status_ = kOk;
         }
@@ -256,10 +265,13 @@ namespace tokyotyrant {
         using namespace std::placeholders;
         return std::unique_ptr<ProtocolCodec>(new ProtocolCodec(magic
                     , std::bind(&Client::Write, this, _1, _2)
-                    , std::bind(&Client::MaxBytesCanWrite, this)));
+                    , std::bind(&Client::MaxBytesCanWrite, this)
+                    , std::bind(&Client::Read, this)));
     }
 
     int Client::Request(ProtocolCodec* codec) {
+        const auto magic = codec->magic();
+        DLOG_INFO << "codec->magic() = " << magic;
         while (!codec->Encode()) {
             if (unlikely(conn_ == nullptr || conn_->closed())) {
                 return kSendError;
@@ -267,49 +279,45 @@ namespace tokyotyrant {
                 co_->Yield();
             }
         }
-
         DLOG_INFO << "Encode done";
 
-        const int16_t kPutNRMagic = 0xC818;
-        if (codec->magic() == kPutNRMagic) {
-            return 0;
+        if (codec->NoReply()) {
+            return kOk;
         }
 
         auto status = kNeedsMore;
         while (status == kNeedsMore) {
-            alpha::Slice data = conn_->ReadBuffer()->Read();
-            auto buffer = reinterpret_cast<const uint8_t*>(data.data());
-            status = static_cast<CodecStatus>(codec->Decode(buffer, data.size()));
-            DLOG_INFO << "Decode return status = " << status;
-            if (status == 0 || status == kNeedsMore) {
-                auto nbytes = codec->ConsumedBytes();
-                DLOG_INFO << "ConsumedBytes = " << nbytes;
-                codec->ClearConsumed();
-                conn_->ReadBuffer()->ConsumeBytes(nbytes);
+            int consumed = 0;
+            status = codec->Decode(&consumed);
+            conn_->ReadBuffer()->ConsumeBytes(consumed);
+            if (status == kErrorFromServer) {
+                return codec->err();
+            } else if (status != kOk && status != kNeedsMore) {
+                LOG_WARNING << "kMiscellaneous, status = " << status;
+                return kMiscellaneous;
             } else {
-                conn_->ReadBuffer()->ConsumeBytes(data.size());
-            }
-            if (status == kNeedsMore) {
-                co_->Yield();
-                if (unlikely(conn_ == nullptr || conn_->closed())) {
-                    return kRecvError;
+                DLOG_INFO << "Decode consume " << consumed << " bytes";
+                if (status == kOk) {
+                    return kOk;
+                } else {
+                    co_->Yield();
                 }
             }
         }
-        if (status == 1 || status == 0) {
-            return status;
-        } else {
-            LOG_WARNING << "kMiscellaneous, status = " << status;
-            return kMiscellaneous;
-        }
+
+        return kOk;
     }
 
     size_t Client::MaxBytesCanWrite() {
-        return 1 << 31;
+        return conn_->BytesCanBytes();
     }
 
     bool Client::Write(const uint8_t* buffer, int size) {
         return conn_->Write(alpha::Slice(reinterpret_cast<const char*>(buffer), size));
+    }
+    
+    alpha::Slice Client::Read() {
+        return conn_->ReadBuffer()->Read();
     }
 
     Iterator::Iterator(Client* client)

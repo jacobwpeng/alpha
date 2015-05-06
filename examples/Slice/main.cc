@@ -28,4 +28,5 @@ int main() {
 
     auto pobj = data.as<PODType>();
     assert (pobj == &obj);
+    (void)pobj;
 }
