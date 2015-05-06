@@ -81,10 +81,13 @@ namespace alpha {
         iovec iov[iovcnt];
 
         size_t contiguous_space_in_buffer = read_buffer_.GetContiguousSpace();
+        auto space_before_full = read_buffer_.SpaceBeforeFull();
+        assert (space_before_full >= contiguous_space_in_buffer);
         iov[0].iov_base = read_buffer_.WriteBegin();
         iov[0].iov_len = contiguous_space_in_buffer;
         iov[1].iov_base = local_buffer;
-        iov[1].iov_len = sizeof(local_buffer);
+        iov[1].iov_len = std::min(sizeof(local_buffer),
+                space_before_full - contiguous_space_in_buffer);
 
         ssize_t nbytes = ::readv(fd_, iov, iovcnt);
         DLOG_INFO << "nbytes = " << nbytes;
@@ -104,14 +107,8 @@ namespace alpha {
                 size_t local_buffer_bytes = bytes - contiguous_space_in_buffer;
                 alpha::Slice data(local_buffer, local_buffer_bytes);
                 bool ok = read_buffer_.Append (data);
-                if (unlikely(!ok)) {
-                    LOG_WARNING << "Append read_buffer_ failed, bytes = " << bytes
-                        << ", contiguous_space_in_buffer = " << contiguous_space_in_buffer
-                        << ", local_buffer_bytes = " << local_buffer_bytes
-                        << ", local_addr_ = " << *local_addr_ 
-                        << ", peer_addr_ = " << *peer_addr_;
-                        
-                }
+                assert (ok);
+                (void)ok;
             }
             DLOG_INFO << "Read " << bytes << " bytes from " << *peer_addr_;
             if (read_callback_) {
@@ -180,7 +177,7 @@ namespace alpha {
         }
     }
 
-    int TcpConnection::BytesCanBytes() const {
+    size_t TcpConnection::BytesCanBytes() const {
         return write_buffer_.SpaceBeforeFull();
     }
 

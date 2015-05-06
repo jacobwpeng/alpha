@@ -29,7 +29,7 @@ namespace alpha {
 
             //写入(可能会扩容, 超限返回false)
             bool Append(const alpha::Slice& data);
-            int SpaceBeforeFull() const;
+            size_t SpaceBeforeFull() const;
 
             alpha::Slice Read() const;
             size_t ReadAndClear(char* buf, size_t len);

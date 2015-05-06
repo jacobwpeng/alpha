@@ -86,7 +86,7 @@ namespace alpha {
                 TcpConnectionBuffer* WriteBuffer() {
                     return &write_buffer_;
                 }
-                int BytesCanBytes() const;
+                size_t BytesCanBytes() const;
                 void SetPeerAddr(const NetAddress& addr);
 
             private:

@@ -48,7 +48,7 @@ namespace alpha {
         return true;
     }
 
-    int TcpConnectionBuffer::SpaceBeforeFull() const {
+    size_t TcpConnectionBuffer::SpaceBeforeFull() const {
         return kMaxBufferSize - internal_buffer_.size() + GetContiguousSpace();
     }
 
