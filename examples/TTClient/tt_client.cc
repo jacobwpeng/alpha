@@ -37,7 +37,11 @@ namespace tokyotyrant {
 
     int Client::Connnect(const alpha::NetAddress& addr) {
         if (addr_ != nullptr) {
-            return false;
+            if (*addr_ == addr) {
+                return kOk;
+            } else {
+                return kMiscellaneous;
+            }
         } else {
             addr_.reset (new alpha::NetAddress(addr));
             tcp_client_->ConnectTo(addr, true);
@@ -202,9 +206,6 @@ namespace tokyotyrant {
         }
     }
 
-    //int Client::GetForwardMatchKeys(alpha::Slice key, int max_size, MatchKeysCallback cb) {
-    //}
-
     void Client::OnConnectError(const alpha::NetAddress& addr) {
         assert (addr_ && *addr_ == addr);
         ResetConnection();
@@ -240,7 +241,6 @@ namespace tokyotyrant {
 
     void Client::OnWriteDone(alpha::TcpConnectionPtr conn) {
         assert (conn == conn_);
-        DLOG_INFO << "Write done";
         co_->Resume();
     }
 

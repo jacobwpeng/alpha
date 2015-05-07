@@ -98,7 +98,6 @@ namespace tokyotyrant {
 
                 return Request(codec.get());
             }
-            //int GetIterator(alpha::Slice key);
 
         private:
             enum class ConnectionState {
