@@ -16,4 +16,4 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 endif()
 
 add_subdirectory(alpha)
-add_subdirectory(examples)
+add_subdirectory(examples EXCLUDE_FROM_ALL)
