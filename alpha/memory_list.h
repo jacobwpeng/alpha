@@ -27,7 +27,10 @@ namespace alpha {
 
     template<typename T, typename SizeType>
     class MemoryList<T, SizeType, 
-          typename std::enable_if< std::is_pod<T>::value && !std::is_pointer<T>::value>::type> {
+          typename std::enable_if<
+                  std::is_pod<T>::value
+                  && !std::is_pointer<T>::value>::type
+              > {
         public:
             using NodeId = SizeType;
             static const NodeId kInvalidNodeId = -1;

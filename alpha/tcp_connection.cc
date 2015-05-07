@@ -90,7 +90,7 @@ namespace alpha {
                 space_before_full - contiguous_space_in_buffer);
 
         ssize_t nbytes = ::readv(fd_, iov, iovcnt);
-        DLOG_INFO << "nbytes = " << nbytes;
+        DLOG_INFO << "readv return " << nbytes;
 
         if (nbytes == 0) {
             LOG_INFO << "Peer closed connection, local_addr_ = " << *local_addr_

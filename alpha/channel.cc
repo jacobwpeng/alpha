@@ -65,6 +65,7 @@ namespace alpha {
 
     std::string Channel::ReadableEvents() const {
         std::ostringstream oss;
+        oss << "revents_ = ";
         if (revents_ & EPOLLIN) oss << "EPOLLIN ";
         if (revents_ & EPOLLOUT) oss << "EPOLLOUT ";
         if (revents_ & EPOLLPRI) oss << "EPOLLPRI ";
