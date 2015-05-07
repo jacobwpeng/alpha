@@ -35,6 +35,7 @@ namespace alpha {
             Slice(const T* t, typename std::enable_if<std::is_pod<T>::value
                     && !std::is_pointer<T>::value, void*>::type dummy = nullptr)
                 :buf_(reinterpret_cast<const char*>(t)), len_(sizeof(T)) {
+                    (void)dummy;
             }
 
             template<typename T>
