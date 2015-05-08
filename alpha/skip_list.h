@@ -20,6 +20,7 @@
 #include <type_traits>
 #include "compiler.h"
 #include "memory_list.h"
+#include "random.h"
 
 namespace alpha {
     template<typename Key, typename Value, int32_t kMaxLevel = 20,
@@ -145,7 +146,7 @@ namespace alpha {
             void Dump() const;
 
         private:
-            SkipList();
+            SkipList() = default;
             void InitHeader();
             bool RestoreHeader(char* start, size_type size);
             NodeId PrevNode(NodeId node_id) const;
@@ -161,8 +162,6 @@ namespace alpha {
         private:
             using MemoryListType = MemoryList<Node, size_type>;
 
-            std::random_device rd_;
-            std::mt19937 mt_;
             std::uniform_int_distribution<int> dist_;
             key_compare comparator_;
             std::unique_ptr<MemoryListType> nodes_;
@@ -218,11 +217,6 @@ namespace alpha {
             return nullptr;
         }
         return std::move(l);
-    }
-
-    template<typename Key, typename Value, int32_t kMaxLevel, typename Comparator>
-    SkipListType::SkipList()
-        :mt_(rd_()) {
     }
 
     template<typename Key, typename Value, int32_t kMaxLevel, typename Comparator>
@@ -502,7 +496,7 @@ namespace alpha {
     template<typename Key, typename Value, int32_t kMaxLevel, typename Comparator>
     SizeType SkipListType::RandomLevel() {
         size_t level = 1;
-        while ((dist_(mt_) & 0xFFFF) < 0.25 * 0xFFFF) {
+        while ((Random::Rand32() & 0xFFFF) < 0.25 * 0xFFFF) {
             ++level;
         }
         return level < kMaxLevel ? level : kMaxLevel;
