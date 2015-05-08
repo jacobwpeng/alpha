@@ -88,6 +88,24 @@ namespace alpha {
             static uint64_t Rand64(ValidRNG<RNG> rng = RNG()) {
                 return Rand64(0, std::numeric_limits<uint64_t>::max(), rng);
             }
+
+            template<typename InputIterator, typename RNG = ThreadLocalPRNG>
+            static std::vector<InputIterator> Sample(InputIterator first,
+                    InputIterator last, size_t k, ValidRNG<RNG> rng = RNG()) {
+                return SampleImpl(first, last, k,
+                        typename std::is_same<
+                            typename std::iterator_traits<InputIterator>::iterator_category,
+                            std::random_access_iterator_tag
+                            >::type(), rng);
+            }
+        private:
+            template<typename InputIterator, typename RNG = ThreadLocalPRNG>
+            static std::vector<InputIterator> SampleImpl(InputIterator first,
+                    InputIterator last, size_t k, std::true_type, ValidRNG<RNG> rng);
+
+            template<typename InputIterator, typename RNG = ThreadLocalPRNG>
+            static std::vector<InputIterator> SampleImpl(InputIterator first,
+                    InputIterator last, size_t k, std::false_type, ValidRNG<RNG> rng);
     };
 }
 
