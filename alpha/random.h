@@ -14,6 +14,8 @@
 #define  __RANDOM_H__
 
 #include <random>
+#include <algorithm>
+#include <functional>
 #include <type_traits>
 
 namespace alpha {
@@ -87,6 +89,16 @@ namespace alpha {
             template<typename RNG = ThreadLocalPRNG>
             static uint64_t Rand64(ValidRNG<RNG> rng = RNG()) {
                 return Rand64(0, std::numeric_limits<uint64_t>::max(), rng);
+            }
+
+            template<typename RandomAccessIterator, typename RNG = ThreadLocalPRNG>
+            static void Shuffle(RandomAccessIterator first, RandomAccessIterator last,
+                    ValidRNG<RNG> rng = RNG()) {
+                using namespace std::placeholders;
+                auto gen = [&rng](uint32_t max) {
+                    return Random::Rand32(max, rng);
+                };
+                std::random_shuffle(first, last, gen);
             }
 
             template<typename InputIterator, typename RNG = ThreadLocalPRNG>
