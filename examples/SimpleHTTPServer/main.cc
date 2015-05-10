@@ -16,7 +16,7 @@
 #include <alpha/simple_http_server.h>
 
 int main(int argc, char* argv[]) {
-    alpha::Logger::Init(argv[0], alpha::Logger::LogToStderr);
+    alpha::Logger::Init(argv[0]);
     alpha::EventLoop loop;
     loop.TrapSignal(SIGINT, [&]{
             loop.Quit();

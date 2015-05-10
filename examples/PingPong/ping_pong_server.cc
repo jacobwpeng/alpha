@@ -119,7 +119,7 @@ class PingPongServer {
 };
 
 int main(int argc, char* argv[]) {
-    alpha::Logger::Init(argv[0], alpha::Logger::LogToStderr);
+    alpha::Logger::Init(argv[0]);
     EventLoop loop;
     PingPongServer s(&loop, NetAddress("127.0.0.1", 7890));
     s.Run();

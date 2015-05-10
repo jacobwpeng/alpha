@@ -59,7 +59,7 @@ class PingPongClient {
 };
 
 int main(int argc, char* argv[]) {
-    alpha::Logger::Init(argv[0], alpha::Logger::LogToStderr);
+    alpha::Logger::Init(argv[0]);
     alpha::EventLoop loop;
     PingPongClient c(&loop);
     loop.QueueInLoop(std::bind(&PingPongClient::Run, &c));

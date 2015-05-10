@@ -78,7 +78,7 @@ class EchoServer {
 };
 
 int main(int argc, char* argv[]) {
-    alpha::Logger::Init(argv[0], alpha::Logger::LogToStderr);
+    alpha::Logger::Init(argv[0]);
     alpha::EventLoop loop;
     alpha::NetAddress addr("127.0.0.1", 7890);
     EchoServer echo_server(&loop, addr);

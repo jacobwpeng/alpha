@@ -16,13 +16,9 @@
 #include <iostream>
 #include "logger.h"
 
-static void LogOutput(alpha::LogLevel level, const char* content, int len) {
-    ::fwrite(content, 1, len, stdout);
-}
-
 int main(int argc, char* argv[]) {
     (void)argc;
-    alpha::Logger::Init(argv[0], LogOutput);
+    alpha::Logger::Init(argv[0]);
     ::srand(::time(NULL));
     int target = 30;
     NormalPlayer jack(target);

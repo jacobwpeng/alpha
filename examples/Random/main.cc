@@ -12,19 +12,16 @@
 
 #include <iostream>
 #include <alpha/random.h>
+#include <alpha/logger.h>
 
-int main() {
+int main(int argc, char* argv[]) {
+    //alpha::Logger::Init(argv[0]);
     std::vector<int> v;
     for (int i = 0; i < 100; ++i) {
         v.emplace_back(i);
     }
     alpha::Random::Shuffle(v.begin(), v.end());
     std::for_each(v.begin(), v.end(), [](int v){
-            static int i = 0;
-            std::cout << v << '\t';
-            if (++i % 10 == 0) {
-                std::cout << '\n';
-            }
+            LOG_INFO << v;
     });
-    std::cout << '\n';
 }

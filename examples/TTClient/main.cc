@@ -285,7 +285,7 @@ int main(int argc, char* argv[]) {
     std::string usage = "Show remote tokyotyrant server stat";
     gflags::SetUsageMessage(usage);
     gflags::ParseCommandLineFlags(&argc, &argv, false);
-    alpha::Logger::Init(argv[0], alpha::Logger::LogToStderr);
+    alpha::Logger::Init(argv[0]);
 
     alpha::EventLoop loop;
     loop.TrapSignal(SIGINT, [&loop]{

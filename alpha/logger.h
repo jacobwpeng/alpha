@@ -56,11 +56,8 @@ namespace alpha {
             typedef std::function<void (LogLevel level, 
                     const char* content, int len)> LoggerOutput;
 
-            static void Init(const char* prog_name,
-                    LoggerOutput output = nullptr, LogLevel level = LogLevel::Info);
-            static void LogToStderr(LogLevel level, const char* content, int len);
+            static void Init(const char* prog_name);
 
-            void SetLogPath(alpha::Slice path) { path_ = path.ToString(); }
             LogLevel GetLogLevel() const { return log_level_; }
             void Append(LogLevel level, const char* content, int len);
             static const char* GetLogLevelName(int level);
@@ -68,8 +65,9 @@ namespace alpha {
 
             static Voidify dummy_;
         private:
+            static void LogToStderr(LogLevel level, const char* content, int len);
+
             Logger(LogLevel level, const LoggerOutput& output);
-            std::string path_;
             LogLevel log_level_;
             LoggerOutput logger_output_;
             static const char* prog_name_;
