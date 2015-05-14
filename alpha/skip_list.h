@@ -248,6 +248,7 @@ namespace alpha {
     template<typename Key, typename Value, int32_t kMaxLevel, typename Comparator>
     bool SkipListType::RestoreHeader(char* start, SizeType size) {
         assert (size >= kHeaderSize);
+        (void)size;
         header_ = reinterpret_cast<Header*>(start);
         if (header_->magic != kMagic
                 || header_->max_level != kMaxLevel
