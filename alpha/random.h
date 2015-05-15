@@ -108,7 +108,7 @@ namespace alpha {
                         typename std::is_same<
                             typename std::iterator_traits<InputIterator>::iterator_category,
                             std::random_access_iterator_tag
-                            >::type(), rng);
+                        >::type(), rng);
             }
         private:
             template<typename InputIterator, typename RNG = ThreadLocalPRNG>
