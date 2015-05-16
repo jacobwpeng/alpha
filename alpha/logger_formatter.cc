@@ -47,8 +47,10 @@ namespace alpha {
             stream_ << ": " << m;
         }
         int len = header_len_ + stream_.streambuf()->used();
-        buf[len] = '\n';
-        len += 1;
+        if (buf[len - 1] != '\n') {
+            buf[len] = '\n';
+            len += 1;
+        }
         logger_->Append(static_cast<LogLevel>(log_level_), buf, len);
     }
 
