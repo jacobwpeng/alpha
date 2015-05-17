@@ -35,7 +35,7 @@ namespace alpha {
             using key_type = Key;
             using mapped_type = Value;
             using key_compare = Comparator;
-            using size_type = int32_t;
+            using size_type = uint32_t;
             using UniquePtr = std::unique_ptr<SkipList>;
             struct value_type {
                 key_type first;
@@ -160,14 +160,14 @@ namespace alpha {
             Header* header_;
 
         private:
-            using MemoryListType = MemoryList<Node, size_type>;
+            using MemoryListType = MemoryList<Node>;
 
             std::uniform_int_distribution<int> dist_;
             key_compare comparator_;
             std::unique_ptr<MemoryListType> nodes_;
 
             static_assert (std::is_same<NodeId, typename MemoryListType::NodeId>::value,
-                    "type NodeId must be same as MemoryList<Node, size_type>::NodeId");
+                    "type NodeId must be same as MemoryList<Node>::NodeId");
     };
 
 #define SkipListType                                                                      \
@@ -254,7 +254,7 @@ namespace alpha {
                 || header_->max_level != kMaxLevel
                 || header_->head != 0
                 || header_->tail != 1
-                || header_->elements > nodes_->Capacity() - 2) {
+                || header_->elements > nodes_->max_size() - 2) {
             return false;
         }
         return true;
@@ -276,7 +276,7 @@ namespace alpha {
             node->val.second = p.second;
             node->level = RandomLevel();
             node->prev = path[0];
-            for (auto level = 0; level < node->level; ++level) {
+            for (auto level = 0u; level < node->level; ++level) {
                 auto prev_node = nodes_->Get(path[level]);
                 node->levels[level] = prev_node->levels[level];
                 prev_node->levels[level] = node_id;
@@ -374,7 +374,7 @@ namespace alpha {
 
     template<typename Key, typename Value, int32_t kMaxLevel, typename Comparator>
     SizeType SkipListType::max_size() const {
-        return nodes_->Capacity() - 2;
+        return nodes_->max_size() - 2;
     }
 
     template<typename Key, typename Value, int32_t kMaxLevel, typename Comparator>
@@ -437,7 +437,7 @@ namespace alpha {
         NodeId target = header_->tail;
         while (current_level >= 0) {
             bool equal;
-            assert (current_node->level >= current_level);
+            assert (current_node->level >= static_cast<size_type>(current_level));
             while (current_level >= 0 
                     && NotGoBefore(key, current_node->levels[current_level], &equal)) {
                 if (equal) {
@@ -467,7 +467,7 @@ namespace alpha {
         auto next_node = nodes_->Get(node->next());
         next_node->prev = node->prev;
 
-        for (auto level = 0; level < node->level; ++level) {
+        for (auto level = 0u; level < node->level; ++level) {
             auto level_node = nodes_->Get(path[level]);
             assert (level_node->levels[level] == node_id);
             level_node->levels[level] = node->levels[level];
