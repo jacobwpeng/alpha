@@ -1,0 +1,5 @@
+file(GLOB SRCS "*.cc")
+set(EXE "skiplist_example")
+list(APPEND SKIPLIST_EXAMPLE_SRCS "main.cc")
+add_executable(${EXE} ${SKIPLIST_EXAMPLE_SRCS})
+target_link_libraries(${EXE} "alpha")
