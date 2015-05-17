@@ -24,13 +24,11 @@ namespace alpha {
     Logger::Voidify Logger::dummy_;
     Logger* Logger::instance_ = nullptr;
     const char* Logger::prog_name_ = nullptr;
-    const char* Logger::LogLevelNames_[Logger::LogLevelNum_];
+    const char* Logger::LogLevelNames_[Logger::LogLevelNum_] = 
+    { "FATAL", "ERROR", "WARN", "INFO" };
+    std::vector<std::unique_ptr<LoggerFile>>* Logger::log_files_;
 
-    void Logger::LogToStderr(LogLevel level, const char* content, int len) {
-        ::fwrite(content, 1, len, stderr);
-    }
-
-    Logger::Logger(LogLevel level, const Logger::LoggerOutput& output)
+    Logger::Logger(LogLevel level, Logger::LoggerOutput output)
         :log_level_(level), logger_output_(output) {
         }
 
@@ -63,17 +61,17 @@ namespace alpha {
            if (pos != std::string::npos) {
                basename = basename.substr(pos + 1);
            }
-           static LoggerFile file(log_dir, basename);
-           using namespace std::placeholders;
-           output = std::bind(&LoggerFile::Write, &file, _1, _2, _3);
+           std::vector<std::unique_ptr<LoggerFile>> files;
+           for (int i = 0; i < static_cast<int>(LogLevel::TotalNum); ++i) {
+               files.push_back(std::unique_ptr<LoggerFile>(
+                           new LoggerFile(log_dir, LogLevelNames_[i], basename)));
+           }
+           log_files_ = &files;
+           output = &Logger::SendLogToFile;
        }
         static Logger logger(min_log_level, output);
         instance_ = &logger;
         prog_name_ = prog_name;
-        LogLevelNames_[0] = "FATAL";
-        LogLevelNames_[1] = "ERROR";
-        LogLevelNames_[2] = "WARN";
-        LogLevelNames_[3] = "INFO";
     }
 
     const char* Logger::GetLogLevelName(int level) {
@@ -81,16 +79,24 @@ namespace alpha {
         return LogLevelNames_[level];
     }
 
-    void Logger::Append(LogLevel level, const char* content, int len) {
+    void Logger::Append(const char* content, int len) {
         assert (len >= 0);
         static bool first_log_before_init = true;
-        auto output = logger_output_ == nullptr ? LogToStderr : logger_output_;
         if (logger_output_ == nullptr && first_log_before_init) {
             ::fputs("Log before Init will go to stderr\n", stderr);
             first_log_before_init = true;
+            logger_output_ = &Logger::LogToStderr;
         }
         assert (logger_output_);
-        logger_output_(level, content, len);
+        logger_output_(content, len);
+    }
+
+    void Logger::LogToStderr(const char* content, int len) {
+        ::fwrite(content, 1, len, stderr);
+    }
+
+
+    void Logger::SendLogToFile(const char* content, int len) {
     }
 
 }

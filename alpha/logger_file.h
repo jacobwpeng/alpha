@@ -22,10 +22,10 @@ namespace alpha {
     class Slice;
     class LoggerFile {
         public:
-            LoggerFile(const Slice& path, const Slice& prog_name);
+            LoggerFile(Slice path, Slice log_level_name, Slice prog_name);
             ~LoggerFile();
 
-            void Write(LogLevel level, const char* content, int len);
+            void Write(const char* content, int len);
 
         private:
             void MaybeChangeLogFile();
@@ -34,6 +34,7 @@ namespace alpha {
             int fd_;
             TimeStamp file_create_time_;
             std::string path_;
+            std::string log_level_name_;
             std::string prog_name_;
     };
 }
