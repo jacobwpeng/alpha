@@ -33,7 +33,7 @@ namespace alpha {
 
     LoggerFormatter::LoggerFormatter(Logger* logger, const char* basename, 
             const char* funcname, int lineno, int level, bool needs_errno_message)
-    :logger_(logger), needs_errno_message_(needs_errno_message) {
+    :logger_(logger), log_level_(level), needs_errno_message_(needs_errno_message) {
 
         header_len_ = FormatHeader(basename, funcname, lineno, level);
         stream_.rdbuf()->pubsetbuf(buf + header_len_, 
@@ -51,7 +51,7 @@ namespace alpha {
             buf[len] = '\n';
             len += 1;
         }
-        logger_->Append(buf, len);
+        logger_->Append(static_cast<LogLevel>(log_level_), buf, len);
     }
 
     int LoggerFormatter::FormatHeader(const char* basename, const char* funcname,

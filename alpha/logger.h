@@ -14,13 +14,10 @@
 #define  __LOGGER_H__
 
 #include <functional>
-#include <vector>
-#include <memory>
 #include "slice.h"
 #include "logger_formatter.h"
 
 namespace alpha {
-    class LoggerFile;
     enum class LogLevel : short {
         Fatal = 0,
         Error = 1,
@@ -56,28 +53,27 @@ namespace alpha {
             };
 
         public:
-            using LoggerOutput = void(*)(const char*, int);
+            typedef std::function<void (LogLevel level, 
+                    const char* content, int len)> LoggerOutput;
 
             static void Init(const char* prog_name);
 
             LogLevel GetLogLevel() const { return log_level_; }
-            void Append(const char* content, int len);
+            void Append(LogLevel level, const char* content, int len);
             static const char* GetLogLevelName(int level);
             static Logger* Instance() { return instance_; }
 
             static Voidify dummy_;
         private:
-            static void LogToStderr(const char* content, int len);
-            static void SendLogToFile(const char* content, int len);
+            static void LogToStderr(LogLevel level, const char* content, int len);
 
-            Logger(LogLevel level, LoggerOutput output);
+            Logger(LogLevel level, const LoggerOutput& output);
             LogLevel log_level_;
             LoggerOutput logger_output_;
             static const char* prog_name_;
             static const int LogLevelNum_ = static_cast<int>(LogLevel::TotalNum);
             static const char* LogLevelNames_[LogLevelNum_];
             static Logger* instance_;
-            static std::vector<std::unique_ptr<LoggerFile>>* log_files_;
     };
 }
 
