@@ -49,7 +49,8 @@ std::unique_ptr<MemoryListType> MemoryListType::Restore(char* buffer, SizeType s
     }
     auto header_slots = (sizeof(Header) + sizeof(T) - 1) / sizeof(T);
     auto slots = size / sizeof(T);
-    if (header->free_list < header_slots || header->free_list > slots) {
+    if (header->free_list != kInvalidNodeId
+            && (header->free_list < header_slots || header->free_list > slots)) {
         return nullptr;
     }
 
@@ -62,18 +63,6 @@ std::unique_ptr<MemoryListType> MemoryListType::Restore(char* buffer, SizeType s
     m->buffer_ = buffer;
 
     return std::move(m);
-#if 0
-    std::unique_ptr<MemoryListType> m(new MemoryListType);
-    m->header_ = reinterpret_cast<Header*>(buffer);
-    m->header_->magic = kMagic;
-    m->header_->size = 0;
-    m->header_->buffer_size = size;
-    m->header_->node_size = sizeof(T);
-    m->header_->free_list = kInvalidNodeId;
-    m->header_->free_area = (sizeof(Header) + sizeof(T) - 1) / sizeof(T);
-    m->buffer_ = buffer;
-    return std::move(m);
-#endif
 }
 
 template<typename T>

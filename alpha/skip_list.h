@@ -252,8 +252,6 @@ namespace alpha {
         header_ = reinterpret_cast<Header*>(start);
         if (header_->magic != kMagic
                 || header_->max_level != kMaxLevel
-                || header_->head != 0
-                || header_->tail != 1
                 || header_->elements > nodes_->max_size() - 2) {
             return false;
         }
