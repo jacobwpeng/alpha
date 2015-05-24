@@ -21,9 +21,13 @@ int main(int argc, char* argv[]) {
     loop.TrapSignal(SIGINT, [&]{
             loop.Quit();
     });
-    alpha::SimpleHTTPServer http_server(&loop, alpha::NetAddress("127.0.0.1", 8080));
-    http_server.SetOnGet([](alpha::TcpConnectionPtr conn, alpha::Slice path
-                , const alpha::SimpleHTTPServer::HTTPHeader& header, alpha::Slice data){
+    alpha::SimpleHTTPServer http_server(&loop,
+            alpha::NetAddress("127.0.0.1", 8080));
+    http_server.SetOnGet([](
+                alpha::TcpConnectionPtr conn,
+                alpha::Slice path,
+                const alpha::SimpleHTTPServer::HTTPHeader& header,
+                alpha::Slice data){
         LOG_INFO << "Get request from " << conn->PeerAddr()
             << ", path = " << path.ToString();
     });

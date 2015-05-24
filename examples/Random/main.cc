@@ -15,7 +15,7 @@
 #include <alpha/logger.h>
 
 int main(int argc, char* argv[]) {
-    //alpha::Logger::Init(argv[0]);
+    alpha::Logger::Init(argv[0]);
     std::vector<int> v;
     for (int i = 0; i < 100; ++i) {
         v.emplace_back(i);
