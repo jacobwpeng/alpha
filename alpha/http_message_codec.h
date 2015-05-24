@@ -44,7 +44,7 @@ namespace alpha {
             using HTTPHeader = std::map<std::string, std::string>;
 
             Status Process(Slice slice, int* consumed);
-            const HTTPMessage& Done() const;
+            HTTPMessage& Done();
 
         private:
             Status ParseStartLine(Slice start_line);

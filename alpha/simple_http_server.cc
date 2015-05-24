@@ -68,7 +68,9 @@ namespace alpha {
             DLOG_INFO << "codec consume " << consumed << " bytes";
             buffer->ConsumeBytes(consumed);
         } else if (status == HTTPMessageCodec::Status::kDone) {
-            callback_(conn, codec->Done());
+            auto & http_message = codec->Done();
+            http_message.SetClientAddress(conn->PeerAddr());
+            callback_(conn, http_message);
             if (!conn->closed()) conn->Close();
         } else {
             LOG_WARNING << "Codec error, status = " << status;

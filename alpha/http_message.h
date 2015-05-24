@@ -13,6 +13,7 @@
 #ifndef  __HTTP_MESSAGE_H__
 #define  __HTTP_MESSAGE_H__
 
+#include <map>
 #include <alpha/slice.h>
 #include <alpha/net_address.h>
 #include <alpha/http_headers.h>
@@ -37,6 +38,7 @@ namespace alpha {
             std::string Path() const;
             uint16_t Status() const;
             const std::string& Body() const;
+            const std::map<std::string, std::string> Params() const;
 
         private:
             struct Request {
@@ -64,9 +66,12 @@ namespace alpha {
             const Request& request() const;
             Response& response();
             const Response& response() const;
+            void ParseParams() const;
 
             HTTPHeaders headers_;
             mutable Fields fields_;
+            mutable bool parsed_params_ = false;
+            mutable std::map<std::string, std::string> query_params_;
             std::string body_;
     };
 }

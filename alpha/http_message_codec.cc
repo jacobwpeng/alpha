@@ -59,7 +59,7 @@ namespace alpha {
         return status_;
     }
 
-    const HTTPMessage& HTTPMessageCodec::Done() const {
+    HTTPMessage& HTTPMessageCodec::Done() {
         assert (status_ == Status::kDone);
         return http_message_;
     }

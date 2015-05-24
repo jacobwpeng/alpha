@@ -30,9 +30,17 @@ int main(int argc, char* argv[]) {
         << ", port = " << message.ClientPort()
         << ", method = " << message.Method()
         << ", path = " << message.Path();
-        message.Headers().Foreach([](const std::string& name, const std::string& val) {
+        message.Headers().Foreach([](const std::string& name,
+                    const std::string& val) {
             LOG_INFO << name << ": " << val;
         });
+        if (!message.Body().empty()) {
+            LOG_INFO << "Body: " << message.Body();
+        }
+
+        for (auto & p : message.Params()) {
+            LOG_INFO << p.first << ": " << p.second;
+        }
     });
     if (http_server.Run()) {
         loop.Run();

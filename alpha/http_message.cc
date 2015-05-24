@@ -80,6 +80,13 @@ namespace alpha {
         return body_;
     }
 
+    const std::map<std::string, std::string> HTTPMessage::Params() const {
+        if (!parsed_params_) {
+            ParseParams();
+        }
+        return query_params_;
+    }
+
     HTTPMessage::Request& HTTPMessage::request() {
         assert (fields_.which == 0 || fields_.which == 1);
         if (fields_.ptr.request == nullptr) {
@@ -104,5 +111,32 @@ namespace alpha {
 
     const HTTPMessage::Response& HTTPMessage::response() const {
         return const_cast<HTTPMessage*>(this)->response();
+    }
+
+    void HTTPMessage::ParseParams() const {
+        alpha::Slice path = request().path;
+        auto pos = path.find("?");
+        if (pos != alpha::Slice::npos) {
+            path = path.RemovePrefix(pos + 1);
+            while (!path.empty()) {
+                pos = path.find("=");
+                if (pos == alpha::Slice::npos) {
+                    break;
+                }
+                auto key = path.subslice(0, pos);
+                path = path.RemovePrefix(pos + 1);
+                pos = path.find("&");
+                alpha::Slice val;
+                if (pos == alpha::Slice::npos) {
+                    val = path;
+                    path = alpha::Slice();
+                } else {
+                    val = path.subslice(0, pos);
+                    path = path.RemovePrefix(pos + 1);
+                }
+                query_params_.emplace(key.ToString(), val.ToString());
+            }
+        }
+        parsed_params_ = true;
     }
 }
