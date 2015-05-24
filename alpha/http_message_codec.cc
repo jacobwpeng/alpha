@@ -16,7 +16,8 @@
 namespace alpha {
     static const Slice CRLF("\r\n");
     static const Slice DoubleCRLF("\r\n\r\n");
-    HTTPMessageCodec::Status HTTPMessageCodec::Process(Slice slice, int* consumed) {
+    HTTPMessageCodec::Status HTTPMessageCodec::Process(Slice slice,
+            int* consumed) {
         *consumed = 0;
         if (status_ < Status::kParseStartLine) {
             return status_;
@@ -58,6 +59,11 @@ namespace alpha {
         return status_;
     }
 
+    const HTTPMessage& HTTPMessageCodec::Done() const {
+        assert (status_ == Status::kDone);
+        return http_message_;
+    }
+
     HTTPMessageCodec::Status HTTPMessageCodec::ParseStartLine(Slice start_line) {
             const auto kVersionLength = Slice(" HTTP/1.0").size();
             if (!start_line.EndsWith(" HTTP/1.0")
@@ -66,26 +72,29 @@ namespace alpha {
             }
             size_t method_size = 0;
             if (start_line.StartsWith("GET /")) {
-                method_ = Method::kGet;
+                http_message_.SetMethod("GET");
                 method_size = 4;
             } else if (start_line.StartsWith("PUT /")) {
-                method_ = Method::kPut;
+                http_message_.SetMethod("PUT");
                 method_size = 4;
             } else if (start_line.StartsWith("POST /")) {
-                method_ = Method::kPost;
+                http_message_.SetMethod("POST");
                 method_size = 5;
             }
             else if (start_line.StartsWith("DELETE /")) {
-                method_ = Method::kDelete;
+                http_message_.SetMethod("DELETE");
                 method_size = 7;
             } else {
                 return Status::kInvalidMethod;
             }
-            path_ = start_line.RemovePrefix(method_size).RemoveSuffix(kVersionLength).ToString();
+            auto path = start_line.RemovePrefix(method_size).RemoveSuffix(
+                kVersionLength).ToString();
+            http_message_.SetPath(path);
         return Status::kParseHeader;
     }
 
-    HTTPMessageCodec::Status HTTPMessageCodec::ParseHeader(Slice data, int* consumed) {
+    HTTPMessageCodec::Status HTTPMessageCodec::ParseHeader(Slice data,
+            int* consumed) {
         auto pos = data.find(CRLF);
         while (pos != Slice::npos) {
             if (pos == 0) {
@@ -99,11 +108,7 @@ namespace alpha {
             }
             auto key = line.subslice(0, sp_pos);
             auto val = line.RemovePrefix(key.size() + 2);
-            if (headers_.find(key.ToString()) != headers_.end()) {
-                return Status::kDuplicatedHead;
-            }
-
-            headers_.emplace(key.ToString(), val.ToString());
+            http_message_.Headers().Add(key, val);
             *consumed += line.size() + CRLF.size();
             data = data.RemovePrefix(line.size() + CRLF.size());
             pos = data.find(CRLF);
@@ -112,57 +117,40 @@ namespace alpha {
     }
 
     HTTPMessageCodec::Status HTTPMessageCodec::OperationAfterParseHeader() {
-        if (headers_.find("Content-Length") == headers_.end()) {
-            return Status::kDone;
-        } else {
-            return Status::kParseData;
-        }
+        return http_message_.Headers().Exists("Content-Length")
+            ? Status::kParseData : Status::kDone;
     }
 
     HTTPMessageCodec::Status HTTPMessageCodec::AppendData(Slice data) {
         if (content_length_ == -1) {
             const size_t kMaxContentLengthDigitNum = 12;
             const int kMaxContentLength = 1024;
-            auto it = headers_.find("Content-Length");
-            assert (it != headers_.end());
-            if (it->second.size() >= kMaxContentLengthDigitNum) {
+            assert (http_message_.Headers().Exists("Content-Length"));
+            auto content_length_str =
+                http_message_.Headers().Get("Content-Length");
+            if (content_length_str.size() >= kMaxContentLengthDigitNum) {
                 return Status::kInvalidContentLength;
             }
 
-            auto n = ::sscanf(it->second.data(), "%d", &content_length_);
-            if (n != 1 || content_length_ <= 0 || content_length_ > kMaxContentLength) {
+            auto n = ::sscanf(content_length_str.data(), "%d", &content_length_);
+            if (n != 1 || content_length_ <= 0 
+                    || content_length_ > kMaxContentLength) {
                 return Status::kInvalidContentLength;
             }
         }
 
         assert (content_length_ > 0);
-        data_.append(data.data(), data.size());
+        http_message_.AppendBody(data);
+        auto current_body_size = http_message_.Body().size();
         const auto size = static_cast<size_t>(content_length_);
-        if (data_.size() > size) {
-            LOG_WARNING << "data_.size() = " << data_.size()
-                << ", size = " << size;
+        if (current_body_size > size) {
             return Status::kTooMuchContent;
-        } else if (data_.size() == size) {
+        } else if (current_body_size == size) {
             return Status::kDone;
         } else {
             DLOG_INFO << "Expected size = " << size
-                << ", current size = " << data_.size();
+                << ", current size = " << current_body_size;
             return Status::kNeedsMore;
-        }
-    }
-
-    Slice HTTPMessageCodec::method_name() const {
-        switch (method_) {
-            case Method::kGet:
-                return "GET";
-            case Method::kPut:
-                return "PUT";
-            case Method::kPost:
-                return "POST";
-            case Method::kDelete:
-                return "DELETE";
-            default:
-                return "UNKNOWN";
         }
     }
 }

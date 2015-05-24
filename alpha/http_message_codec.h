@@ -15,20 +15,13 @@
 
 #include <map>
 #include <string>
-#include "slice.h"
-#include "tcp_connection.h"
+#include <alpha/slice.h>
+#include <alpha/tcp_connection.h>
+#include <alpha/http_message.h>
 
 namespace alpha {
     class HTTPMessageCodec {
         public:
-            enum class Method {
-                kGet = 1,
-                kPut = 2,
-                kPost = 3,
-                kDelete = 4,
-                kUnknown
-            };
-
             enum class Status {
                 kDone = 0,
                 kNeedsMore = 1,
@@ -51,11 +44,7 @@ namespace alpha {
             using HTTPHeader = std::map<std::string, std::string>;
 
             Status Process(Slice slice, int* consumed);
-            Method method() const { return method_; }
-            Slice method_name() const;
-            Slice path() const { return path_; }
-            Slice data() const { return data_; }
-            const HTTPHeader& headers() const { return headers_; }
+            const HTTPMessage& Done() const;
 
         private:
             Status ParseStartLine(Slice start_line);
@@ -64,10 +53,7 @@ namespace alpha {
             Status AppendData(Slice data);
             Status status_ = Status::kParseStartLine;
             int content_length_ = -1;
-            Method method_ = Method::kUnknown;
-            std::string path_;
-            std::string data_;
-            HTTPHeader headers_;
+            HTTPMessage http_message_;
     };
 }
 

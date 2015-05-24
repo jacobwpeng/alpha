@@ -14,6 +14,7 @@
 #include <alpha/net_address.h>
 #include <alpha/event_loop.h>
 #include <alpha/simple_http_server.h>
+#include <alpha/http_message.h>
 
 int main(int argc, char* argv[]) {
     alpha::Logger::Init(argv[0]);
@@ -23,13 +24,15 @@ int main(int argc, char* argv[]) {
     });
     alpha::SimpleHTTPServer http_server(&loop,
             alpha::NetAddress("127.0.0.1", 8080));
-    http_server.SetOnGet([](
-                alpha::TcpConnectionPtr conn,
-                alpha::Slice path,
-                const alpha::SimpleHTTPServer::HTTPHeader& header,
-                alpha::Slice data){
-        LOG_INFO << "Get request from " << conn->PeerAddr()
-            << ", path = " << path.ToString();
+    http_server.SetCallback([](alpha::TcpConnectionPtr conn,
+                const alpha::HTTPMessage& message) {
+        LOG_INFO << "Client ip = " << message.ClientIp()
+        << ", port = " << message.ClientPort()
+        << ", method = " << message.Method()
+        << ", path = " << message.Path();
+        message.Headers().Foreach([](const std::string& name, const std::string& val) {
+            LOG_INFO << name << ": " << val;
+        });
     });
     if (http_server.Run()) {
         loop.Run();

@@ -22,22 +22,28 @@ namespace alpha {
     class EventLoop;
     class TcpServer;
     class NetAddress;
+    class HTTPMessage;
     class SimpleHTTPServer {
         public:
             using HTTPHeader = HTTPMessageCodec::HTTPHeader;
+            using Callback = std::function<
+                void(TcpConnectionPtr, const HTTPMessage& message)>;
             using RequestCallback = std::function<
-                void(TcpConnectionPtr, Slice path, const HTTPHeader& header, Slice data)>;
+                void(TcpConnectionPtr,
+                        Slice path,
+                        const HTTPHeader& header,
+                        Slice data)>;
             SimpleHTTPServer(EventLoop* loop, const NetAddress& addr);
             ~SimpleHTTPServer();
             bool Run();
-            void SetOnGet(const RequestCallback& cb) { get_callback_ = cb; }
-            void SetOnPut(const RequestCallback& cb) { put_callback_ = cb; }
-            void SetOnPost(const RequestCallback& cb) { post_callback_ = cb; }
-            void SetOnDelete(const RequestCallback& cb) { delete_callback_ = cb; }
+            void SetCallback(const Callback& cb) { callback_ = cb; }
 
         private:
-            void DefaultRequestCallback(TcpConnectionPtr, Slice method, Slice path
-                    , const HTTPHeader& header, Slice data);
+            void DefaultRequestCallback(TcpConnectionPtr,
+                    Slice method,
+                    Slice path,
+                    const HTTPHeader& header,
+                    Slice data);
             void OnMessage(TcpConnectionPtr conn, TcpConnectionBuffer* buffer);
             void OnConnected(TcpConnectionPtr conn);
             void OnClose(TcpConnectionPtr conn);
@@ -46,10 +52,7 @@ namespace alpha {
             EventLoop* loop_;
             NetAddress addr_;
             std::unique_ptr<TcpServer> server_;
-            RequestCallback get_callback_;
-            RequestCallback put_callback_;
-            RequestCallback post_callback_;
-            RequestCallback delete_callback_;
+            Callback callback_;
     };
 }
 
