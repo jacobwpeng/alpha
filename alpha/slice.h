@@ -48,6 +48,7 @@ namespace alpha {
 
             Slice subslice(size_t pos = 0, size_t len = npos);
 
+            void Clear();
             bool empty() const { return buf_ == NULL || len_ == 0; }
             const char * data() const { return buf_; }
             size_t size() const { return len_; }

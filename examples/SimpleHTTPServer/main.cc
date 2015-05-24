@@ -29,7 +29,8 @@ int main(int argc, char* argv[]) {
         LOG_INFO << "Client ip = " << message.ClientIp()
         << ", port = " << message.ClientPort()
         << ", method = " << message.Method()
-        << ", path = " << message.Path();
+        << ", path = " << message.Path()
+        << ", query string = " << message.QueryString();
         message.Headers().Foreach([](const std::string& name,
                     const std::string& val) {
             LOG_INFO << name << ": " << val;

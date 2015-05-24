@@ -106,6 +106,11 @@ namespace alpha {
         }
     }
 
+    void Slice::Clear() {
+        buf_ = nullptr;
+        len_ = 0;
+    }
+
     bool Slice::StartsWith(alpha::Slice prefix) const {
         return len_ >= prefix.len_
             && memcmp(buf_, prefix.buf_, prefix.len_) == 0;

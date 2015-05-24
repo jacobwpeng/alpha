@@ -89,7 +89,13 @@ namespace alpha {
             }
             auto path = start_line.RemovePrefix(method_size).RemoveSuffix(
                 kVersionLength).ToString();
-            http_message_.SetPath(path);
+            auto query_string_start = path.find('?');
+            if (query_string_start == std::string::npos) {
+                http_message_.SetPath(path);
+            } else {
+                http_message_.SetPath(path.substr(0, query_string_start));
+                http_message_.SetQueryString(path.substr(query_string_start + 1));
+            }
         return Status::kParseHeader;
     }
 

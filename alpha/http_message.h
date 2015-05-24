@@ -29,6 +29,7 @@ namespace alpha {
             void SetClientAddress(const alpha::NetAddress& addr);
             void SetMethod(alpha::Slice method);
             void SetPath(alpha::Slice path);
+            void SetQueryString(alpha::Slice query_string);
             void SetStatus(uint16_t status);
             void AppendBody(alpha::Slice body);
 
@@ -36,6 +37,7 @@ namespace alpha {
             uint16_t ClientPort() const;
             std::string Method() const;
             std::string Path() const;
+            std::string QueryString() const;
             uint16_t Status() const;
             const std::string& Body() const;
             const std::map<std::string, std::string> Params() const;
@@ -46,7 +48,7 @@ namespace alpha {
                 int client_port;
                 std::string method;
                 std::string path;
-                std::string query;
+                std::string query_string;
             };
 
             struct Response {

@@ -48,6 +48,10 @@ namespace alpha {
         request().path = path.ToString();
     }
 
+    void HTTPMessage::SetQueryString(alpha::Slice query_string) {
+        request().query_string = query_string.ToString();
+    }
+
     void HTTPMessage::SetStatus(uint16_t status) {
         response().status = status;
     }
@@ -70,6 +74,10 @@ namespace alpha {
 
     std::string HTTPMessage::Path() const {
         return request().path;
+    }
+
+    std::string HTTPMessage::QueryString() const {
+        return request().query_string;
     }
 
     uint16_t HTTPMessage::Status() const {
@@ -114,28 +122,24 @@ namespace alpha {
     }
 
     void HTTPMessage::ParseParams() const {
-        alpha::Slice path = request().path;
-        auto pos = path.find("?");
-        if (pos != alpha::Slice::npos) {
-            path = path.RemovePrefix(pos + 1);
-            while (!path.empty()) {
-                pos = path.find("=");
-                if (pos == alpha::Slice::npos) {
-                    break;
-                }
-                auto key = path.subslice(0, pos);
-                path = path.RemovePrefix(pos + 1);
-                pos = path.find("&");
-                alpha::Slice val;
-                if (pos == alpha::Slice::npos) {
-                    val = path;
-                    path = alpha::Slice();
-                } else {
-                    val = path.subslice(0, pos);
-                    path = path.RemovePrefix(pos + 1);
-                }
-                query_params_.emplace(key.ToString(), val.ToString());
+        alpha::Slice query_string = request().query_string;
+        while (!query_string.empty()) {
+            auto pos = query_string.find("=");
+            if (pos == alpha::Slice::npos) {
+                break;
             }
+            auto key = query_string.subslice(0, pos);
+            query_string = query_string.RemovePrefix(pos + 1);
+            pos = query_string.find("&");
+            alpha::Slice val;
+            if (pos == alpha::Slice::npos) {
+                val = query_string;
+                query_string.Clear();
+            } else {
+                val = query_string.subslice(0, pos);
+                query_string = query_string.RemovePrefix(pos + 1);
+            }
+            query_params_.emplace(key.ToString(), val.ToString());
         }
         parsed_params_ = true;
     }
