@@ -12,6 +12,7 @@
 
 #include "logger_file.h"
 #include <unistd.h>
+#include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -21,8 +22,12 @@
 #include "logger.h"
 
 namespace alpha {
-    LoggerFile::LoggerFile(const Slice& path, const Slice& prog_name)
-        :file_create_time_(0), path_(path.ToString()), prog_name_(prog_name.ToString()) {
+    LoggerFile::LoggerFile(const std::string& path,
+            const std::string& prog_name,
+            const std::string& log_level_name)
+        :path_(path),
+        prog_name_(prog_name),
+        log_level_name_(log_level_name) {
     }
 
     LoggerFile::~LoggerFile() {
@@ -31,7 +36,7 @@ namespace alpha {
         }
     }
 
-    void LoggerFile::Write(LogLevel level, const char* content, int len) {
+    void LoggerFile::Write(const char* content, int len) {
         MaybeChangeLogFile();
         if (unlikely(fd_ == -1)) {
             ::fprintf(stderr, content, len);
@@ -60,11 +65,18 @@ namespace alpha {
             return;
         }
 
-        char file_name[256];
-        ::snprintf(file_name, sizeof(file_name), "%s/%s-%4d%02d%02d%02d.log", 
-                path_.c_str(), prog_name_.c_str(), result.tm_year + 1900, result.tm_mon + 1,
-                result.tm_mday, result.tm_hour);
-        fd_ = ::open(file_name, O_WRONLY | O_APPEND | O_CREAT, 0666);
+        char file[PATH_MAX];
+        ::snprintf(file,
+                sizeof(file),
+                "%s/%s.%4d%02d%02d%02d.%s.log",
+                path_.c_str(),
+                prog_name_.c_str(),
+                result.tm_year + 1900,
+                result.tm_mon + 1,
+                result.tm_mday,
+                result.tm_hour,
+                log_level_name_.c_str());
+        fd_ = ::open(file, O_WRONLY | O_APPEND | O_CREAT, 0666);
         if (unlikely(fd_ == -1)) {
             perror("open");
         } else {

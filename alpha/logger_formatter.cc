@@ -31,12 +31,15 @@ namespace alpha {
         static __thread pid_t tid = 0;
     }
 
-    LoggerFormatter::LoggerFormatter(Logger* logger, const char* basename, 
-            const char* funcname, int lineno, int level, bool needs_errno_message)
-    :logger_(logger), log_level_(level), needs_errno_message_(needs_errno_message) {
-
+    LoggerFormatter::LoggerFormatter(const char* basename,
+                                    const char* funcname,
+                                    int lineno,
+                                    int level,
+                                    bool needs_errno_message)
+    :log_level_(level),
+    needs_errno_message_(needs_errno_message) {
         header_len_ = FormatHeader(basename, funcname, lineno, level);
-        stream_.rdbuf()->pubsetbuf(buf + header_len_, 
+        stream_.rdbuf()->pubsetbuf(buf + header_len_,
                 LoggerFormatter::kMaxLogLength - header_len_ - 1);
     }
 
@@ -51,7 +54,7 @@ namespace alpha {
             buf[len] = '\n';
             len += 1;
         }
-        logger_->Append(static_cast<LogLevel>(log_level_), buf, len);
+        Logger::SendLog(static_cast<LogLevel>(log_level_), buf, len);
     }
 
     int LoggerFormatter::FormatHeader(const char* basename, const char* funcname,
@@ -67,15 +70,16 @@ namespace alpha {
         if (tv.tv_sec != detail::lasttime) {
             detail::lasttime = tv.tv_sec;
             if (NULL != localtime_r(&tv.tv_sec, &detail::tm)) {
-                strftime(detail::time_fmt, sizeof detail::time_fmt, 
-                    "[%Y-%m-%d %H:%M:%S.%%06u %%d %%s %%s %%s:%%d] ", 
+                strftime(detail::time_fmt, sizeof detail::time_fmt,
+                    "[%Y-%m-%d %H:%M:%S.%%06u %%d %%s %%s:%%d] ",
                     &detail::tm);
             }
         }
 
-        return snprintf(buf, LoggerFormatter::kMaxLogLength, 
-                detail::time_fmt, tv.tv_usec, 
-                detail::tid, Logger::GetLogLevelName(level), 
-                funcname, basename, lineno);
+        (void)funcname;
+        return snprintf(buf, LoggerFormatter::kMaxLogLength,
+                detail::time_fmt, tv.tv_usec,
+                detail::tid, Logger::GetLogLevelName(level),
+                basename, lineno);
     }
 }

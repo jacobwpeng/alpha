@@ -13,84 +13,130 @@
 #include "logger.h"
 #include "logger_file.h"
 
+#include <unistd.h>
 #include <cassert>
 #include <cstdio>
 #include <cstring>
 #include <functional>
 
 namespace alpha {
-    static const char* kDefaultLogDir = "/tmp";
-    static const LogLevel kDefaultLogLevel = LogLevel::Info;
-    Logger::Voidify Logger::dummy_;
-    Logger* Logger::instance_ = nullptr;
-    const char* Logger::prog_name_ = nullptr;
-    const char* Logger::LogLevelNames_[Logger::LogLevelNum_];
+    Logger::LogVoidify Logger::dummy_;
+    const char* Logger::LogLevelNames_[kLogLevelNum] = {
+        "INFO", "WARN", "ERROR"
+    };
+    bool Logger::initialized_ = false;
 
-    void Logger::LogToStderr(LogLevel level, const char* content, int len) {
-        ::fwrite(content, 1, len, stderr);
+    bool LogEnv::logtostderr_ = false;
+    LogLevel LogEnv::minloglevel_ = kLogLevelInfo;
+    std::string LogEnv::logdir_ = "/tmp";
+
+    const char* LogDestination::prog_name_ = nullptr;
+    LogDestination::LogFilesPtr LogDestination::files_;
+
+    static const char* const_basename(const char* name) {
+        auto p = ::strrchr(name, '/');
+        return p ? p + 1 : name;
     }
 
-    Logger::Logger(LogLevel level, const Logger::LoggerOutput& output)
-        :log_level_(level), logger_output_(output) {
-        }
-
     void Logger::Init(const char* prog_name) {
-       const char* log_dir = secure_getenv("alpha_logdir");
-       const char* logtostderr_env = secure_getenv("alpha_logtostderr");
-       LogLevel min_log_level = kDefaultLogLevel;
-       const char* min_log_level_env = secure_getenv("alpha_minloglevel");
-       Logger::LoggerOutput output;
-       if (log_dir == nullptr) {
-           log_dir = kDefaultLogDir;
-       }
-       if (min_log_level_env != nullptr) {
-           std::string min_level(min_log_level_env);
-           if (min_level == "0") {
-               min_log_level = LogLevel::Fatal;
-           } else if (min_level == "1") {
-               min_log_level = LogLevel::Error;
-           } else if (min_level == "2") {
-               min_log_level = LogLevel::Warning;
-           } else if (min_level == "3") {
-               min_log_level = LogLevel::Info;
-           }
-       }
-       if (logtostderr_env != nullptr && ::strcmp("1", logtostderr_env) == 0) {
-           output = &Logger::LogToStderr;
-       } else {
-           std::string basename(prog_name);
-           auto pos = basename.rfind("/");
-           if (pos != std::string::npos) {
-               basename = basename.substr(pos + 1);
-           }
-           static LoggerFile file(log_dir, basename);
-           using namespace std::placeholders;
-           output = std::bind(&LoggerFile::Write, &file, _1, _2, _3);
-       }
-        static Logger logger(min_log_level, output);
-        instance_ = &logger;
-        prog_name_ = prog_name;
-        LogLevelNames_[0] = "FATAL";
-        LogLevelNames_[1] = "ERROR";
-        LogLevelNames_[2] = "WARN";
-        LogLevelNames_[3] = "INFO";
+        LogEnv::Init();
+        LogDestination::Init(const_basename(prog_name));
+        initialized_ = true;
     }
 
     const char* Logger::GetLogLevelName(int level) {
-        assert (level <= LogLevelNum_);
+        assert (level < kLogLevelNum);
         return LogLevelNames_[level];
     }
 
-    void Logger::Append(LogLevel level, const char* content, int len) {
+    void Logger::SendLog(LogLevel level, const char* buf, int len) {
         assert (len >= 0);
         static bool first_log_before_init = true;
-        auto output = logger_output_ == nullptr ? LogToStderr : logger_output_;
-        if (logger_output_ == nullptr && first_log_before_init) {
-            ::fputs("Log before Init will go to stderr\n", stderr);
-            first_log_before_init = true;
+        if (!initialized_ && first_log_before_init) {
+            alpha::Slice warning("[WARN]Log before init will go to stderr.\n");
+            LogDestination::SendLogToStderr(kLogLevelWarning,
+                    warning.data(), warning.size());
+            first_log_before_init = false;
         }
-        assert (logger_output_);
-        logger_output_(level, content, len);
+        if (LogEnv::logtostderr() || !initialized_) {
+            LogDestination::SendLogToStderr(level, buf, len);
+        } else {
+            LogDestination::SendLog(level, buf, len);
+        }
     }
 
+    void LogEnv::Init() {
+       const char* logdir = getenv("alpha_logdir");
+       const char* logtostderr = getenv("alpha_logtostderr");
+       const char* minloglevel = getenv("alpha_minloglevel");
+
+       if (logdir) {
+           logdir_ = logdir;
+           if (!logdir_.empty() && *logdir_.rbegin() == '/') {
+               logdir_ = logdir_.substr(0, logdir_.size() - 1);
+           }
+       }
+       if (logtostderr && logtostderr[0] == '1') {
+           logtostderr_ = true;
+       }
+       if (minloglevel) {
+           auto level = minloglevel[0] - '0';
+           if (level >= 0 && level <= 3) {
+               minloglevel_ = static_cast<LogLevel>(level);
+           }
+       }
+    }
+
+    bool LogEnv::logtostderr() {
+        return logtostderr_;
+    }
+    LogLevel LogEnv::minloglevel() {
+        return minloglevel_;
+    }
+    std::string LogEnv::logdir() {
+        return logdir_;
+    }
+
+    void LogDestination::Init(const char* prog_name) {
+        prog_name_ = prog_name;
+        if (!LogEnv::logtostderr()) {
+            const int minloglevel = LogEnv::minloglevel();
+            files_.reset (new LogDestination::LogFiles());
+            for (int i = 0;
+                    i < kLogLevelNum;
+                    ++i) {
+                if (i >= minloglevel) {
+                    AddFileSink(i);
+                } else {
+                    files_->push_back(nullptr);
+                }
+            }
+        }
+    }
+
+    void LogDestination::SendLog(LogLevel level, const char* buf, int len) {
+        const int log_level = level;
+        const int minloglevel = LogEnv::minloglevel();
+        if (log_level >= minloglevel) {
+            for (int i = minloglevel; i <= log_level; ++i) {
+                files_->at(i)->Write(buf, len);
+            }
+        }
+    }
+
+    void LogDestination::SendLogToStderr(LogLevel level, const char* buf,
+            int len) {
+        ::write(STDERR_FILENO, buf, len);
+    }
+
+    void LogDestination::AddFileSink(int level) {
+        files_->push_back(std::unique_ptr<LoggerFile>(
+                        new LoggerFile(
+                            LogEnv::logdir(),
+                            prog_name_,
+                            Logger::GetLogLevelName(level)
+                        )
+                    )
+                );
+    }
 }

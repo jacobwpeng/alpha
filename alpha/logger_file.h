@@ -18,23 +18,24 @@
 #include "time_util.h"
 
 namespace alpha {
-    enum class LogLevel : short;
     class Slice;
     class LoggerFile {
         public:
-            LoggerFile(const Slice& path, const Slice& prog_name);
+            LoggerFile(const std::string& path,
+                    const std::string& prog_name,
+                    const std::string& log_level_name);
             ~LoggerFile();
-
-            void Write(LogLevel level, const char* content, int len);
+            void Write(const char* content, int len);
 
         private:
             void MaybeChangeLogFile();
 
         private:
-            int fd_;
-            TimeStamp file_create_time_;
+            int fd_ = -1;
+            TimeStamp file_create_time_ = 0;
             std::string path_;
             std::string prog_name_;
+            std::string log_level_name_;
     };
 }
 

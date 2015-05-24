@@ -13,18 +13,21 @@
 #ifndef  __LOGGER_H__
 #define  __LOGGER_H__
 
+#include <memory>
+#include <vector>
 #include <functional>
 #include "slice.h"
 #include "logger_formatter.h"
+#include "logger_file.h"
 
 namespace alpha {
-    enum class LogLevel : short {
-        Fatal = 0,
-        Error = 1,
-        Warning = 2,
-        Info = 3,
-        TotalNum = 4,
+    enum LogLevel {
+        kLogLevelInfo = 0,
+        kLogLevelWarning = 1,
+        kLogLevelError = 2
     };
+
+    static const int kLogLevelNum = 3;
 
     struct BasenameRetriever {
         template<int len>
@@ -47,43 +50,62 @@ namespace alpha {
 
     class Logger {
         private:
-            struct Voidify {
+            struct LogVoidify {
                 void operator&(std::ostream&) {
                 }
             };
 
         public:
-            typedef std::function<void (LogLevel level, 
-                    const char* content, int len)> LoggerOutput;
+            using LoggerOutput = void(*)(LogLevel level, const char*, int);
 
             static void Init(const char* prog_name);
-
-            LogLevel GetLogLevel() const { return log_level_; }
-            void Append(LogLevel level, const char* content, int len);
+            static void SendLog(LogLevel level, const char* buf, int len);
             static const char* GetLogLevelName(int level);
-            static Logger* Instance() { return instance_; }
+            static LogVoidify dummy_;
 
-            static Voidify dummy_;
         private:
-            static void LogToStderr(LogLevel level, const char* content, int len);
-
             Logger(LogLevel level, const LoggerOutput& output);
-            LogLevel log_level_;
-            LoggerOutput logger_output_;
+            static const char* LogLevelNames_[kLogLevelNum];
+            static bool initialized_;
+    };
+
+    class LogEnv {
+        public:
+            static void Init();
+            static bool logtostderr();
+            static LogLevel minloglevel();
+            static std::string logdir();
+        private:
+            static bool logtostderr_;
+            static LogLevel minloglevel_;
+            static std::string logdir_;
+    };
+
+    class LogDestination {
+        public:
+            static void Init(const char* prog_name);
+            static void SendLog(LogLevel level, const char* buf, int len);
+            static void SendLogToStderr(LogLevel level, const char* buf, int len);
+
+        private:
+            using LogFiles = std::vector<std::unique_ptr<LoggerFile>>;
+            using LogFilesPtr = std::unique_ptr<LogFiles>;
+            static void AddFileSink(int level);
             static const char* prog_name_;
-            static const int LogLevelNum_ = static_cast<int>(LogLevel::TotalNum);
-            static const char* LogLevelNames_[LogLevelNum_];
-            static Logger* instance_;
+            static LogFilesPtr files_;
     };
 }
 
-#define LOG_COND_IF_IMPL(level, cond, errno_message) \
-    (alpha::Logger::Instance()->GetLogLevel() < level || (!cond)) ? (void)0 : \
-        alpha::Logger::dummy_ & (alpha::LoggerFormatter(\
-                    alpha::Logger::Instance(), \
-                        alpha::BasenameRetriever(__FILE__).basename, \
-                        __FUNCTION__, __LINE__, static_cast<int>(level), errno_message \
-                    ).stream())
+#define LOG_COND_IF_IMPL(level, cond, errno_message)                    \
+    (level < alpha::LogEnv::minloglevel() || (!cond)) ?                 \
+    (void)0 :                                                           \
+    alpha::Logger::dummy_ & (alpha::LoggerFormatter(                    \
+        alpha::BasenameRetriever(__FILE__).basename,                    \
+        __FUNCTION__,                                                   \
+        __LINE__,                                                       \
+        static_cast<int>(level),                                        \
+        errno_message                                                   \
+    ).stream())
 
 
 #define LOG_COND_IF(level, cond) LOG_COND_IF_IMPL(level, cond, false)
@@ -92,21 +114,21 @@ namespace alpha {
 #define LOG_LEVEL_IF(level) LOG_COND_IF(level, true)
 #define PLOG_LEVEL_IF(level) PLOG_COND_IF(level, true)
 
-#define LOG_INFO LOG_LEVEL_IF(alpha::LogLevel::Info)
-#define LOG_WARNING LOG_LEVEL_IF(alpha::LogLevel::Warning)
-#define LOG_ERROR LOG_LEVEL_IF(alpha::LogLevel::Error)
+#define LOG_INFO LOG_LEVEL_IF(alpha::kLogLevelInfo)
+#define LOG_WARNING LOG_LEVEL_IF(alpha::kLogLevelWarning)
+#define LOG_ERROR LOG_LEVEL_IF(alpha::kLogLevelError)
 
-#define PLOG_INFO PLOG_LEVEL_IF(alpha::LogLevel::Info)
-#define PLOG_WARNING PLOG_LEVEL_IF(alpha::LogLevel::Warning)
-#define PLOG_ERROR PLOG_LEVEL_IF(alpha::LogLevel::Error)
+#define PLOG_INFO PLOG_LEVEL_IF(alpha::kLogLevelInfo)
+#define PLOG_WARNING PLOG_LEVEL_IF(alpha::kLogLevelWarning)
+#define PLOG_ERROR PLOG_LEVEL_IF(alpha::kLogLevelError)
 
-#define LOG_INFO_IF(cond) LOG_COND_IF(alpha::LogLevel::Info, (cond))
-#define LOG_WARNING_IF(cond) LOG_COND_IF(alpha::LogLevel::Warning, (cond))
-#define LOG_ERROR_IF(cond) LOG_COND_IF(alpha::LogLevel::Error, (cond))
+#define LOG_INFO_IF(cond) LOG_COND_IF(alpha::kLogLevelInfo, (cond))
+#define LOG_WARNING_IF(cond) LOG_COND_IF(alpha::kLogLevelWarning, (cond))
+#define LOG_ERROR_IF(cond) LOG_COND_IF(alpha::kLogLevelError, (cond))
 
-#define PLOG_INFO_IF(cond) PLOG_COND_IF(alpha::LogLevel::Info, (cond))
-#define PLOG_WARNING_IF(cond) PLOG_COND_IF(alpha::LogLevel::Warning, (cond))
-#define PLOG_ERROR_IF(cond) PLOG_COND_IF(alpha::LogLevel::Error, (cond))
+#define PLOG_INFO_IF(cond) PLOG_COND_IF(alpha::kLogLevelInfo, (cond))
+#define PLOG_WARNING_IF(cond) PLOG_COND_IF(alpha::kLogLevelWarning, (cond))
+#define PLOG_ERROR_IF(cond) PLOG_COND_IF(alpha::kLogLevelError, (cond))
 
 #ifdef NDEBUG
 #define DLOG_INFO_IF(cond) LOG_INFO_IF(false)
