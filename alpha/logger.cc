@@ -30,6 +30,7 @@ namespace alpha {
     LogLevel LogEnv::minloglevel_ = kLogLevelInfo;
     std::string LogEnv::logdir_ = "/tmp";
 
+    std::atomic_int LogDestination::logs_num_[alpha::kLogLevelNum];
     const char* LogDestination::prog_name_ = nullptr;
     LogDestination::LogFilesPtr LogDestination::files_;
 
@@ -118,6 +119,7 @@ namespace alpha {
         const int log_level = level;
         const int minloglevel = LogEnv::minloglevel();
         if (log_level >= minloglevel) {
+            ++logs_num_[level];
             for (int i = minloglevel; i <= log_level; ++i) {
                 files_->at(i)->Write(buf, len);
             }
@@ -126,7 +128,12 @@ namespace alpha {
 
     void LogDestination::SendLogToStderr(LogLevel level, const char* buf,
             int len) {
+        logs_num_[level]++;
         ::write(STDERR_FILENO, buf, len);
+    }
+
+    int LogDestination::GetLogNum(LogLevel level) {
+        return logs_num_[level];
     }
 
     void LogDestination::AddFileSink(int level) {

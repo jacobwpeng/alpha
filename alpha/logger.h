@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <vector>
+#include <atomic>
 #include <functional>
 #include "slice.h"
 #include "logger_formatter.h"
@@ -86,11 +87,13 @@ namespace alpha {
             static void Init(const char* prog_name);
             static void SendLog(LogLevel level, const char* buf, int len);
             static void SendLogToStderr(LogLevel level, const char* buf, int len);
+            static int GetLogNum(LogLevel level);
 
         private:
             using LogFiles = std::vector<std::unique_ptr<LoggerFile>>;
             using LogFilesPtr = std::unique_ptr<LogFiles>;
             static void AddFileSink(int level);
+            static std::atomic_int logs_num_[kLogLevelNum];
             static const char* prog_name_;
             static LogFilesPtr files_;
     };
