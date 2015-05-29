@@ -56,6 +56,10 @@ namespace alpha {
         response().status = status;
     }
 
+    void HTTPMessage::SetStatusString(alpha::Slice status_string) {
+        response().status_string = status_string.ToString();
+    }
+
     void HTTPMessage::AppendBody(alpha::Slice data) {
         body_.append(data.data(), data.size());
     }
@@ -82,6 +86,10 @@ namespace alpha {
 
     uint16_t HTTPMessage::Status() const {
         return response().status;
+    }
+
+    const std::string& HTTPMessage::StatusString() const {
+        return response().status_string;
     }
 
     const std::string& HTTPMessage::Body() const {

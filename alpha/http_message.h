@@ -31,6 +31,7 @@ namespace alpha {
             void SetPath(alpha::Slice path);
             void SetQueryString(alpha::Slice query_string);
             void SetStatus(uint16_t status);
+            void SetStatusString(alpha::Slice status_string);
             void AppendBody(alpha::Slice body);
 
             std::string ClientIp() const;
@@ -39,6 +40,7 @@ namespace alpha {
             std::string Path() const;
             std::string QueryString() const;
             uint16_t Status() const;
+            const std::string& StatusString() const;
             const std::string& Body() const;
             const std::map<std::string, std::string> Params() const;
 
