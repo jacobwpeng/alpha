@@ -17,37 +17,17 @@
 #include <vector>
 #include <atomic>
 #include <functional>
-#include "slice.h"
-#include "logger_formatter.h"
-#include "logger_file.h"
+#include <alpha/logger_file.h>
+#include <alpha/logger_stream.h>
 
 namespace alpha {
     enum LogLevel {
         kLogLevelInfo = 0,
         kLogLevelWarning = 1,
-        kLogLevelError = 2
+        kLogLevelError = 2,
+        kLogLevelFatal = 3
     };
-
-    static const int kLogLevelNum = 3;
-
-    struct BasenameRetriever {
-        template<int len>
-        BasenameRetriever(const char (&arr)[len])
-        :basename(NULL) {
-            int pos = len - 1;                      /* skil '\0' */
-            while (pos >= 0) {
-                if (arr[pos] == '/') {
-                    basename = arr + pos + 1;
-                    break;
-                }
-                else {
-                    --pos;
-                }
-            }
-            if (basename == NULL) basename = arr;
-        }
-        const char* basename;
-    };
+    static const int kLogLevelNum = 4;
 
     class Logger {
         private:
@@ -58,7 +38,6 @@ namespace alpha {
 
         public:
             using LoggerOutput = void(*)(LogLevel level, const char*, int);
-
             static void Init(const char* prog_name);
             static void SendLog(LogLevel level, const char* buf, int len);
             static const char* GetLogLevelName(int level);
@@ -76,6 +55,7 @@ namespace alpha {
             static bool logtostderr();
             static LogLevel minloglevel();
             static std::string logdir();
+
         private:
             static bool logtostderr_;
             static LogLevel minloglevel_;
@@ -97,41 +77,56 @@ namespace alpha {
             static const char* prog_name_;
             static LogFilesPtr files_;
     };
+
+    class LogMessage {
+        public:
+            LogMessage(const char* file, int line, LogLevel level,
+                    bool errno_message = false, const char* expr = nullptr);
+            virtual ~LogMessage();
+            alpha::LoggerStream& stream();
+
+        protected:
+            void Flush();
+            int preserved_errno() const;
+
+        private:
+            bool flushed_;
+            int preserved_errno_;
+            int header_size_;
+            const char* file_;
+            int line_;
+            LogLevel level_;
+            bool errno_message_;
+            const char* expr_;
+            alpha::LoggerStream stream_;
+    };
 }
+#define ALPHA_TOSTRING1(x) #x
+#define ALPHA_TOSTRING(x) ALPHA_TOSTRING1(x)
+#define VodifyStream(stream) alpha::Logger::dummy_ & stream
 
-#define LOG_COND_IF_IMPL(level, cond, errno_message)                    \
-    (level < alpha::LogEnv::minloglevel() || (!cond)) ?                 \
-    (void)0 :                                                           \
-    alpha::Logger::dummy_ & (alpha::LoggerFormatter(                    \
-        alpha::BasenameRetriever(__FILE__).basename,                    \
-        __FUNCTION__,                                                   \
-        __LINE__,                                                       \
-        static_cast<int>(level),                                        \
-        errno_message                                                   \
-    ).stream())
+#define LOG_IF(level, cond) !(cond) ? (void)0 :                             \
+    VodifyStream(alpha::LogMessage(__FILE__, __LINE__, level).stream())
+#define LOG_INFO_IF(cond) LOG_IF(alpha::kLogLevelInfo, cond)
+#define LOG_WARNING_IF(cond) LOG_IF(alpha::kLogLevelWarning, cond)
+#define LOG_ERROR_IF(cond) LOG_IF(alpha::kLogLevelError, cond)
+#define LOG_INFO LOG_INFO_IF(true)
+#define LOG_WARNING LOG_WARNING_IF(true)
+#define LOG_ERROR LOG_ERROR_IF(true)
 
+#define PLOG_IF(level, cond) !(cond) ? (void)0 :                            \
+    VodifyStream(alpha::LogMessage(__FILE__, __LINE__, level, true).stream())
+#define PLOG_INFO_IF(cond) PLOG_IF(alpha::kLogLevelInfo, cond)
+#define PLOG_WARNING_IF(cond) PLOG_IF(alpha::kLogLevelWarning, cond)
+#define PLOG_ERROR_IF(cond) PLOG_IF(alpha::kLogLevelError, cond)
+#define PLOG_INFO PLOG_INFO_IF(true)
+#define PLOG_WARNING PLOG_WARNING_IF(true)
+#define PLOG_ERROR PLOG_ERROR_IF(true)
 
-#define LOG_COND_IF(level, cond) LOG_COND_IF_IMPL(level, cond, false)
-#define PLOG_COND_IF(level, cond) LOG_COND_IF_IMPL(level, cond, true)
-
-#define LOG_LEVEL_IF(level) LOG_COND_IF(level, true)
-#define PLOG_LEVEL_IF(level) PLOG_COND_IF(level, true)
-
-#define LOG_INFO LOG_LEVEL_IF(alpha::kLogLevelInfo)
-#define LOG_WARNING LOG_LEVEL_IF(alpha::kLogLevelWarning)
-#define LOG_ERROR LOG_LEVEL_IF(alpha::kLogLevelError)
-
-#define PLOG_INFO PLOG_LEVEL_IF(alpha::kLogLevelInfo)
-#define PLOG_WARNING PLOG_LEVEL_IF(alpha::kLogLevelWarning)
-#define PLOG_ERROR PLOG_LEVEL_IF(alpha::kLogLevelError)
-
-#define LOG_INFO_IF(cond) LOG_COND_IF(alpha::kLogLevelInfo, (cond))
-#define LOG_WARNING_IF(cond) LOG_COND_IF(alpha::kLogLevelWarning, (cond))
-#define LOG_ERROR_IF(cond) LOG_COND_IF(alpha::kLogLevelError, (cond))
-
-#define PLOG_INFO_IF(cond) PLOG_COND_IF(alpha::kLogLevelInfo, (cond))
-#define PLOG_WARNING_IF(cond) PLOG_COND_IF(alpha::kLogLevelWarning, (cond))
-#define PLOG_ERROR_IF(cond) PLOG_COND_IF(alpha::kLogLevelError, (cond))
+#define CHECK(expr) (expr) ? (void)0 :                                      \
+    VodifyStream(alpha::LogMessage(__FILE__, __LINE__, alpha::kLogLevelFatal, false, ALPHA_TOSTRING(expr)).stream())
+#define PCHECK(expr) (expr) ? (void)0 :                                     \
+    VodifyStream(alpha::LogMessage(__FILE__, __LINE__, alpha::kLogLevelFatal, true, ALPHA_TOSTRING(expr)).stream())
 
 #ifdef NDEBUG
 #define DLOG_INFO_IF(cond) LOG_INFO_IF(false)
@@ -140,6 +135,7 @@ namespace alpha {
 #define DLOG_INFO DLOG_INFO_IF(false)
 #define DLOG_WARNING DLOG_WARNING_IF(false)
 #define DLOG_ERROR DLOG_ERROR_IF(false)
+#define DCHECK(expr) alpha::NullStream()
 #else
 #define DLOG_INFO_IF LOG_INFO_IF
 #define DLOG_WARNING_IF LOG_WARNING_IF
@@ -147,6 +143,7 @@ namespace alpha {
 #define DLOG_INFO LOG_INFO
 #define DLOG_WARNING LOG_WARNING
 #define DLOG_ERROR LOG_ERROR
+#define DCHECK(expr) CHECK(expr)
 #endif
 
 #endif   /* ----- #ifndef __LOGGER_H__  ----- */

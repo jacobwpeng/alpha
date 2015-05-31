@@ -20,4 +20,8 @@ namespace alpha {
     LoggerStreambuf* LoggerStream::streambuf() {
         return &streambuf_;
     }
+
+    NullStream::NullStream() {
+        LoggerStream::streambuf()->pubsetbuf(message_buffer_, 1);
+    }
 }

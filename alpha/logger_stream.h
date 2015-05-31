@@ -20,11 +20,20 @@ namespace alpha {
     class LoggerStream : public std::ostream {
         public:
             LoggerStream();
-
+            virtual ~LoggerStream() = default;
             LoggerStreambuf* streambuf();
 
         private:
             LoggerStreambuf streambuf_;
+    };
+
+    class NullStream final : public LoggerStream {
+        public:
+            NullStream();
+            virtual ~NullStream() = default;
+
+        private:
+            char message_buffer_[2];
     };
 }
 
