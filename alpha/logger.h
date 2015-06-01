@@ -146,4 +146,29 @@ namespace alpha {
 #define DCHECK(expr) CHECK(expr)
 #endif
 
+#ifndef ALPHA_STRIP_LOG
+#define ALPHA_STRIP_LOG 0
+#endif
+
+#if ALPHA_STRIP_LOG >= 1
+#undef LOG_INFO_IF
+#undef PLOG_INFO_IF
+#define LOG_INFO_IF(cond) alpha::NullStream()
+#define PLOG_INFO_IF(cond) alpha::NullStream()
+#endif
+
+#if ALPHA_STRIP_LOG >= 2
+#undef LOG_WARNING_IF
+#undef PLOG_WARNING_IF
+#define LOG_WARNING_IF(cond) alpha::NullStream()
+#define PLOG_WARNING_IF(cond) alpha::NullStream()
+#endif
+
+#if ALPHA_STRIP_LOG >= 3
+#undef LOG_ERROR_IF
+#undef PLOG_ERROR_IF
+#define LOG_ERROR_IF(cond) alpha::NullStream()
+#define PLOG_ERROR_IF(cond) alpha::NullStream()
+#endif
+
 #endif   /* ----- #ifndef __LOGGER_H__  ----- */
