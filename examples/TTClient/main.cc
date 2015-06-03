@@ -212,7 +212,7 @@ void BackupCoroutine::Routine() {
     alpha::Slice stat(tmp);
     auto pos = stat.find("rnum");
     assert (pos != alpha::Slice::npos);
-    stat = stat.RemovePrefix(pos + 4);
+    stat.Advance(pos + 4);
     auto first = stat.find("\t");
     auto last = stat.find("\n");
     assert (first != alpha::Slice::npos);

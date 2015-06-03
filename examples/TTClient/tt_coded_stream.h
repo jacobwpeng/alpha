@@ -37,7 +37,6 @@ namespace tokyotyrant {
             const uint8_t* const original_buf_;
             const uint8_t* buf_;
             const int size_;
-            int current_pos_;
     };
 
     class CodedOutputStream final {

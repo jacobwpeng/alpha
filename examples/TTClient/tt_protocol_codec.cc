@@ -34,7 +34,6 @@ namespace tokyotyrant {
         *consumed = sizeof(int32_t);
         assert (ok);
         (void)ok;
-        LOG_INFO << "*val_ = " << *val_;
         return kOk;
     }
 
@@ -132,7 +131,7 @@ namespace tokyotyrant {
         if (!data_.empty()) {
             auto size = data_.size();
             auto nbytes = stream->WriteRaw(data_);
-            data_ = data_.RemovePrefix(nbytes);
+            data_.Advance(nbytes);
             if (nbytes != size) {
                 return kFullBuffer;
             } else {
@@ -160,10 +159,10 @@ namespace tokyotyrant {
         if (!key_.empty()) {
             auto nbytes = stream->WriteRaw(key_);
             if (nbytes != key_.size()) {
-                key_ = key_.RemovePrefix(nbytes);
+                key_.Advance(nbytes);
                 return kFullBuffer;
             } else {
-                key_ = key_.RemovePrefix(nbytes);
+                key_.Advance(nbytes);
                 assert (key_.empty());
             }
         }
@@ -171,10 +170,10 @@ namespace tokyotyrant {
         if (!val_.empty()) {
             auto nbytes = stream->WriteRaw(val_);
             if (nbytes != val_.size()) {
-                val_ = val_.RemovePrefix(nbytes);
+                val_.Advance(nbytes);
                 return kFullBuffer;
             } else {
-                val_ = val_.RemovePrefix(nbytes);
+                val_.Advance(nbytes);
                 assert (val_.empty());
             }
         }
@@ -193,7 +192,7 @@ namespace tokyotyrant {
         if (!val_.empty()) {
             auto nbytes = stream->WriteRaw(val_);
             if (nbytes != val_.size()) {
-                val_ = val_.RemovePrefix(nbytes);
+                val_.Advance(nbytes);
                 return kFullBuffer;
             }
         }
@@ -345,7 +344,7 @@ namespace tokyotyrant {
 
         for (auto idx = current_encode_unit_index_; idx < encode_units_.size(); ++idx) {
             if (kFullBuffer == encode_units_[idx]->Encode(&stream)) {
-                DLOG_INFO << "Unit encode returns kFullBuffer, idx = " << idx;
+                //DLOG_INFO << "Unit encode returns kFullBuffer, idx = " << idx;
                 return false;
             }
             DLOG_INFO << "Encode unit " << idx << " done";

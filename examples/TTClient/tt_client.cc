@@ -47,7 +47,7 @@ namespace tokyotyrant {
             tcp_client_->ConnectTo(addr, true);
             state_ = ConnectionState::kConnecting;
             co_->Yield();
-            return Connected() ? kOk : kRefused;
+            return Connected() ? static_cast<int>(kOk) : static_cast<int>(kRefused);
         }
     }
 
@@ -189,6 +189,18 @@ namespace tokyotyrant {
         return Request(codec.get());
     }
 
+    int Client::Optimize() {
+        if (ConnectionError()) {
+            return kInvalidOperation;
+        }
+        const int16_t kMagic = 0xC871;
+        auto codec = CreateCodec(kMagic);
+        LengthPrefixedEncodeUnit unit("");
+        codec->AddEncodeUnit(&unit);
+
+        return Request(codec.get());
+    }
+
     std::unique_ptr<Iterator> Client::NewIterator() {
         if (ConnectionError()) {
             return nullptr;
@@ -207,10 +219,12 @@ namespace tokyotyrant {
     }
 
     void Client::OnConnectError(const alpha::NetAddress& addr) {
+        LOG_WARNING << "Connect to " << addr << " failed";
         assert (addr_ && *addr_ == addr);
         ResetConnection();
-        LOG_WARNING << "Connect to " << addr << " failed";
-        co_->Resume();
+        if (co_->IsSuspended()) {
+            co_->Resume();
+        }
     }
 
     void Client::OnConnected(alpha::TcpConnectionPtr conn) {
@@ -221,27 +235,36 @@ namespace tokyotyrant {
         conn_->SetOnWriteDone(std::bind(&Client::OnWriteDone, this, _1));
         state_ = ConnectionState::kConnected;
         expired_ = false; //干掉超时造成的重连标志
-        co_->Resume();
+        if (co_->IsSuspended()) {
+            co_->Resume();
+        }
     }
 
     void Client::OnDisconnected(alpha::TcpConnectionPtr conn) {
-        assert (conn_ == conn);
-        ResetConnection();
         LOG_WARNING << "Connection to Remote server closed, addr = " << *addr_;
-        co_->Resume();
+        assert (conn_ == conn);
+        (void)conn;
+        ResetConnection();
+        if (co_->IsSuspended()) {
+            co_->Resume();
+        }
     }
 
     void Client::OnMessage(alpha::TcpConnectionPtr conn, 
-            alpha::TcpConnectionBuffer* buffer) {
+            alpha::TcpConnectionBuffer*) {
         assert (conn == conn_);
-        //auto data = buffer->Read();
-        //DLOG_INFO << "size = " << data.size() << ", data = \n" << alpha::HexDump(data);
-        co_->Resume();
+        (void)conn;
+        if (co_->IsSuspended()) {
+            co_->Resume();
+        }
     }
 
     void Client::OnWriteDone(alpha::TcpConnectionPtr conn) {
         assert (conn == conn_);
-        co_->Resume();
+        (void)conn;
+        if (co_->IsSuspended()) {
+            co_->Resume();
+        }
     }
 
     void Client::OnTimeout() {
