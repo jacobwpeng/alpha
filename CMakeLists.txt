@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 
 project(alpha)
 
+include_directories(${PROJECT_SOURCE_DIR})
 set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra -Werror -D_FILE_OFFSET_BITS=64")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter -Wno-unused-private-field")
 set(CMAKE_CXX_FLAGS_DEBUG "-ggdb")
@@ -16,4 +17,4 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 endif()
 
 add_subdirectory(alpha)
-add_subdirectory(examples EXCLUDE_FROM_ALL)
+add_subdirectory(examples)# EXCLUDE_FROM_ALL)

@@ -137,7 +137,7 @@ namespace alpha {
                 break;
             }
             auto key = query_string.subslice(0, pos);
-            query_string = query_string.RemovePrefix(pos + 1);
+            query_string.Advance(pos + 1);
             pos = query_string.find("&");
             alpha::Slice val;
             if (pos == alpha::Slice::npos) {
@@ -145,7 +145,7 @@ namespace alpha {
                 query_string.Clear();
             } else {
                 val = query_string.subslice(0, pos);
-                query_string = query_string.RemovePrefix(pos + 1);
+                query_string.Advance(pos + 1);
             }
             query_params_.emplace(key.ToString(), val.ToString());
         }

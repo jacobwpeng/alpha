@@ -56,8 +56,10 @@ namespace alpha {
             size_t find(const Slice& s) const;
             bool StartsWith(Slice prefix) const;
             bool EndsWith(Slice suffix) const;
-            Slice RemovePrefix(size_t n) const;
-            Slice RemoveSuffix(size_t n) const;
+            bool RemovePrefix(Slice prefix);
+            bool RemoveSuffix(Slice suffix);
+            void Advance(size_t n);
+            void Subtract(size_t n);
 
             std::string ToString() const;
 

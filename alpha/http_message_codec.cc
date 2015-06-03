@@ -34,7 +34,7 @@ namespace alpha {
                     return status_;
                 }
                 *consumed += pos + CRLF.size();
-                slice = slice.RemovePrefix(*consumed);
+                slice.Advance(*consumed);
             }
         }
 
@@ -45,7 +45,7 @@ namespace alpha {
                 return status_;
             }
             *consumed += consumed_by_parse_header;
-            slice = slice.RemovePrefix(consumed_by_parse_header);
+            slice.Advance(consumed_by_parse_header);
         }
 
         if (status_ == Status::kParseData) {
@@ -87,8 +87,9 @@ namespace alpha {
             } else {
                 return Status::kInvalidMethod;
             }
-            auto path = start_line.RemovePrefix(method_size).RemoveSuffix(
-                kVersionLength).ToString();
+            start_line.Advance(method_size);
+            start_line.Subtract(kVersionLength);
+            auto path = start_line.ToString();
             auto query_string_start = path.find('?');
             if (query_string_start == std::string::npos) {
                 http_message_.SetPath(path);
@@ -113,10 +114,10 @@ namespace alpha {
                 return Status::kInvalidHeadLine;
             }
             auto key = line.subslice(0, sp_pos);
-            auto val = line.RemovePrefix(key.size() + 2);
+            auto val = line.subslice(key.size() + 2);
             http_message_.Headers().Add(key, val);
             *consumed += line.size() + CRLF.size();
-            data = data.RemovePrefix(line.size() + CRLF.size());
+            data.Advance(line.size() + CRLF.size());
             pos = data.find(CRLF);
         }
         return Status::kNeedsMore;

@@ -43,11 +43,7 @@ namespace alpha {
             return Slice();
         }
         assert (pos < len_);
-        if (len > (len_ - pos)) {
-            return Slice (buf_ + pos, len_ - pos);
-        } else {
-            return Slice (buf_ + pos, len);
-        }
+        return Slice(buf_ + pos, std::min(len, len_ - pos));
     }
 
     size_t Slice::find (const Slice& s) const {
@@ -121,14 +117,23 @@ namespace alpha {
             && memcmp(buf_ + len_ - suffix.len_, suffix.buf_, suffix.len_) == 0;
     }
 
-    Slice Slice::RemovePrefix(size_t n) const {
-        assert (size() >= n);
-        return Slice(buf_ + n, len_ - n);
+    bool Slice::RemovePrefix(Slice prefix) {
+        return StartsWith(prefix) && (Advance(prefix.size()), true);
     }
 
-    Slice Slice::RemoveSuffix(size_t n) const {
+    bool Slice::RemoveSuffix(Slice suffix) {
+        return EndsWith(suffix) && (Subtract(suffix.size()), true);
+    }
+
+    void Slice::Advance(size_t n) {
         assert (size() >= n);
-        return Slice(buf_, len_ - n);
+        buf_ += n;
+        len_ -= n;
+    }
+
+    void Slice::Subtract(size_t n) {
+        assert (size() >= n);
+        len_ -= n;
     }
 
     std::string Slice::ToString() const {
