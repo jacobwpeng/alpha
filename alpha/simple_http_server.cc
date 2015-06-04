@@ -61,7 +61,7 @@ namespace alpha {
         auto codec = *p;
         int consumed;
         auto data = buffer->Read();
-        DLOG_INFO << "data = \n" << HexDump(data);
+        //DLOG_INFO << "data = \n" << HexDump(data);
         auto status = codec->Process(data, &consumed);
         assert (consumed >= 0);
         if (status == HTTPMessageCodec::Status::kNeedsMore) {
