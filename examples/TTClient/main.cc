@@ -16,7 +16,6 @@
 #include <memory>
 #include <sstream>
 #include <gflags/gflags.h>
-#include <gtest/gtest.h>
 #include <alpha/slice.h>
 #include <alpha/logger.h>
 #include <alpha/event_loop.h>
