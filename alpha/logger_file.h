@@ -29,6 +29,8 @@ namespace alpha {
 
         private:
             void MaybeChangeLogFile();
+            void UpdateSymLinkFile(const char* file);
+            std::string SymLinkPath() const;
 
         private:
             int fd_ = -1;

@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <cstdio>
+#include <cstring>
 
 #include "compiler.h"
 #include "logger.h"
@@ -69,18 +70,36 @@ namespace alpha {
         ::snprintf(file,
                 sizeof(file),
                 "%s/%s.%4d%02d%02d%02d.%s.log",
-                path_.c_str(),
-                prog_name_.c_str(),
+                path_.data(),
+                prog_name_.data(),
                 result.tm_year + 1900,
                 result.tm_mon + 1,
                 result.tm_mday,
                 result.tm_hour,
-                log_level_name_.c_str());
+                log_level_name_.data());
         fd_ = ::open(file, O_WRONLY | O_APPEND | O_CREAT, 0666);
         if (unlikely(fd_ == -1)) {
             perror("open");
         } else {
+            UpdateSymLinkFile(strrchr(file, '/') + 1);
             file_create_time_ = now;
         }
+    }
+
+    void LoggerFile::UpdateSymLinkFile(const char* file) {
+        static std::string symlink_path = SymLinkPath();
+        unlink(symlink_path.data());
+        symlink(file, symlink_path.data());
+    }
+
+    std::string LoggerFile::SymLinkPath() const {
+        char file[PATH_MAX];
+        ::snprintf(file, sizeof(file),
+                "%s/%s.%s.log",
+                path_.data(),
+                prog_name_.data(),
+                log_level_name_.data()
+                );
+        return file;
     }
 }
