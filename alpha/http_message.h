@@ -14,6 +14,7 @@
 #define  __HTTP_MESSAGE_H__
 
 #include <map>
+#include <alpha/time_util.h>
 #include <alpha/slice.h>
 #include <alpha/net_address.h>
 #include <alpha/http_headers.h>
@@ -21,6 +22,7 @@
 namespace alpha {
     class HTTPMessage {
         public:
+            static std::string FormatDate(alpha::TimeStamp time);
             HTTPMessage();
             ~HTTPMessage();
             HTTPHeaders& Headers();

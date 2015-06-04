@@ -10,8 +10,18 @@
  * ==============================================================================
  */
 #include "http_message.h"
+#include <ctime>
 
 namespace alpha {
+    std::string HTTPMessage::FormatDate(alpha::TimeStamp time) {
+        static const int kDateSize = 128;
+        char buf[kDateSize];
+        struct tm result;
+        time_t t = time / alpha::kMilliSecondsPerSecond;
+        strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", gmtime_r(&t, &result));
+        return buf;
+    }
+
     HTTPMessage::HTTPMessage() {
         fields_.which = 0;
         fields_.ptr.request = nullptr;
