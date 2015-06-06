@@ -20,6 +20,7 @@
 #include <limits>
 #include <type_traits>
 #include "compiler.h"
+#include <alpha/logger.h>
 
 namespace alpha {
     template<typename T, typename Enable = void>
@@ -56,10 +57,10 @@ namespace alpha {
             };
             static const int64_t kMagic = 0x434da4cca9fea893;
 
-            NodeId AddressToNodeId(const char* addr);
             NodeId* NodeIdToNodeIdPtr(NodeId id);
             char* NodeIdToAddress(NodeId id);
 
+            NodeId base_;
             Header* header_;
             const char* buffer_;
     };

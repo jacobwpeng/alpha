@@ -33,6 +33,7 @@ std::unique_ptr<MemoryListType> MemoryListType::Create(char* buffer, SizeType si
     m->header_->free_list = kInvalidNodeId;
     m->header_->free_area = (sizeof(Header) + sizeof(T) - 1) / sizeof(T);
     m->buffer_ = buffer;
+    m->base_ = m->header_->free_area;
     return std::move(m);
 }
 
@@ -50,17 +51,18 @@ std::unique_ptr<MemoryListType> MemoryListType::Restore(char* buffer, SizeType s
     auto header_slots = (sizeof(Header) + sizeof(T) - 1) / sizeof(T);
     auto slots = size / sizeof(T);
     if (header->free_list != kInvalidNodeId
-            && (header->free_list < header_slots || header->free_list > slots)) {
+            && (header->free_list < header_slots || header->free_list >= slots)) {
         return nullptr;
     }
 
-    if (header->free_area < header_slots || header->free_area > slots) {
+    if (header->free_area < header_slots || header->free_area >= slots) {
         return nullptr;
     }
 
     std::unique_ptr<MemoryListType> m(new MemoryListType);
     m->header_ = header;
     m->buffer_ = buffer;
+    m->base_ = header_slots;
 
     return std::move(m);
 }
@@ -72,7 +74,8 @@ typename MemoryListType::NodeId MemoryListType::Allocate() {
         result = header_->free_list;
         header_->free_list = *NodeIdToNodeIdPtr(result);
     } else {
-        if (header_->free_area == max_size()) {
+        CHECK(header_->free_area >= base_);
+        if (header_->free_area - base_ == max_size()) {
             throw std::bad_alloc();
         } else {
             result = header_->free_area;
@@ -131,8 +134,8 @@ typename MemoryListType::SizeType MemoryListType::size() const {
 
 template<typename T>
 typename MemoryListType::SizeType MemoryListType::max_size() const {
-    auto header_size = (sizeof(Header) + sizeof(T) - 1) / sizeof(T);
-    return header_->buffer_size / sizeof(T) - header_size;
+    auto header_slots = (sizeof(Header) + sizeof(T) - 1) / sizeof(T);
+    return header_->buffer_size / sizeof(T) - header_slots;
 }
 
 #undef MemoryListType
