@@ -281,19 +281,20 @@ TEST_F(SkipListTest, Restore) {
     ASSERT_NE (list_, nullptr);
     ASSERT_TRUE (list_->empty());
 
-    const size_t expected_elements = 1000;
-    while (list_->size() < expected_elements) {
-        (*list_)[alpha::Random::Rand32()] = alpha::Random::Rand32();
+    const size_t expected_elements = list_->max_size();
+    for (auto i = 0u; i < expected_elements; ++i) {
+        (*list_)[i] = alpha::Random::Rand32();
     }
 
     ASSERT_EQ (list_->size(), expected_elements);
+    ASSERT_EQ (list_->size(), list_->max_size());
     ASSERT_FALSE (list_->empty());
 
     decltype(buffer_) newbuffer(buffer_);
 
     auto newlist = DefaultSkipListType::Restore(newbuffer.data(),
             newbuffer.size());
-    EXPECT_NE (newlist, nullptr);
+    ASSERT_NE (newlist, nullptr);
     EXPECT_EQ (newlist->size(), list_->size());
     EXPECT_EQ (newlist->max_size(), list_->max_size());
     EXPECT_NE (newlist->begin(), list_->begin());

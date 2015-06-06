@@ -55,7 +55,7 @@ std::unique_ptr<MemoryListType> MemoryListType::Restore(char* buffer, SizeType s
         return nullptr;
     }
 
-    if (header->free_area < header_slots || header->free_area >= slots) {
+    if (header->free_area < header_slots || header->free_area > slots) {
         return nullptr;
     }
 

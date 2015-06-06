@@ -18,9 +18,10 @@
 #include <iterator>
 #include <iostream>
 #include <type_traits>
-#include "compiler.h"
-#include "memory_list.h"
-#include "random.h"
+#include <alpha/compiler.h>
+#include <alpha/memory_list.h>
+#include <alpha/random.h>
+#include <alpha/logger.h>
 
 namespace alpha {
     template<typename Key, typename Value, int32_t kMaxLevel = 20,
@@ -209,11 +210,13 @@ namespace alpha {
         std::unique_ptr<MemoryListType> nodes(
                 MemoryListType::Restore(start + kHeaderSize, size - kHeaderSize));
         if (nodes == nullptr) {
+            LOG_WARNING << "MemoryListType::Restore faield";
             return nullptr;
         }
         std::unique_ptr<SkipList> l(new SkipList);
         l->nodes_ = std::move(nodes);
         if (l->RestoreHeader(start, size) == false) {
+            LOG_WARNING << "SkipList::RestoreHeader faield";
             return nullptr;
         }
         return std::move(l);
