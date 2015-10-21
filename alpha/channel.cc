@@ -26,14 +26,16 @@ namespace alpha {
     const int Channel::kNoneEvents = 0;
 
     Channel::Channel(EventLoop * loop, int fd)
-        :loop_(loop), fd_(fd), events_(0), revents_(0), handling_events_(false) {
+        :loop_(loop), fd_(fd), events_(0), revents_(0),
+        handling_events_(false) {
     }
 
     Channel::~Channel() {
         LOG_ERROR_IF(handling_events_) << "Destroy Channel when handling events"
             << ", fd = " << fd_;
         assert (!handling_events_);
-        DLOG_INFO << "Channel destroyed, fd = " << fd_;
+        DLOG_INFO << "Channel destroyed, channel = " << this
+          << ", fd = " << fd_;
     }
 
     void Channel::Remove() {

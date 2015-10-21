@@ -16,7 +16,6 @@
 #include <map>
 #include <vector>
 #include <chrono>
-#include <boost/noncopyable.hpp>
 
 #include "compiler.h"
 #include "time_util.h"

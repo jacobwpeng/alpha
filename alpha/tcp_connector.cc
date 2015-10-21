@@ -117,6 +117,7 @@ namespace alpha {
         }
         std::unique_ptr<Channel> channel(new Channel(loop_, fd));
         using namespace std::placeholders;
+        DLOG_INFO << "Create channel for Connect fd, channel = " << channel.get();
         channel->set_error_callback(std::bind(&TcpConnector::OnError, this, fd, addr));
         channel->set_write_callback(std::bind(&TcpConnector::OnConnected, this, fd));
         channel->EnableWriting();
