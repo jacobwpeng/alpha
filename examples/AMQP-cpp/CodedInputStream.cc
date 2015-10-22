@@ -28,7 +28,10 @@ namespace amqp {
   }
 
   bool CodedInputStream::ReadPartialString(std::string* out, int sz) {
-    return false;
+    auto vsize = std::min<int>(sz, data_.size() - consumed_bytes_);
+    out->append(Ptr(), vsize);
+    Advance(vsize);
+    return sz == vsize;
   }
 
   bool CodedInputStream::ReadUInt8(uint8_t* val) {

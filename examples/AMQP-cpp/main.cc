@@ -16,6 +16,7 @@
 #include <alpha/format.h>
 #include "Frame.h"
 #include "FrameCodec.h"
+#include "MethodPayloadCodec.h"
 
 static alpha::TcpConnectionPtr connection;
 static const uint8_t kMajorVersion = 9;
@@ -56,8 +57,23 @@ void OnDisconnected(alpha::TcpConnectionPtr conn) {
 void OnNewFrame(amqp::Frame* frame) {
   LOG_INFO << "Frame type: " << static_cast<int>(frame->type())
     << ", Frame channel: " << frame->channel_id()
-    << ", Frame expeced payload size: " << frame->expeced_payload_size()
+    << ", Frame expeced payload size: " << frame->expected_payload_size()
     << ", Frame paylaod size: " << frame->payload_size();
+  amqp::MethodStartArgsDecoder d;
+  int rc = d.Decode(frame->payload());
+  if (rc == 0) {
+    auto args = d.Get();
+    LOG_INFO << "Decode done, "
+      << "version_major: " << static_cast<uint8_t>(args.version_major)
+      << "version_minor: " << static_cast<uint8_t>(args.version_minor)
+      << "mechanisms: " << args.mechanisms
+      << "locales: " << args.locales;
+    for (const auto& p : args.server_properties) {
+      LOG_INFO << p.first << ": " << p.second;
+    }
+  } else {
+    LOG_INFO << "Decode returns: " << rc;
+  }
 }
 
 int main(int argc, char* argv[]) {

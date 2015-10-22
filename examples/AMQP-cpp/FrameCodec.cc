@@ -41,13 +41,13 @@ namespace amqp {
       }
     }
     CHECK(frame_);
-    DLOG_INFO << "Expected frame size = " << frame_->expeced_payload_size()
+    DLOG_INFO << "Expected frame size = " << frame_->expected_payload_size()
       << ", current frame size = " << frame_->payload_size()
       << ", data.size() = " << data.size();
-    size_t sz = std::min(frame_->expeced_payload_size(), data.size());
+    size_t sz = std::min(frame_->expected_payload_size(), data.size());
     frame_->AddPayload(data.subslice(0, sz));
     data.Advance(sz);
-    if (frame_->expeced_payload_size() == frame_->payload_size()) {
+    if (frame_->expected_payload_size() == frame_->payload_size()) {
       // All payloads arrived, check frame end
       static const char kFrameEnd = 0xCE;
       if (!data.empty() && *data.data() == kFrameEnd) {

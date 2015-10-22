@@ -30,19 +30,21 @@ class Frame {
     };
     static bool ValidType(uint8_t frame_type);
 
-    Frame(Type type, ChannelID channel_id, uint32_t expeced_payload_size);
+    Frame(Type type, ChannelID channel_id, uint32_t expected_payload_size);
     void AddPayload(alpha::Slice partial_payload);
+    void swap(Frame& other);
 
     Type type() const;
     ChannelID channel_id() const;
     bool global_to_connection() const;
-    size_t expeced_payload_size() const;
+    size_t expected_payload_size() const;
     size_t payload_size() const;
+    std::string payload() const;
 
   private:
     Type type_;
     ChannelID channel_id_;
-    uint32_t expeced_payload_size_;
+    uint32_t expected_payload_size_;
     std::string payload_;
 };
 }
