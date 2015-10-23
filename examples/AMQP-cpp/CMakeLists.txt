@@ -3,6 +3,9 @@ list(APPEND AMQP_CPP_SRCS
   "DecodeUnit.cc"
   "CodedInputStream.cc"
   "Frame.cc"
-  "FrameCodec.cc")
+  "FrameCodec.cc"
+  "FieldValue.cc"
+  "FieldTable.cc"
+)
 add_executable("AMQP-cpp" ${AMQP_CPP_SRCS})
 target_link_libraries("AMQP-cpp" "alpha")

@@ -17,6 +17,7 @@
 #include "Frame.h"
 #include "FrameCodec.h"
 #include "MethodPayloadCodec.h"
+#include "FieldValue.h"
 
 static alpha::TcpConnectionPtr connection;
 static const uint8_t kMajorVersion = 9;
@@ -68,9 +69,9 @@ void OnNewFrame(amqp::Frame* frame) {
       << "version_minor: " << static_cast<uint8_t>(args.version_minor)
       << "mechanisms: " << args.mechanisms
       << "locales: " << args.locales;
-    for (const auto& p : args.server_properties) {
-      LOG_INFO << p.first << ": " << p.second;
-    }
+    //for (const auto& p : args.server_properties) {
+    //  LOG_INFO << p.first << ": " << p.second;
+    //}
   } else {
     LOG_INFO << "Decode returns: " << rc;
   }
@@ -78,6 +79,14 @@ void OnNewFrame(amqp::Frame* frame) {
 
 int main(int argc, char* argv[]) {
   alpha::Logger::Init(argv[0]);
+  amqp::FieldValue v;
+  {
+    amqp::FieldValue val(amqp::FieldValue::Type::kLongString, "123");
+    v = val;
+  }
+  auto p = v.AsPtr<std::string>();
+  LOG_INFO << p->data();
+#if 0
   if (argc != 3) {
     LOG_INFO << "Usage: " << argv[0] << " [ip] [port]";
     return -1;
@@ -92,4 +101,5 @@ int main(int argc, char* argv[]) {
   client.ConnectTo(addr);
   loop.Run();
   return 0;
+#endif
 }

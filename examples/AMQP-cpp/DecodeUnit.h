@@ -17,6 +17,7 @@
 #include <string>
 #include <map>
 #include <alpha/slice.h>
+#include "FieldTable.h"
 
 namespace amqp {
 
@@ -114,9 +115,7 @@ class TimeStampDecodeUnit final : public DecodeUnit {
 
 class FieldTableDecodeUnit final : public DecodeUnit {
   public:
-    using ResultType = typename std::add_pointer<
-                         std::map<std::string, std::string>
-                       >::type;
+    using ResultType = typename std::add_pointer<FieldTable>::type;
     FieldTableDecodeUnit(ResultType res);
     virtual int ProcessMore(alpha::Slice& data);
 

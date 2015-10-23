@@ -15,14 +15,15 @@
 
 #include <cstdint>
 #include <map>
+#include "FieldTable.h"
 
 namespace amqp {
 
 using ClassID = uint16_t;
 using MethodID = uint16_t;
-using FieldTable = std::map<std::string, std::string>;
 using ShortString = std::string;
 using LongString = std::string;
+using Timestamp = uint64_t;
 
 struct MethodStartArgs {
   static const ClassID kClassID = 10;
