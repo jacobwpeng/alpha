@@ -17,6 +17,7 @@
 #include <string>
 #include <map>
 #include <alpha/slice.h>
+#include "MethodArgTypes.h"
 #include "FieldTable.h"
 
 namespace amqp {
@@ -101,16 +102,11 @@ class LongStringDecodeUnit final : public DecodeUnit {
 
 class TimeStampDecodeUnit final : public DecodeUnit {
   public:
-    using ResultType = typename std::add_pointer<
-                         typename std::conditional<
-                           sizeof(time_t) == 8, time_t, uint64_t
-                         >::type
-                       >::type;
-    TimeStampDecodeUnit(ResultType res);
+    TimeStampDecodeUnit(Timestamp* res);
     virtual int ProcessMore(alpha::Slice& data);
 
   private:
-    ResultType res_;
+    Timestamp* res_;
 };
 
 class FieldTableDecodeUnit final : public DecodeUnit {

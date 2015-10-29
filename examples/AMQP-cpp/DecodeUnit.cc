@@ -103,7 +103,7 @@ namespace amqp {
     return ok ? DecodeState::kDone : DecodeState::kNeedsMore;
   }
 
-  TimeStampDecodeUnit::TimeStampDecodeUnit(TimeStampDecodeUnit::ResultType res)
+  TimeStampDecodeUnit::TimeStampDecodeUnit(Timestamp* res)
     :res_(res) {
   }
 
@@ -123,12 +123,29 @@ namespace amqp {
   int FieldTableDecodeUnit::ProcessMore(alpha::Slice& data) {
     DLOG_INFO << '\n' << alpha::HexDump(data);
     return DecodeState::kError;
-    //int rc = underlying_decode_unit_.ProcessMore(data);
-    //if (rc != 0) {
-    //  return rc;
-    //}
-    //DLOG_INFO << "FieldTable LongString size = " << raw_.size();
-    //alpha::Slice table_raw(raw_);
+    int rc = underlying_decode_unit_.ProcessMore(data);
+    if (rc != 0) {
+      return rc;
+    }
+    DLOG_INFO << "FieldTable LongString size = " << raw_.size();
+    alpha::Slice table_data(raw_);
+    while (!table_data.empty()) {
+      std::string key;
+      ShortStringDecodeUnit key_decode_unit(&key);
+      rc = key_decode_unit.ProcessMore(table_data);
+      if (rc != 0) {
+        LOG_WARNING << "Decode FieldTable key failed, rc = " << rc;
+        return rc;
+      }
+      uint8_t value_type;
+      OctetDecodeUnit value_type_decode_unit(&value_type);
+      rc = value_type_decode_unit.ProcessMore(table_data);
+      if (rc != 0) {
+        LOG_WARNING << "Decode FieldTable value type failed, rc = " << rc;
+        return rc;
+      }
+      auto value_decode_unit = FiledValueDecodeUnitFactory::New(value_type);
+    }
     //while (!table_raw.empty()) {
     //  std::string key, value;
     //  ShortStringDecodeUnit short_decode_unit(&key);
