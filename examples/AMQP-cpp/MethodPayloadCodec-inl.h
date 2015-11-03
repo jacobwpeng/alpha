@@ -109,8 +109,8 @@ namespace amqp {
         return rc;
       }
       decode_units_.erase(cur);
-      DLOG_INFO << decode_units_.size() << " DecodeUnit(s) left"
-        << ", data.size() = " << data.size();
+      //DLOG_INFO << decode_units_.size() << " DecodeUnit(s) left"
+      //  << ", data.size() = " << data.size();
     }
     return kDone;
   }

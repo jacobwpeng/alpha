@@ -89,9 +89,9 @@ namespace amqp {
     if (!read_size_ && !stream.ReadBigEndianUInt32(&sz_)) {
       return DecodeState::kNeedsMore;
     }
-    DLOG_INFO << "LongString expected size = " << sz_
-      << ", res_->size() = " << res_->size()
-      << ", data.size() = " << data.size();
+    //DLOG_INFO << "LongString expected size = " << sz_
+    //  << ", res_->size() = " << res_->size()
+    //  << ", data.size() = " << data.size();
     read_size_ = true;
     if (sz_ == 0) {
       data.Advance(stream.consumed_bytes());
