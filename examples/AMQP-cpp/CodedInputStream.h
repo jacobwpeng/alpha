@@ -14,6 +14,7 @@
 #define  __CODEDINPUTSTREAM_H__
 
 #include <alpha/slice.h>
+#include "MethodArgTypes.h"
 
 namespace amqp {
 
@@ -22,6 +23,7 @@ class CodedInputStream {
     CodedInputStream(alpha::Slice data);
 
     bool Skip(int amount);
+    bool ReadPartialString(ShortString* out, int sz);
     bool ReadPartialString(std::string* out, int sz);
     bool ReadUInt8(uint8_t* val);
     bool ReadBigEndianUInt16(uint16_t* val);

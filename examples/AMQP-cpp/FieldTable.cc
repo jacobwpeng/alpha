@@ -14,25 +14,29 @@
 
 namespace amqp {
 
-FieldValue FieldTable::Get(const std::string& key) const {
-  auto it = m_.find(key);
+FieldValue FieldTable::Get(alpha::Slice key) const {
+  auto it = m_.find(key.ToString());
   return it == m_.end() ? FieldValue() : it->second;
 }
 
-FieldValue* FieldTable::GetPtr(const std::string& key) {
-  auto it = m_.find(key);
+FieldValue* FieldTable::GetPtr(alpha::Slice key) {
+  auto it = m_.find(key.ToString());
   return it == m_.end() ? nullptr : &it->second;
 }
 
-const FieldValue* FieldTable::GetPtr(const std::string& key) const {
-  auto it = m_.find(key);
+const FieldValue* FieldTable::GetPtr(alpha::Slice key) const {
+  auto it = m_.find(key.ToString());
   return it == m_.end() ? nullptr : &it->second;
 }
 
-std::pair<FieldValue*, bool> FieldTable::Insert(const std::string& key,
+std::pair<FieldValue*, bool> FieldTable::Insert(alpha::Slice key,
     const FieldValue& val) {
-  auto p = m_.insert(std::make_pair(key, val));
+  auto p = m_.emplace(key.ToString(), val);
   return std::make_pair(&p.first->second, p.second);
+}
+
+const FieldTable::UnderlyingMap& FieldTable::underlying_map() const {
+  return m_;
 }
 
 }

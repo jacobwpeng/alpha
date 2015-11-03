@@ -60,7 +60,7 @@ namespace amqp {
     return ok ? DecodeState::kDone : DecodeState::kNeedsMore;
   }
 
-  ShortStringDecodeUnit::ShortStringDecodeUnit(std::string* res)
+  ShortStringDecodeUnit::ShortStringDecodeUnit(ShortString* res)
     :res_(res), read_size_(false), sz_(0) {
   }
 
@@ -121,16 +121,13 @@ namespace amqp {
   }
 
   int FieldTableDecodeUnit::ProcessMore(alpha::Slice& data) {
-    DLOG_INFO << '\n' << alpha::HexDump(data);
-    return DecodeState::kError;
     int rc = underlying_decode_unit_.ProcessMore(data);
     if (rc != 0) {
       return rc;
     }
-    DLOG_INFO << "FieldTable LongString size = " << raw_.size();
     alpha::Slice table_data(raw_);
     while (!table_data.empty()) {
-      std::string key;
+      ShortString key;
       ShortStringDecodeUnit key_decode_unit(&key);
       rc = key_decode_unit.ProcessMore(table_data);
       if (rc != 0) {
@@ -144,36 +141,80 @@ namespace amqp {
         LOG_WARNING << "Decode FieldTable value type failed, rc = " << rc;
         return rc;
       }
-      auto value_decode_unit = FiledValueDecodeUnitFactory::New(value_type);
+      auto value_decode_unit = FieldValueDecodeUnitFactory::New(value_type);
+      rc = value_decode_unit->ProcessMore(table_data);
+      if (rc != 0) {
+        LOG_WARNING << "Decode FieldTable value failed, value_type = " << value_type;
+        return rc;
+      }
+      auto p = res_->Insert(key.str(), value_decode_unit->Get());
+      CHECK(p.second) << "Same key found in FieldTable";
+      //DLOG_INFO << "Key: " << key << ", Value: " << *p.first;
     }
-    //while (!table_raw.empty()) {
-    //  std::string key, value;
-    //  ShortStringDecodeUnit short_decode_unit(&key);
-    //  rc = short_decode_unit.ProcessMore(table_raw);
-    //  if (rc != 0) {
-    //    LOG_WARNING << "Decode FieldTable key failed, rc = " << rc;
-    //    return rc;
-    //  }
-    //  DLOG_INFO << "key: " << key;
-    //  uint8_t field_value_type;
-    //  OctetDecodeUnit field_value_type_decode_unit(&field_value_type);
-    //  rc = field_value_type_decode_unit.ProcessMore(table_raw);
-    //  if (rc != 0) {
-    //    LOG_WARNING << "Decode FieldTable value type failed, rc = " << rc;
-    //    return rc;
-    //  }
-    //  DLOG_INFO << "value type: " << static_cast<int>(field_value_type);
-    //  LongStringDecodeUnit long_decode_unit(&value);
-    //  rc = long_decode_unit.ProcessMore(table_raw);
-    //  if (rc != 0) {
-    //    LOG_WARNING << "Decode FieldTable value failed, rc = " << rc;
-    //    return rc;
-    //  }
-    //  DLOG_INFO << "Key = " << key << ", value = " << value;
-    //  res_->emplace(std::piecewise_construct,
-    //      std::forward_as_tuple(key),
-    //      std::forward_as_tuple(value));
-    //}
-    //return DecodeState::kDone;
+    DLOG_INFO << "FieldTable done";
+    return DecodeState::kDone;
+  }
+
+  const FieldValue& FieldValueDecodeUnit::Get() const {
+    return val_;
+  }
+
+  int FieldValueDecodeUnit::ProcessMore(alpha::Slice& data) {
+    return underlying_decode_unit_->ProcessMore(data);
+  }
+
+  std::unique_ptr<FieldValueDecodeUnit> FieldValueDecodeUnitFactory::New(
+      uint8_t value_type) {
+    auto type = static_cast<FieldValue::Type>(value_type);
+    switch (type) {
+      case FieldValue::Type::kBoolean:
+        return FieldValueDecodeUnit::Create<OctetDecodeUnit,
+                                            bool,
+                                            uint8_t>();
+      case FieldValue::Type::kShortShortInt:
+        return FieldValueDecodeUnit::Create<OctetDecodeUnit,
+                                            int8_t,
+                                            uint8_t>();
+      case FieldValue::Type::kShortShortUInt:
+        return FieldValueDecodeUnit::Create<OctetDecodeUnit,
+                                            uint8_t,
+                                            uint8_t>();
+      case FieldValue::Type::kShortInt:
+        return FieldValueDecodeUnit::Create<ShortDecodeUnit,
+                                            int16_t,
+                                            uint16_t>();
+      case FieldValue::Type::kShortUInt:
+        return FieldValueDecodeUnit::Create<ShortDecodeUnit,
+                                            uint16_t,
+                                            uint16_t>();
+      case FieldValue::Type::kLongInt:
+        return FieldValueDecodeUnit::Create<LongDecodeUnit,
+                                            int32_t,
+                                            uint32_t>();
+      case FieldValue::Type::kLongUInt:
+        return FieldValueDecodeUnit::Create<LongDecodeUnit,
+                                            uint32_t,
+                                            uint32_t>();
+      case FieldValue::Type::kLongLongInt:
+        return FieldValueDecodeUnit::Create<LongLongDecodeUnit,
+                                            int64_t,
+                                            uint64_t>();
+      case FieldValue::Type::kLongLongUInt:
+        return FieldValueDecodeUnit::Create<LongLongDecodeUnit,
+                                            uint64_t,
+                                            uint64_t>();
+      case FieldValue::Type::kShortString:
+        return FieldValueDecodeUnit::Create<ShortStringDecodeUnit,
+                                            ShortString>(type);
+      case FieldValue::Type::kLongString:
+        return FieldValueDecodeUnit::Create<LongStringDecodeUnit,
+                                            std::string>(type);
+      case FieldValue::Type::kFieldTable:
+        return FieldValueDecodeUnit::Create<FieldTableDecodeUnit,
+                                            FieldTable>();
+      default:
+        CHECK(false) << "Unknown value_type: `" << value_type << "'";
+        return nullptr;
+    }
   }
 }

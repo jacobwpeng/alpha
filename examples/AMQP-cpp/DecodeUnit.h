@@ -16,9 +16,11 @@
 #include <cstdint>
 #include <string>
 #include <map>
+#include <memory>
 #include <alpha/slice.h>
 #include "MethodArgTypes.h"
 #include "FieldTable.h"
+#include "FieldValue.h"
 
 namespace amqp {
 
@@ -80,11 +82,11 @@ class LongLongDecodeUnit final : public DecodeUnit {
 
 class ShortStringDecodeUnit final : public DecodeUnit {
   public:
-    ShortStringDecodeUnit(std::string* res);
+    ShortStringDecodeUnit(ShortString* res);
     virtual int ProcessMore(alpha::Slice& data);
 
   private:
-    std::string* res_;
+    ShortString* res_;
     bool read_size_;
     uint8_t sz_;
 };
@@ -121,6 +123,39 @@ class FieldTableDecodeUnit final : public DecodeUnit {
     LongStringDecodeUnit underlying_decode_unit_;
 };
 
+class FieldValueDecodeUnit : public DecodeUnit {
+  public:
+    // Create Trivial Type DecodeUnit
+    template<typename UnderlyingDecodeUnitType,
+             typename ValueCppType,
+             typename DecodeUnitArgType>
+    static std::unique_ptr<FieldValueDecodeUnit> Create();
+
+    // Create String Type DecodeUnit
+    template<typename UnderlyingDecodeUnitType,
+             typename ValueCppType>
+    static std::unique_ptr<FieldValueDecodeUnit> Create(FieldValue::Type);
+
+    // Create Custom Type DecodeUnit
+    template<typename UnderlyingDecodeUnitType,
+             typename ValueCppType>
+    static std::unique_ptr<FieldValueDecodeUnit> Create();
+
+    const FieldValue& Get() const;
+
+    virtual int ProcessMore(alpha::Slice& data);
+
+  private:
+    FieldValue val_;
+    std::unique_ptr<DecodeUnit> underlying_decode_unit_;
+};
+
+class FieldValueDecodeUnitFactory {
+  public:
+    static std::unique_ptr<FieldValueDecodeUnit> New(uint8_t value_type);
+};
+
 }
 
+#include "DecodeUnit-inl.h"
 #endif   /* ----- #ifndef __DECODEUNIT_H__  ----- */

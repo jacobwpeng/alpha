@@ -85,7 +85,8 @@ namespace amqp {
     };
   }
 
-  DecoderBase::DecoderBase() {
+  DecoderBase::DecoderBase()
+    :inited_(false) {
     AddDecodeUnit(&class_id_, &method_id_);
   }
 
@@ -95,7 +96,12 @@ namespace amqp {
   }
 
   int DecoderBase::Decode(alpha::Slice data) {
-    Init();
+    if (!inited_) { 
+      Init(); 
+      DLOG_INFO << decode_units_.size() << " DecodeUnit(s)";
+      inited_ = true;
+    }
+
     while (!decode_units_.empty()) {
       auto cur = decode_units_.begin();
       auto rc = (*cur)->ProcessMore(data);
@@ -103,7 +109,8 @@ namespace amqp {
         return rc;
       }
       decode_units_.erase(cur);
-      DLOG_INFO << "One decode unit done";
+      DLOG_INFO << decode_units_.size() << " DecodeUnit(s) left"
+        << ", data.size() = " << data.size();
     }
     return kDone;
   }

@@ -14,7 +14,20 @@
 #include <cstring>
 #include <boost/preprocessor/facilities/empty.hpp>
 #include <alpha/logger.h>
+#include "MethodArgTypes.h"
 #include "FieldTable.h"
+
+namespace detail {
+  template<typename T>
+  void CommonDestory(void* p) {
+    delete reinterpret_cast<T*>(p);
+  }
+
+  template<typename T>
+  void* CommonCopy(void* p) {
+    return new T(*reinterpret_cast<T*>(p));
+  }
+}
 
 namespace amqp {
 #define FieldValueAs(cpp_type, type_enum, field)                     \
@@ -34,6 +47,8 @@ namespace amqp {
   FieldValueAs(uint32_t, Type::kLongUInt, uint32);
   FieldValueAs(int64_t, Type::kLongLongInt, int64);
   FieldValueAs(uint64_t, Type::kLongLongUInt, uint64);
+  FieldValueAs(float, Type::kFloat, f);
+  FieldValueAs(double, Type::kDouble, d);
 #undef FieldValueAs
 
 #define FieldValueAsPtr(C, cpp_type, type_enum)                      \
@@ -49,53 +64,33 @@ namespace amqp {
 
   FieldValueAsPtr(BOOST_PP_EMPTY, FieldTable, Type::kFieldTable);
   FieldValueAsPtr(const BOOST_PP_EMPTY, FieldTable, Type::kFieldTable);
+  FieldValueAsPtr(BOOST_PP_EMPTY, ShortString, Type::kShortString);
+  FieldValueAsPtr(const BOOST_PP_EMPTY, ShortString, Type::kShortString);
+  FieldValueAsPtr(BOOST_PP_EMPTY, std::string, Type::kLongString);
+  FieldValueAsPtr(const BOOST_PP_EMPTY, std::string, Type::kLongString);
 #undef FieldValueAsPtr
-
-  template<>
-  std::string* FieldValue::AsPtr<std::string>() {
-    CHECK(type_ == Type::kShortString || type_ == Type::kLongString)
-      << "Expecetd type: `s' or `S', Actual type: `" << type_ << "'";
-    return reinterpret_cast<std::string*>(custom.ptr);
-  }
-
-  template<>
-  const std::string* FieldValue::AsPtr<std::string>() const {
-    CHECK(type_ == Type::kShortString || type_ == Type::kLongString)
-      << "Expecetd type: `s' or `S', Actual type: `" << type_ << "'";
-    return reinterpret_cast<const std::string*>(custom.ptr);
-  }
-
-  void FieldValue::DestoryString(void* p) {
-    delete reinterpret_cast<std::string*>(p);
-  }
-
-  void FieldValue::DestoryFieldTable(void* p) {
-    delete reinterpret_cast<FieldTable*>(p);
-  }
-
-  void* FieldValue::CopyString(void* p) {
-    return new std::string(*reinterpret_cast<std::string*>(p));
-  }
-
-  void* FieldValue::CopyFieldTable(void* p) {
-    return new FieldTable(*reinterpret_cast<FieldTable*>(p));
-  }
 
   FieldValue::FieldValue(FieldValue::Type string_type, alpha::Slice arg) {
     CHECK(string_type == Type::kShortString
         || string_type == Type::kLongString)
       << "Invalid string_type" << string_type;
     type_ = string_type;
-    custom.ptr = new std::string(std::move(arg.ToString()));
-    custom.destory_func = &FieldValue::DestoryString;
-    custom.copy_func = &FieldValue::CopyString;
+    if (type_ == Type::kLongString) {
+      custom.ptr = new std::string(std::move(arg.ToString()));
+      custom.destory_func = &detail::CommonDestory<std::string>;
+      custom.copy_func = &detail::CommonCopy<std::string>;
+    } else {
+      custom.ptr = new ShortString(arg);
+      custom.destory_func = &detail::CommonDestory<ShortString>;
+      custom.copy_func = &detail::CommonCopy<ShortString>;
+    }
   }
 
   FieldValue::FieldValue(const FieldTable& arg)
     : FieldValue(Type::kFieldTable,
         new FieldTable(arg),
-        &FieldValue::DestoryFieldTable,
-        &FieldValue::CopyFieldTable) {
+        &detail::CommonDestory<FieldTable>,
+        &detail::CommonCopy<FieldTable>) {
   }
 
   FieldValue::~FieldValue() {
@@ -104,7 +99,8 @@ namespace amqp {
     }
   }
 
-  FieldValue::FieldValue(const FieldValue& other) {
+  FieldValue::FieldValue(const FieldValue& other)
+    :type_(Type::kEmpty) {
     *this = other;
   }
 
@@ -137,5 +133,64 @@ namespace amqp {
       default:
         return false;
     }
+  }
+
+  std::ostream& operator<< (std::ostream& os, const FieldValue& v) {
+    switch (v.type()) {
+      case FieldValue::Type::kBoolean:
+        os << v.As<bool>();
+        break;
+      case FieldValue::Type::kShortShortInt:
+        os << v.As<int8_t>();
+        break;
+      case FieldValue::Type::kShortShortUInt:
+        os << v.As<uint8_t>();
+        break;
+      case FieldValue::Type::kShortInt:
+        os << v.As<int16_t>();
+        break;
+      case FieldValue::Type::kShortUInt:
+        os << v.As<uint16_t>();
+        break;
+      case FieldValue::Type::kLongInt:
+        os << v.As<int32_t>();
+        break;
+      case FieldValue::Type::kLongUInt:
+        os << v.As<uint32_t>();
+        break;
+      case FieldValue::Type::kLongLongInt:
+        os << v.As<int64_t>();
+        break;
+      case FieldValue::Type::kTimestamp:
+      case FieldValue::Type::kLongLongUInt:
+        os << v.As<uint64_t>();
+        break;
+      case FieldValue::Type::kFloat:
+        os << v.As<float>();
+        break;
+      case FieldValue::Type::kDouble:
+        os << v.As<double>();
+        break;
+      case FieldValue::Type::kShortString:
+      case FieldValue::Type::kLongString:
+        os << *v.AsPtr<std::string>();
+        break;
+      case FieldValue::Type::kFieldArray:
+        os << "FieldValue-Array";
+        break;
+      case FieldValue::Type::kFieldTable:
+        os << "FieldValue-Table";
+        break;
+      case FieldValue::Type::kDecimal:
+        os << "FieldValue-Decimal";
+        break;
+      case FieldValue::Type::kEmpty:
+        os << "FieldValue-Empty";
+        break;
+      default:
+        os << "FieldValue-Unknown";
+        break;
+    }
+    return os;
   }
 }

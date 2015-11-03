@@ -40,6 +40,7 @@ class DecoderBase {
     std::vector<DecodeUnit*> decode_units_;
     ClassID class_id_;
     MethodID method_id_;
+    bool inited_;
 };
 
 }

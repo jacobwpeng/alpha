@@ -111,6 +111,13 @@ class FieldValue {
 
     Type type() const;
     bool is_custom_type_value() const;
+    void* Ptr() {
+      return &custom;
+    }
+
+    const void* CustomPtr() const {
+      return custom.ptr;
+    }
 
     template<typename Target>
     Target As() const;
@@ -121,6 +128,8 @@ class FieldValue {
     template<typename Target>
     typename std::add_pointer<const Target>::type AsPtr() const;
 };
+
+std::ostream& operator<< (std::ostream& os, const FieldValue& v);
 }
 
 #endif   /* ----- #ifndef __FIELDVALUE_H__  ----- */
