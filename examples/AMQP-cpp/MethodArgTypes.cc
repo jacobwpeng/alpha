@@ -24,6 +24,16 @@ ShortString::ShortString(alpha::Slice s) {
   append(s.data(), s.size());
 }
 
+ShortString& ShortString::operator= (alpha::Slice s) {
+  clear();
+  append(s.data(), s.size());
+  return *this;
+}
+
+void ShortString::clear() {
+  size_ = 0;
+}
+
 void ShortString::append(const char* data, size_t size) {
   CHECK(size_ + size < kBufferSize) << "ShortString overflow";
   memcpy(buf_ + size_, data, size);

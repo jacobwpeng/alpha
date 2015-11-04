@@ -29,6 +29,13 @@ struct MethodStartArgs {
   LongString mechanisms;
   LongString locales;
 };
+
+struct MethodStartOkArgs {
+  FieldTable client_properties;
+  ShortString mechanism;
+  LongString response;
+  ShortString locale;
+};
 }
 
 #endif   /* ----- #ifndef __METHODARGS_H__  ----- */

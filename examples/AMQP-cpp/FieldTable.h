@@ -22,10 +22,13 @@ class FieldTable {
     using UnderlyingMap = std::map<std::string, FieldValue>;
   public:
     FieldValue Get(alpha::Slice key) const;
-    FieldValue* GetPtr(alpha::Slice key);
     const FieldValue* GetPtr(alpha::Slice key) const;
+    FieldValue* MutablePtr(alpha::Slice key);
+
     std::pair<FieldValue*, bool> Insert(alpha::Slice key,
         const FieldValue& val);
+
+    bool empty() const;
     const UnderlyingMap& underlying_map() const;
 
   private:

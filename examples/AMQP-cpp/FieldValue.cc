@@ -138,7 +138,7 @@ namespace amqp {
   std::ostream& operator<< (std::ostream& os, const FieldValue& v) {
     switch (v.type()) {
       case FieldValue::Type::kBoolean:
-        os << v.As<bool>();
+        os << (v.As<bool>() ? "true" : "false");
         break;
       case FieldValue::Type::kShortShortInt:
         os << v.As<int8_t>();

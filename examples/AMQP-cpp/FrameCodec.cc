@@ -17,14 +17,11 @@
 
 namespace amqp {
   static const size_t kFrameHeaderSize = 7;
-  FrameCodec::FrameCodec()
-    :frame_(nullptr) {
-  }
 
-  size_t FrameCodec::Process(alpha::Slice data) {
+  FramePtr FrameCodec::Process(alpha::Slice& data) {
     if (frame_ == nullptr) {
       if (data.size() < kFrameHeaderSize) {
-        return 0; //needs more data to proceed
+        return nullptr; //needs more data to proceed
       } else {
         CodedInputStream stream(data);
         uint8_t frame_type;
@@ -33,10 +30,14 @@ namespace amqp {
         stream.ReadUInt8(&frame_type);
         stream.ReadBigEndianUInt16(&frame_channel);
         stream.ReadBigEndianUInt32(&frame_payload_size);
+        // TODO: Throw an ConnectionException
         CHECK(Frame::ValidType(frame_type)) << "Invalid frame type: "
           << frame_type;;
-        frame_ = new Frame(static_cast<Frame::Type>(frame_type), frame_channel,
-            frame_payload_size);
+        frame_.reset(new Frame(static_cast<Frame::Type>(frame_type),
+                               frame_channel,
+                               frame_payload_size
+                             )
+            );
         data.Advance(stream.consumed_bytes());
       }
     }
@@ -44,31 +45,31 @@ namespace amqp {
     DLOG_INFO << "Expected frame size = " << frame_->expected_payload_size()
       << ", current frame size = " << frame_->payload_size()
       << ", data.size() = " << data.size();
-    size_t sz = std::min(frame_->expected_payload_size(), data.size());
+    size_t sz = 0;
+    if (frame_->payload_all_received()) {
+      // Waiting for frame end
+      sz = std::min<size_t>(1, data.size());
+    } else {
+      sz = std::min(frame_->expected_payload_size(), data.size());
+    }
     frame_->AddPayload(data.subslice(0, sz));
     data.Advance(sz);
-    if (frame_->expected_payload_size() == frame_->payload_size()) {
+    if (frame_->payload_all_received()) {
       // All payloads arrived, check frame end
       static const char kFrameEnd = 0xCE;
       if (!data.empty() && *data.data() == kFrameEnd) {
-        // Valid frame, just tell callback if it exists
-        if (new_frame_callback_) new_frame_callback_(frame_);
-        // Delete frame anyway
-        // client could use frame_->Swap(saved) to save this frame if necessary
-        delete frame_;
+        // Valid frame, return it
+        data.Advance(1);
+        return std::move(frame_);
       } else if (!data.empty()) {
         // Invalid frame end, log first
         LOG_WARNING << "Invalid frame end: " << static_cast<int>(*data.data());
-        // Then abort this connection
+        // TODO: Throw an ConnectionException
         CHECK(false);
       } else {
         // Waiting for frame end
       }
     }
-    return sz;
-  }
-
-  void FrameCodec::SetNewFrameCallback(const NewFrameCallback& cb) {
-    new_frame_callback_ = cb;
+    return nullptr;
   }
 }

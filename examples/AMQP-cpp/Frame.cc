@@ -56,6 +56,10 @@ bool Frame::global_to_connection() const {
   return channel_id_ == 0;
 }
 
+bool Frame::payload_all_received() const {
+  return payload_size() == expected_payload_size();
+}
+
 size_t Frame::expected_payload_size() const {
   return expected_payload_size_;
 }

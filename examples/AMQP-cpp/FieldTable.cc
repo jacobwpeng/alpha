@@ -19,7 +19,7 @@ FieldValue FieldTable::Get(alpha::Slice key) const {
   return it == m_.end() ? FieldValue() : it->second;
 }
 
-FieldValue* FieldTable::GetPtr(alpha::Slice key) {
+FieldValue* FieldTable::MutablePtr(alpha::Slice key) {
   auto it = m_.find(key.ToString());
   return it == m_.end() ? nullptr : &it->second;
 }
@@ -33,6 +33,10 @@ std::pair<FieldValue*, bool> FieldTable::Insert(alpha::Slice key,
     const FieldValue& val) {
   auto p = m_.emplace(key.ToString(), val);
   return std::make_pair(&p.first->second, p.second);
+}
+
+bool FieldTable::empty() const {
+  return m_.empty();
 }
 
 const FieldTable::UnderlyingMap& FieldTable::underlying_map() const {

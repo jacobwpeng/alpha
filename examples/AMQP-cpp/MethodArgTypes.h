@@ -25,6 +25,8 @@ namespace amqp {
     public:
       ShortString();
       ShortString(alpha::Slice s);
+      ShortString& operator= (alpha::Slice s);
+      void clear();
       void append(const char* data, size_t sz);
       size_t size() const;
       const char* data() const;

@@ -15,20 +15,18 @@
 
 #include <functional>
 #include <alpha/slice.h>
+#include <alpha/tcp_connection.h>
+#include "Frame.h"
 
 namespace amqp {
 
 class Frame;
 class FrameCodec {
   public:
-    using NewFrameCallback = std::function<void(Frame*)>;
-    FrameCodec();
-    size_t Process(alpha::Slice data);
-    void SetNewFrameCallback(const NewFrameCallback& cb);
+    FramePtr Process(alpha::Slice& data);
 
   private:
-    Frame* frame_;
-    NewFrameCallback new_frame_callback_;
+    FramePtr frame_;
 };
 }
 
