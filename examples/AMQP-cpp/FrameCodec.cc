@@ -30,7 +30,7 @@ namespace amqp {
         stream.ReadUInt8(&frame_type);
         stream.ReadBigEndianUInt16(&frame_channel);
         stream.ReadBigEndianUInt32(&frame_payload_size);
-        // TODO: Throw an ConnectionException
+        // TODO: Throw a ConnectionException
         CHECK(Frame::ValidType(frame_type)) << "Invalid frame type: "
           << frame_type;;
         frame_.reset(new Frame(static_cast<Frame::Type>(frame_type),
@@ -64,7 +64,7 @@ namespace amqp {
       } else if (!data.empty()) {
         // Invalid frame end, log first
         LOG_WARNING << "Invalid frame end: " << static_cast<int>(*data.data());
-        // TODO: Throw an ConnectionException
+        // TODO: Throw a ConnectionException
         CHECK(false);
       } else {
         // Waiting for frame end

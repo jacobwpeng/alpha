@@ -17,49 +17,54 @@
 #include <algorithm>
 #include <boost/preprocessor.hpp>
 #include <alpha/logger.h>
+#include "DecodeUnit.h"
+#include "EncodeUnit.h"
 
 namespace amqp {
   namespace detail {
     template<typename ResultType>
-    struct DecoderTypeHelper;
+    struct CodecTypeHelper;
 
     template<>
-    struct DecoderTypeHelper<uint8_t> {
-      using type = OctetDecodeUnit;
+    struct CodecTypeHelper<uint8_t> {
+      using EncoderType = OctetEncodeUnit;
+      using DecoderType = OctetDecodeUnit;
     };
 
     template<>
-    struct DecoderTypeHelper<uint16_t> {
-      using type = ShortDecodeUnit;
+    struct CodecTypeHelper<uint16_t> {
+      using EncoderType = ShortEncodeUnit;
+      using DecoderType = ShortDecodeUnit;
     };
 
     template<>
-    struct DecoderTypeHelper<uint32_t> {
-      using type = LongDecodeUnit;
+    struct CodecTypeHelper<uint32_t> {
+      using EncoderType = LongEncodeUnit;
+      using DecoderType = LongDecodeUnit;
     };
 
     template<>
-    struct DecoderTypeHelper<uint64_t> {
-      using type = LongLongDecodeUnit;
+    struct CodecTypeHelper<uint64_t> {
+      using EncoderType = LongLongEncodeUnit;
+      using DecoderType = LongLongDecodeUnit;
     };
 
     template<>
-    struct DecoderTypeHelper<FieldTable> {
-      using type = FieldTableDecodeUnit;
+    struct CodecTypeHelper<FieldTable> {
+      using EncoderType = FieldTableEncodeUnit;
+      using DecoderType = FieldTableDecodeUnit;
     };
 
     template<>
-    struct DecoderTypeHelper<ShortString> {
-      using type = ShortStringDecodeUnit;
+    struct CodecTypeHelper<ShortString> {
+      using EncoderType = ShortStringEncodeUnit;
+      using DecoderType = ShortStringDecodeUnit;
     };
 
     template<>
-    struct DecoderTypeHelper<typename std::conditional<
-                              std::is_same<ShortString, LongString>::value,
-                              void,
-                              LongString
-                            >::type >{
-      using type = LongStringDecodeUnit;
+    struct CodecTypeHelper<LongString> {
+      using EncoderType = LongStringEncodeUnit;
+      using DecoderType = LongStringDecodeUnit;
     };
 
     template<typename ResultType, typename Enable = void>
@@ -78,21 +83,23 @@ namespace amqp {
         || std::is_same<ResultType, LongString>::value
       >::type
     > {
-      using DecoderType = typename detail::DecoderTypeHelper<ResultType>::type;
-      static DecoderType* New(ResultType* p) {
-        return new DecoderType(p);
+      using DecoderType = typename 
+        detail::CodecTypeHelper<ResultType>::DecoderType;
+      static std::unique_ptr<DecoderType> New(ResultType* p) {
+        return std::unique_ptr<DecoderType>(new DecoderType(p));
       }
     };
   }
 
+  //EncoderBase::EncoderBase(ClassID class_id, kMethodID method_id)
+  //  :inited_(false) {
+  //  AddEncodeUnit(class_id);
+  //  AddEncodeUnit(method_id);
+  //}
+
   DecoderBase::DecoderBase()
     :inited_(false) {
     AddDecodeUnit(&class_id_, &method_id_);
-  }
-
-  DecoderBase::~DecoderBase() {
-    std::for_each(decode_units_.begin(), decode_units_.end(),
-        [](DecodeUnit* unit) { delete unit; });
   }
 
   int DecoderBase::Decode(alpha::Slice data) {

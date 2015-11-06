@@ -18,9 +18,8 @@
 namespace amqp {
 
 class FieldTable {
-  private:
-    using UnderlyingMap = std::map<std::string, FieldValue>;
   public:
+    using UnderlyingMap = std::map<std::string, FieldValue>;
     FieldValue Get(alpha::Slice key) const;
     const FieldValue* GetPtr(alpha::Slice key) const;
     FieldValue* MutablePtr(alpha::Slice key);

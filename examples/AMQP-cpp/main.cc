@@ -62,6 +62,16 @@ void OnDisconnected(alpha::TcpConnectionPtr conn) {
   connection.reset();
 }
 
+//void OnWriteDone(alpha::TcpConnectionPtr conn) {
+//  auto encoder = conn->GetContext();
+//  if (encoder) {
+//    bool done = encoder->WriteTo(conn);
+//    if (done) {
+//      conn->ClearContext();
+//    }
+//  }
+//}
+
 void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
   DLOG_INFO << "Frame type: " << static_cast<int>(frame->type())
     << ", Frame channel: " << frame->channel_id()
@@ -80,12 +90,39 @@ void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
       DLOG_INFO << p.first << ": " << p.second;
     }
 
+    //std::string payload;
+    //MemoryStringWriter w(&payload);
+    //EncoderBase(ok).Encode(&w);
+    //Write(Frame::Type::kMethod);
+    //Write(channel);
+    //Write(payload.size());
+    //Write(payload);
+    //Write(frame_end);
+
+    //TcpConnectionWriter w(conn);
+    //FrameCodec frame_encoder(&w);
+    //frame_encoder->Write(Frame::Type::kMethod, channel, payload);
+    
+    //amqp::MethodStartOkArgs ok;
+    //auto payload_size = amqp::MethodStartOkArgsEncoder(ok).ByteSize();
+    //auto total_size = 1 + 2 + 4 + payload_size + 1;
+
+    //if (total_size > client_max_frame_size) {
+    //  // Split into multiple frames
+    //  
+    //}
+
     //amqp::MethodStartOkArgs ok;
     //ok.mechanism = "PLAIN";
     //ok.locale = "en_US";
     //std::string user = "guest";
     //std::string passwd = "guest";
     //ok.response = '\0' + user + '\0' + passwd;
+    //amqp::MethodStartOkArgsEncoder encoder
+    //bool done = amqp::MethodStartOkArgsEncoder(ok).WriteTo(conn);
+    //if (!done) {
+    //  SetContext(
+    //}
     //amqp::MethodStartArgsEncoder encoder(ok);
     //encoder.Process([&conn](const char* data, size_t sz){
     //  conn->Write(alpha::Slice(data, sz));

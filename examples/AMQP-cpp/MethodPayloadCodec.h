@@ -13,16 +13,31 @@
 #ifndef  __METHODPAYLOADCODEC_H__
 #define  __METHODPAYLOADCODEC_H__
 
+#include <memory>
 #include <type_traits>
 #include "MethodArgs.h"
-#include "DecodeUnit.h"
 
 namespace amqp {
 
 class Frame;
+class CodedWriterBase;
+class EncodeUnit;
+class DecodeUnit;
+class EncoderBase {
+  public:
+    virtual ~EncoderBase() = default;
+    virtual void Init() = 0;
+
+    void Encode(CodedWriterBase* w);
+
+    void AddEncodeUnit();
+    template<typename Arg, typename... Tail>
+    void AddEncodeUnit(Arg&& arg, Tail&&... tail);
+};
+
 class DecoderBase {
   public:
-    virtual ~DecoderBase();
+    virtual ~DecoderBase() = default;
     virtual void Init() = 0;
     int Decode(alpha::Slice data);
 
@@ -37,7 +52,7 @@ class DecoderBase {
     void* ptr_;
 
   private:
-    std::vector<DecodeUnit*> decode_units_;
+    std::vector<std::unique_ptr<DecodeUnit>> decode_units_;
     ClassID class_id_;
     MethodID method_id_;
     bool inited_;

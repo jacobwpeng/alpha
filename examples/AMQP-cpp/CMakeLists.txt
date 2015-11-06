@@ -1,7 +1,10 @@
 list(APPEND AMQP_CPP_SRCS
   "MethodArgTypes.cc"
+  "EncodeUnit.cc"
   "DecodeUnit.cc"
+  "CodedWriter.cc"
   "CodedInputStream.cc"
+  "CodedOutputStream.cc"
   "Frame.cc"
   "FrameCodec.cc"
   "FieldValue.cc"
