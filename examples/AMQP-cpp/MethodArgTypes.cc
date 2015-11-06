@@ -20,7 +20,8 @@ ShortString::ShortString()
   :size_(0) {
 }
 
-ShortString::ShortString(alpha::Slice s) {
+ShortString::ShortString(alpha::Slice s)
+  :size_(0) {
   append(s.data(), s.size());
 }
 

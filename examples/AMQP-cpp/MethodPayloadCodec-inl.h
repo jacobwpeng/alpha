@@ -68,10 +68,10 @@ namespace amqp {
     };
 
     template<typename ResultType, typename Enable = void>
-    struct DecoderFactory;
+    struct CoderFactory;
 
     template<typename ResultType>
-    struct DecoderFactory<
+    struct CoderFactory<
       ResultType,
       typename std::enable_if<
         std::is_same<ResultType, uint8_t>::value
@@ -83,19 +83,61 @@ namespace amqp {
         || std::is_same<ResultType, LongString>::value
       >::type
     > {
+      using EncoderType = typename
+        detail::CodecTypeHelper<ResultType>::EncoderType;
       using DecoderType = typename 
         detail::CodecTypeHelper<ResultType>::DecoderType;
-      static std::unique_ptr<DecoderType> New(ResultType* p) {
+      using ResultArgType = typename std::conditional<
+                                      std::is_pod<ResultType>::value,
+                                      ResultType,
+                                      const ResultType&
+                                    >::type;
+      static std::unique_ptr<EncoderType> NewEncoder(ResultArgType p) {
+        return std::unique_ptr<EncoderType>(new EncoderType(p));
+      }
+      static std::unique_ptr<DecoderType> NewDecoder(ResultType* p) {
         return std::unique_ptr<DecoderType>(new DecoderType(p));
       }
     };
   }
 
-  //EncoderBase::EncoderBase(ClassID class_id, kMethodID method_id)
-  //  :inited_(false) {
-  //  AddEncodeUnit(class_id);
-  //  AddEncodeUnit(method_id);
-  //}
+  EncoderBase::EncoderBase(ClassID class_id, MethodID method_id)
+    :inited_(false) {
+    AddEncodeUnit(class_id);
+    AddEncodeUnit(method_id);
+  }
+
+  bool EncoderBase::Encode(CodedWriterBase* w) {
+    if (!inited_) {
+      Init();
+      inited_ = true;
+    }
+
+    while (!encode_units_.empty()) {
+      auto cur = encode_units_.begin();
+      bool done = (*cur)->Write(w);
+      if (!done) {
+        break;
+      }
+      encode_units_.erase(cur);
+    }
+    return encode_units_.empty();
+  }
+
+  void EncoderBase::AddEncodeUnit() {}
+
+  template<typename Arg, typename... Tail>
+  void EncoderBase::AddEncodeUnit(Arg&& arg, Tail&&... tail) {
+    encode_units_.push_back(
+        detail::CoderFactory<
+          typename std::remove_pointer<
+              typename std::remove_cv<
+                typename std::remove_reference<Arg>::type
+              >::type
+          >::type
+        >::NewEncoder(std::forward<Arg>(arg)));
+    AddEncodeUnit(tail...);
+  }
 
   DecoderBase::DecoderBase()
     :inited_(false) {
@@ -105,7 +147,6 @@ namespace amqp {
   int DecoderBase::Decode(alpha::Slice data) {
     if (!inited_) { 
       Init(); 
-      DLOG_INFO << decode_units_.size() << " DecodeUnit(s)";
       inited_ = true;
     }
 
@@ -127,13 +168,13 @@ namespace amqp {
   template<typename Arg, typename... Tail>
   void DecoderBase::AddDecodeUnit(Arg&& arg, Tail&&... tail) {
     decode_units_.push_back(
-        detail::DecoderFactory<
+        detail::CoderFactory<
           typename std::remove_pointer<
               typename std::remove_reference<
                 typename std::remove_cv<Arg>::type
               >::type
           >::type
-        >::New(std::forward<Arg>(arg)));
+        >::NewDecoder(std::forward<Arg>(arg)));
     AddDecodeUnit(tail...);
   }
 
@@ -149,6 +190,7 @@ namespace amqp {
     return *reinterpret_cast<ArgType*>(ptr_);
   }
 
+#define Member(r, data, i, member) BOOST_PP_COMMA_IF(i) arg_.member
 #define MemberPtr(r, data, i, member) BOOST_PP_COMMA_IF(i) &arg_.member
 #define DefineArgsDecoder(ArgType, Seq)                              \
 class ArgType##Decoder final : public DecoderBase {                  \
@@ -167,8 +209,26 @@ class ArgType##Decoder final : public DecoderBase {                  \
     ArgType arg_;                                                    \
 };
 
+#define DefineArgsEncoder(ArgType, CID, MID, Seq)                    \
+class ArgType##Encoder final : public EncoderBase {                  \
+  public:                                                            \
+    ArgType##Encoder(const ArgType& arg)                             \
+      : EncoderBase(CID, MID), arg_(arg) {                           \
+    }                                                                \
+    virtual void Init() {                                            \
+      AddEncodeUnit(BOOST_PP_SEQ_FOR_EACH_I(                         \
+            Member, BOOST_PP_SEQ_SIZE(Seq), Seq));                   \
+    }                                                                \
+  private:                                                           \
+    const ArgType& arg_;                                             \
+};
+
 DefineArgsDecoder(MethodStartArgs,
     (version_major)(version_minor)(server_properties)(mechanisms)(locales)
+);
+
+DefineArgsEncoder(MethodStartOkArgs, 10, 11,
+    (client_properties)(mechanism)(response)(locale)
 );
 
 //DefineArgsDecoder(MethodStartOkArgs,

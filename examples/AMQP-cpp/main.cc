@@ -16,6 +16,8 @@
 #include <alpha/format.h>
 #include "Frame.h"
 #include "FrameCodec.h"
+#include "CodedWriter.h"
+#include "CodedOutputStream.h"
 #include "MethodPayloadCodec.h"
 #include "FieldValue.h"
 
@@ -112,13 +114,32 @@ void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
     //  
     //}
 
-    //amqp::MethodStartOkArgs ok;
-    //ok.mechanism = "PLAIN";
-    //ok.locale = "en_US";
-    //std::string user = "guest";
-    //std::string passwd = "guest";
-    //ok.response = '\0' + user + '\0' + passwd;
-    //amqp::MethodStartOkArgsEncoder encoder
+    amqp::MethodStartOkArgs ok;
+    ok.mechanism = "PLAIN";
+    ok.locale = "en_US";
+    std::string user = "guest";
+    std::string passwd = "guest";
+    ok.response = '\0' + user + '\0' + passwd;
+
+    // Seems that RabbitMQ doesn't support short string field value
+    ok.client_properties.Insert("Product",
+        amqp::FieldValue(amqp::FieldValue::Type::kLongString, "AMQP-cpp"));
+    ok.client_properties.Insert("Version",
+        amqp::FieldValue(amqp::FieldValue::Type::kLongString, "0.01"));
+
+    std::string payload;
+    amqp::MemoryStringWriter w(&payload);
+    amqp::MethodStartOkArgsEncoder encoder(ok);
+    bool done = encoder.Encode(&w);
+    CHECK(done);
+    DLOG_INFO << '\n' << alpha::HexDump(payload);
+    amqp::TcpConnectionWriter writer(conn);
+    amqp::CodedOutputStream stream(&writer);
+    stream.WriteUInt8(amqp::Frame::Type::kMethod);
+    stream.WriteBigEndianUInt16(0);
+    stream.WriteBigEndianUInt32(payload.size());
+    stream.WriteBinary(payload.data(), payload.size());
+    stream.WriteUInt8(0xCE);
     //bool done = amqp::MethodStartOkArgsEncoder(ok).WriteTo(conn);
     //if (!done) {
     //  SetContext(

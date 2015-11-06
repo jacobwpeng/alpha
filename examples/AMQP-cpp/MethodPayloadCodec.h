@@ -25,14 +25,19 @@ class EncodeUnit;
 class DecodeUnit;
 class EncoderBase {
   public:
+    EncoderBase(ClassID class_id, MethodID method_id);
     virtual ~EncoderBase() = default;
     virtual void Init() = 0;
 
-    void Encode(CodedWriterBase* w);
+    bool Encode(CodedWriterBase* w);
 
     void AddEncodeUnit();
     template<typename Arg, typename... Tail>
     void AddEncodeUnit(Arg&& arg, Tail&&... tail);
+
+  private:
+    bool inited_;
+    std::vector<std::unique_ptr<EncodeUnit>> encode_units_;
 };
 
 class DecoderBase {
