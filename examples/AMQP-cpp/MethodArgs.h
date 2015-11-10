@@ -5,13 +5,13 @@
  *        Created:  10/21/15 16:45:23
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
- *    Description:  
+ *    Description:
  *
  * =============================================================================
  */
 
-#ifndef  __METHODARGS_H__
-#define  __METHODARGS_H__
+#ifndef __METHODARGS_H__
+#define __METHODARGS_H__
 
 #include <cstdint>
 #include <map>
@@ -38,4 +38,4 @@ struct MethodStartOkArgs {
 };
 }
 
-#endif   /* ----- #ifndef __METHODARGS_H__  ----- */
+#endif /* ----- #ifndef __METHODARGS_H__  ----- */

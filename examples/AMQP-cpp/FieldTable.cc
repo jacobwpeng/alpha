@@ -5,7 +5,7 @@
  *        Created:  10/23/15 17:08:10
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
- *    Description:  
+ *    Description:
  *
  * =============================================================================
  */
@@ -30,17 +30,14 @@ const FieldValue* FieldTable::GetPtr(alpha::Slice key) const {
 }
 
 std::pair<FieldValue*, bool> FieldTable::Insert(alpha::Slice key,
-    const FieldValue& val) {
+                                                const FieldValue& val) {
   auto p = m_.emplace(key.ToString(), val);
   return std::make_pair(&p.first->second, p.second);
 }
 
-bool FieldTable::empty() const {
-  return m_.empty();
-}
+bool FieldTable::empty() const { return m_.empty(); }
 
 const FieldTable::UnderlyingMap& FieldTable::underlying_map() const {
   return m_;
 }
-
 }

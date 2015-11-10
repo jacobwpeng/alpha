@@ -9,32 +9,32 @@
  * ==============================================================================
  */
 
-#ifndef  __COMPILER_H__
-#define  __COMPILER_H__
+#ifndef __COMPILER_H__
+#define __COMPILER_H__
 
 #ifndef likely
-#define likely(x)       __builtin_expect((x),1)
+#define likely(x) __builtin_expect((x), 1)
 #endif
 
 #ifndef unlikely
-#define unlikely(x)     __builtin_expect((x),0)
+#define unlikely(x) __builtin_expect((x), 0)
 #endif
 
 #define DISABLE_COPY_ASSIGNMENT(type) \
-    type(const type&) = delete; \
-    type& operator=(const type&) = delete
+  type(const type&) = delete;         \
+  type& operator=(const type&) = delete
 
 #define DISABLE_MOVE_ASSIGNMENT(type) \
-    type(type&&) = delete; \
-    type& operator=(type&&) = delete
+  type(type&&) = delete;              \
+  type& operator=(type&&) = delete
 
 #include <memory>
 
 namespace alpha {
-  template<typename T, typename ...Args>
-  std::unique_ptr<T> make_unique(Args&& ...args) {
-    return std::unique_ptr<T>(new T(std::forward<Args>(args)... ));
-  }
+template <typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args&&... args) {
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
 }
 
-#endif   /* ----- #ifndef __COMPILER_H__----- */
+#endif /* ----- #ifndef __COMPILER_H__----- */

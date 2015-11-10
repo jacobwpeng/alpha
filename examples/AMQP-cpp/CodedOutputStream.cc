@@ -5,7 +5,7 @@
  *        Created:  11/04/15 16:39:03
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
- *    Description:  
+ *    Description:
  *
  * =============================================================================
  */
@@ -16,9 +16,7 @@
 
 namespace amqp {
 
-CodedOutputStream::CodedOutputStream(CodedWriterBase* w)
-  :w_(w) {
-}
+CodedOutputStream::CodedOutputStream(CodedWriterBase* w) : w_(w) {}
 
 bool CodedOutputStream::WriteUInt8(uint8_t val) {
   return w_->CanWrite(1) && w_->Write(&val, 1);
@@ -51,5 +49,4 @@ bool CodedOutputStream::WriteBigEndianUInt64(uint64_t val) {
 size_t CodedOutputStream::WriteBinary(const char* buf, size_t sz) {
   return w_->Write(buf, sz);
 }
-
 }

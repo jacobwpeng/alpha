@@ -5,7 +5,7 @@
  *        Created:  11/05/15 09:48:36
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
- *    Description:  
+ *    Description:
  *
  * =============================================================================
  */
@@ -36,12 +36,11 @@ bool LongLongEncodeUnit::Write(CodedWriterBase* w) {
 }
 
 ShortStringEncodeUnit::ShortStringEncodeUnit(const ShortString& s)
-  :size_done_(false), consumed_(0), s_(s) {
-}
+    : size_done_(false), consumed_(0), s_(s) {}
 
 bool ShortStringEncodeUnit::Write(CodedWriterBase* w) {
   CHECK(s_.size() <= std::numeric_limits<uint8_t>::max())
-    << "Invalid ShortString size";
+      << "Invalid ShortString size";
   const uint8_t sz = s_.size();
   if (!size_done_) {
     size_done_ = OctetEncodeUnit(sz).Write(w);
@@ -57,16 +56,14 @@ bool ShortStringEncodeUnit::Write(CodedWriterBase* w) {
 }
 
 LongStringEncodeUnit::LongStringEncodeUnit(const LongString& s)
-  :size_done_(false), consumed_(0), s_(s) {
-}
+    : size_done_(false), consumed_(0), s_(s) {}
 
 LongStringEncodeUnit::LongStringEncodeUnit(alpha::Slice s)
-  :saved_(s.ToString()), size_done_(false), consumed_(0), s_(saved_) {
-}
+    : saved_(s.ToString()), size_done_(false), consumed_(0), s_(saved_) {}
 
 bool LongStringEncodeUnit::Write(CodedWriterBase* w) {
   CHECK(s_.size() <= std::numeric_limits<uint32_t>::max())
-    << "Invalid LongString size: " << s_.size();
+      << "Invalid LongString size: " << s_.size();
   const uint32_t sz = s_.size();
   if (!size_done_) {
     size_done_ = LongEncodeUnit(sz).Write(w);
@@ -82,9 +79,9 @@ bool LongStringEncodeUnit::Write(CodedWriterBase* w) {
 }
 
 FieldValueEncodeUnit::FieldValueEncodeUnit(const FieldValue& v,
-    const CodecEnv* env)
-  :env_(env),val_(v) {
-    underlying_encode_unit_ = env_->NewEncodeUnit(v);
+                                           const CodecEnv* env)
+    : env_(env), val_(v) {
+  underlying_encode_unit_ = env_->NewEncodeUnit(v);
 }
 
 bool FieldValueEncodeUnit::Write(CodedWriterBase* w) {
@@ -92,9 +89,8 @@ bool FieldValueEncodeUnit::Write(CodedWriterBase* w) {
 }
 
 FieldTableEncodeUnit::FieldTableEncodeUnit(const FieldTable& ft,
-    const CodecEnv* env)
-  :env_(env), ft_(ft) {
-}
+                                           const CodecEnv* env)
+    : env_(env), ft_(ft) {}
 
 bool FieldTableEncodeUnit::Write(CodedWriterBase* w) {
   if (encoded_.empty()) {
@@ -103,8 +99,7 @@ bool FieldTableEncodeUnit::Write(CodedWriterBase* w) {
     for (const auto& p : ft_.underlying_map()) {
       ShortStringEncodeUnit key_encode_unit(ShortString(p.first));
       key_encode_unit.Write(&w);
-      OctetEncodeUnit value_type_encode_unit(env_->FieldValueType(
-            p.second));
+      OctetEncodeUnit value_type_encode_unit(env_->FieldValueType(p.second));
       value_type_encode_unit.Write(&w);
       DLOG_INFO << "`" << p.second.type() << "'";
       FieldValueEncodeUnit value_encode_unit(p.second, env_);
@@ -113,7 +108,7 @@ bool FieldTableEncodeUnit::Write(CodedWriterBase* w) {
   }
 
   if (!long_string_encode_unit_) {
-    long_string_encode_unit_.reset (new LongStringEncodeUnit(encoded_));
+    long_string_encode_unit_.reset(new LongStringEncodeUnit(encoded_));
   }
 
   // Then write as LongString

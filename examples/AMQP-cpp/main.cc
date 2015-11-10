@@ -5,7 +5,7 @@
  *        Created:  10/19/15 14:21:16
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
- *    Description:  
+ *    Description:
  *
  * =============================================================================
  */
@@ -29,7 +29,7 @@ amqp::FrameCodec codec;
 void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame);
 
 void OnMessage(alpha::TcpConnectionPtr conn,
-    alpha::TcpConnectionBuffer* buffer) {
+               alpha::TcpConnectionBuffer* buffer) {
   auto data = buffer->Read();
   DLOG_INFO << "Receive " << data.size() << " bytes from server";
   DLOG_INFO << '\n' << alpha::HexDump(data);
@@ -65,7 +65,7 @@ void OnDisconnected(alpha::TcpConnectionPtr conn) {
   connection.reset();
 }
 
-//void OnWriteDone(alpha::TcpConnectionPtr conn) {
+// void OnWriteDone(alpha::TcpConnectionPtr conn) {
 //  auto encoder = conn->GetContext();
 //  if (encoder) {
 //    bool done = encoder->WriteTo(conn);
@@ -77,42 +77,45 @@ void OnDisconnected(alpha::TcpConnectionPtr conn) {
 
 void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
   DLOG_INFO << "Frame type: " << static_cast<int>(frame->type())
-    << ", Frame channel: " << frame->channel_id()
-    << ", Frame expected payload size: " << frame->expected_payload_size()
-    << ", Frame paylaod size: " << frame->payload_size();
+            << ", Frame channel: " << frame->channel_id()
+            << ", Frame expected payload size: "
+            << frame->expected_payload_size()
+            << ", Frame paylaod size: " << frame->payload_size();
   amqp::MethodStartArgsDecoder d(amqp::GetCodecEnv("Default"));
   int rc = d.Decode(frame->payload());
   if (rc == 0) {
     auto args = d.Get();
     DLOG_INFO << "Decode done"
-      << ", version_major: " << static_cast<uint16_t>(args.version_major)
-      << ", version_minor: " << static_cast<uint16_t>(args.version_minor)
-      << ", mechanisms: " << args.mechanisms
-      << ", locales: " << args.locales;
+              << ", version_major: "
+              << static_cast<uint16_t>(args.version_major)
+              << ", version_minor: "
+              << static_cast<uint16_t>(args.version_minor)
+              << ", mechanisms: " << args.mechanisms
+              << ", locales: " << args.locales;
     for (const auto& p : args.server_properties.underlying_map()) {
       DLOG_INFO << p.first << ": " << p.second;
     }
     auto env = amqp::GetCodecEnv("RabbitMQ");
-    //std::string payload;
-    //MemoryStringWriter w(&payload);
-    //EncoderBase(ok).Encode(&w);
-    //Write(Frame::Type::kMethod);
-    //Write(channel);
-    //Write(payload.size());
-    //Write(payload);
-    //Write(frame_end);
+    // std::string payload;
+    // MemoryStringWriter w(&payload);
+    // EncoderBase(ok).Encode(&w);
+    // Write(Frame::Type::kMethod);
+    // Write(channel);
+    // Write(payload.size());
+    // Write(payload);
+    // Write(frame_end);
 
-    //TcpConnectionWriter w(conn);
-    //FrameCodec frame_encoder(&w);
-    //frame_encoder->Write(Frame::Type::kMethod, channel, payload);
-    
-    //amqp::MethodStartOkArgs ok;
-    //auto payload_size = amqp::MethodStartOkArgsEncoder(ok).ByteSize();
-    //auto total_size = 1 + 2 + 4 + payload_size + 1;
+    // TcpConnectionWriter w(conn);
+    // FrameCodec frame_encoder(&w);
+    // frame_encoder->Write(Frame::Type::kMethod, channel, payload);
 
-    //if (total_size > client_max_frame_size) {
+    // amqp::MethodStartOkArgs ok;
+    // auto payload_size = amqp::MethodStartOkArgsEncoder(ok).ByteSize();
+    // auto total_size = 1 + 2 + 4 + payload_size + 1;
+
+    // if (total_size > client_max_frame_size) {
     //  // Split into multiple frames
-    //  
+    //
     //}
 
     amqp::MethodStartOkArgs ok;
@@ -123,9 +126,11 @@ void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
     ok.response = '\0' + user + '\0' + passwd;
 
     // Seems that RabbitMQ doesn't support short string field value
-    ok.client_properties.Insert("Product",
+    ok.client_properties.Insert(
+        "Product",
         amqp::FieldValue(amqp::FieldValue::Type::kLongString, "AMQP-cpp"));
-    ok.client_properties.Insert("Version",
+    ok.client_properties.Insert(
+        "Version",
         amqp::FieldValue(amqp::FieldValue::Type::kShortString, "0.01"));
 
     std::string payload;
@@ -142,12 +147,12 @@ void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
     stream.WriteBinary(payload.data(), payload.size());
     stream.WriteUInt8(0xCE);
 
-    //bool done = amqp::MethodStartOkArgsEncoder(ok).WriteTo(conn);
-    //if (!done) {
+    // bool done = amqp::MethodStartOkArgsEncoder(ok).WriteTo(conn);
+    // if (!done) {
     //  SetContext(
     //}
-    //amqp::MethodStartArgsEncoder encoder(ok);
-    //encoder.Process([&conn](const char* data, size_t sz){
+    // amqp::MethodStartArgsEncoder encoder(ok);
+    // encoder.Process([&conn](const char* data, size_t sz){
     //  conn->Write(alpha::Slice(data, sz));
     //});
   } else {

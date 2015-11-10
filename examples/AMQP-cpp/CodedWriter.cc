@@ -5,7 +5,7 @@
  *        Created:  11/05/15 14:50:32
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
- *    Description:  
+ *    Description:
  *
  * =============================================================================
  */
@@ -16,8 +16,7 @@
 namespace amqp {
 
 TcpConnectionWriter::TcpConnectionWriter(alpha::TcpConnectionPtr& conn)
-  :conn_(conn) {
-}
+    : conn_(conn) {}
 
 bool TcpConnectionWriter::CanWrite(size_t sz) const {
   if (auto conn = conn_.lock()) {
@@ -32,19 +31,16 @@ size_t TcpConnectionWriter::Write(const void* buf, size_t sz) {
     auto data = reinterpret_cast<const char*>(buf);
     bool ok = conn->Write(alpha::Slice(data, writable_size));
     CHECK(ok) << "Write to TcpConnection failed, writable_size: "
-      << writable_size;
+              << writable_size;
     return writable_size;
   }
   return 0;
 }
 
-bool MemoryStringWriter::CanWrite(size_t sz) const {
-  return true;
-}
+bool MemoryStringWriter::CanWrite(size_t sz) const { return true; }
 
 size_t MemoryStringWriter::Write(const void* buf, size_t sz) {
   s_->append(reinterpret_cast<const char*>(buf), sz);
   return sz;
 }
-
 }

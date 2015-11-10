@@ -5,7 +5,7 @@
  *        Created:  08/22/14 15:28:49
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
- *    Description:  
+ *    Description:
  *
  * =====================================================================================
  */
@@ -18,17 +18,14 @@
 #include "udp_listener.h"
 
 namespace alpha {
-    const int UdpServer::kOutputBufferSize = kOutputBufferSize;
-    UdpServer::UdpServer(EventLoop * loop)
-        :loop_(loop) {
-    }
+const int UdpServer::kOutputBufferSize = kOutputBufferSize;
+UdpServer::UdpServer(EventLoop* loop) : loop_(loop) {}
 
-    UdpServer::~UdpServer() {
-    }
+UdpServer::~UdpServer() {}
 
-    bool UdpServer::Start(const NetAddress& addr, const MessageCallback& cb) {
-        listener_.reset(new UdpListener(loop_));
-        listener_->set_message_callback(cb);
-        return listener_->Run(addr);
-    }
+bool UdpServer::Start(const NetAddress& addr, const MessageCallback& cb) {
+  listener_.reset(new UdpListener(loop_));
+  listener_->set_message_callback(cb);
+  return listener_->Run(addr);
+}
 }
