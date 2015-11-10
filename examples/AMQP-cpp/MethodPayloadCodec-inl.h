@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <boost/preprocessor.hpp>
 #include <alpha/logger.h>
+#include <alpha/compiler.h>
 #include "DecodeUnit.h"
 #include "EncodeUnit.h"
 
@@ -78,7 +79,6 @@ namespace amqp {
         || std::is_same<ResultType, uint16_t>::value
         || std::is_same<ResultType, uint32_t>::value
         || std::is_same<ResultType, uint64_t>::value
-        || std::is_same<ResultType, FieldTable>::value
         || std::is_same<ResultType, ShortString>::value
         || std::is_same<ResultType, LongString>::value
       >::type
@@ -92,17 +92,46 @@ namespace amqp {
                                       ResultType,
                                       const ResultType&
                                     >::type;
-      static std::unique_ptr<EncoderType> NewEncoder(ResultArgType p) {
-        return std::unique_ptr<EncoderType>(new EncoderType(p));
+      static std::unique_ptr<EncoderType> NewEncoder(ResultArgType p,
+          const CodecEnv* ) {
+        return alpha::make_unique<EncoderType>(p);
       }
-      static std::unique_ptr<DecoderType> NewDecoder(ResultType* p) {
-        return std::unique_ptr<DecoderType>(new DecoderType(p));
+      static std::unique_ptr<DecoderType> NewDecoder(ResultType* p,
+          const CodecEnv* ) {
+        return alpha::make_unique<DecoderType>(p);
+      }
+    };
+
+    template<typename ResultType>
+    struct CoderFactory<
+      ResultType,
+      typename std::enable_if<
+        std::is_same<ResultType, FieldTable>::value
+      >::type
+    > {
+      using EncoderType = typename
+        detail::CodecTypeHelper<ResultType>::EncoderType;
+      using DecoderType = typename 
+        detail::CodecTypeHelper<ResultType>::DecoderType;
+      using ResultArgType = typename std::conditional<
+                                      std::is_pod<ResultType>::value,
+                                      ResultType,
+                                      const ResultType&
+                                    >::type;
+      static std::unique_ptr<EncoderType> NewEncoder(ResultArgType p,
+          const CodecEnv* env) {
+        return alpha::make_unique<EncoderType>(p, env);
+      }
+      static std::unique_ptr<DecoderType> NewDecoder(ResultType* p,
+          const CodecEnv* env) {
+        return alpha::make_unique<DecoderType>(p, env);
       }
     };
   }
 
-  EncoderBase::EncoderBase(ClassID class_id, MethodID method_id)
-    :inited_(false) {
+  EncoderBase::EncoderBase(ClassID class_id, MethodID method_id,
+      const CodecEnv* env)
+    :inited_(false), env_(env) {
     AddEncodeUnit(class_id);
     AddEncodeUnit(method_id);
   }
@@ -135,12 +164,12 @@ namespace amqp {
                 typename std::remove_reference<Arg>::type
               >::type
           >::type
-        >::NewEncoder(std::forward<Arg>(arg)));
+        >::NewEncoder(std::forward<Arg>(arg), env_));
     AddEncodeUnit(tail...);
   }
 
-  DecoderBase::DecoderBase()
-    :inited_(false) {
+  DecoderBase::DecoderBase(const CodecEnv* env)
+    :env_(env), inited_(false) {
     AddDecodeUnit(&class_id_, &method_id_);
   }
 
@@ -174,7 +203,7 @@ namespace amqp {
                 typename std::remove_cv<Arg>::type
               >::type
           >::type
-        >::NewDecoder(std::forward<Arg>(arg)));
+        >::NewDecoder(std::forward<Arg>(arg), env_));
     AddDecodeUnit(tail...);
   }
 
@@ -195,7 +224,8 @@ namespace amqp {
 #define DefineArgsDecoder(ArgType, Seq)                              \
 class ArgType##Decoder final : public DecoderBase {                  \
   public:                                                            \
-    ArgType##Decoder() {                                             \
+    ArgType##Decoder(const CodecEnv* env)                            \
+      :DecoderBase(env) {                                            \
         ptr_ = &arg_;                                                \
     }                                                                \
     virtual void Init() {                                            \
@@ -212,8 +242,8 @@ class ArgType##Decoder final : public DecoderBase {                  \
 #define DefineArgsEncoder(ArgType, CID, MID, Seq)                    \
 class ArgType##Encoder final : public EncoderBase {                  \
   public:                                                            \
-    ArgType##Encoder(const ArgType& arg)                             \
-      : EncoderBase(CID, MID), arg_(arg) {                           \
+    ArgType##Encoder(const ArgType& arg, const CodecEnv* env)        \
+      : EncoderBase(CID, MID, env), arg_(arg) {                      \
     }                                                                \
     virtual void Init() {                                            \
       AddEncodeUnit(BOOST_PP_SEQ_FOR_EACH_I(                         \

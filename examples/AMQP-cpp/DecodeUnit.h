@@ -24,6 +24,7 @@
 
 namespace amqp {
 
+class CodecEnv;
 enum DecodeState : int8_t {
   kError = -1,
   kDone = 0,
@@ -111,18 +112,6 @@ class TimeStampDecodeUnit final : public DecodeUnit {
     Timestamp* res_;
 };
 
-class FieldTableDecodeUnit final : public DecodeUnit {
-  public:
-    using ResultType = typename std::add_pointer<FieldTable>::type;
-    FieldTableDecodeUnit(ResultType res);
-    virtual int ProcessMore(alpha::Slice& data);
-
-  private:
-    ResultType res_;
-    std::string raw_;
-    LongStringDecodeUnit underlying_decode_unit_;
-};
-
 class FieldValueDecodeUnit : public DecodeUnit {
   public:
     // Create Trivial Type DecodeUnit
@@ -139,7 +128,7 @@ class FieldValueDecodeUnit : public DecodeUnit {
     // Create Custom Type DecodeUnit
     template<typename UnderlyingDecodeUnitType,
              typename ValueCppType>
-    static std::unique_ptr<FieldValueDecodeUnit> Create();
+    static std::unique_ptr<FieldValueDecodeUnit> Create(const CodecEnv* env);
 
     const FieldValue& Get() const;
 
@@ -150,9 +139,17 @@ class FieldValueDecodeUnit : public DecodeUnit {
     std::unique_ptr<DecodeUnit> underlying_decode_unit_;
 };
 
-class FieldValueDecodeUnitFactory {
+class FieldTableDecodeUnit final : public DecodeUnit {
   public:
-    static std::unique_ptr<FieldValueDecodeUnit> New(uint8_t value_type);
+    using ResultType = typename std::add_pointer<FieldTable>::type;
+    FieldTableDecodeUnit(ResultType res, const CodecEnv* env);
+    virtual int ProcessMore(alpha::Slice& data);
+
+  private:
+    const CodecEnv* env_;
+    ResultType res_;
+    std::string raw_;
+    LongStringDecodeUnit underlying_decode_unit_;
 };
 
 }

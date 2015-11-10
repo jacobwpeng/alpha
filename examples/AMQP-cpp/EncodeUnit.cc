@@ -13,6 +13,7 @@
 #include "EncodeUnit.h"
 #include <limits>
 #include <alpha/logger.h>
+#include "CodecEnv.h"
 #include "CodedWriter.h"
 #include "CodedOutputStream.h"
 
@@ -59,9 +60,13 @@ LongStringEncodeUnit::LongStringEncodeUnit(const LongString& s)
   :size_done_(false), consumed_(0), s_(s) {
 }
 
+LongStringEncodeUnit::LongStringEncodeUnit(alpha::Slice s)
+  :saved_(s.ToString()), size_done_(false), consumed_(0), s_(saved_) {
+}
+
 bool LongStringEncodeUnit::Write(CodedWriterBase* w) {
   CHECK(s_.size() <= std::numeric_limits<uint32_t>::max())
-    << "Invalid LongString size";
+    << "Invalid LongString size: " << s_.size();
   const uint32_t sz = s_.size();
   if (!size_done_) {
     size_done_ = LongEncodeUnit(sz).Write(w);
@@ -76,60 +81,19 @@ bool LongStringEncodeUnit::Write(CodedWriterBase* w) {
   return consumed_ == sz;
 }
 
-FieldValueEncodeUnit::FieldValueEncodeUnit(const FieldValue& v)
-  :val_(v) {
-    switch (val_.type()) {
-      case FieldValue::Type::kShortShortInt:
-        underlying_encode_unit_.reset(new OctetEncodeUnit(
-              val_.As<int8_t>()));
-        break;
-      case FieldValue::Type::kShortShortUInt:
-        underlying_encode_unit_.reset(new OctetEncodeUnit(
-              val_.As<uint8_t>()));
-        break;
-      case FieldValue::Type::kShortInt:
-        underlying_encode_unit_.reset(new ShortEncodeUnit(
-              val_.As<int16_t>()));
-        break;
-      case FieldValue::Type::kShortUInt:
-        underlying_encode_unit_.reset(new ShortEncodeUnit(
-              val_.As<uint16_t>()));
-        break;
-      case FieldValue::Type::kLongInt:
-        underlying_encode_unit_.reset(new LongEncodeUnit(
-              val_.As<int32_t>()));
-        break;
-      case FieldValue::Type::kLongUInt:
-        underlying_encode_unit_.reset(new LongEncodeUnit(
-              val_.As<uint32_t>()));
-        break;
-      case FieldValue::Type::kLongLongInt:
-        underlying_encode_unit_.reset(new LongLongEncodeUnit(
-              val_.As<int64_t>()));
-        break;
-      case FieldValue::Type::kLongLongUInt:
-        underlying_encode_unit_.reset(new LongLongEncodeUnit(
-              val_.As<uint64_t>()));
-        break;
-      case FieldValue::Type::kShortString:
-        underlying_encode_unit_.reset(new ShortStringEncodeUnit(
-            *val_.AsPtr<ShortString>()));
-        break;
-      case FieldValue::Type::kLongString:
-        underlying_encode_unit_.reset(new LongStringEncodeUnit(
-            *val_.AsPtr<LongString>()));
-        break;
-      default:
-        CHECK(false) << "Unsupported FieldValue::Type ";
-    }
+FieldValueEncodeUnit::FieldValueEncodeUnit(const FieldValue& v,
+    const CodecEnv* env)
+  :env_(env),val_(v) {
+    underlying_encode_unit_ = env_->NewEncodeUnit(v);
 }
 
 bool FieldValueEncodeUnit::Write(CodedWriterBase* w) {
   return underlying_encode_unit_->Write(w);
 }
 
-FieldTableEncodeUnit::FieldTableEncodeUnit(const FieldTable& ft)
-  :ft_(ft) {
+FieldTableEncodeUnit::FieldTableEncodeUnit(const FieldTable& ft,
+    const CodecEnv* env)
+  :env_(env), ft_(ft) {
 }
 
 bool FieldTableEncodeUnit::Write(CodedWriterBase* w) {
@@ -139,10 +103,11 @@ bool FieldTableEncodeUnit::Write(CodedWriterBase* w) {
     for (const auto& p : ft_.underlying_map()) {
       ShortStringEncodeUnit key_encode_unit(ShortString(p.first));
       key_encode_unit.Write(&w);
-      OctetEncodeUnit value_type_encode_unit(
-          static_cast<uint8_t>(p.second.type()));
+      OctetEncodeUnit value_type_encode_unit(env_->FieldValueType(
+            p.second));
       value_type_encode_unit.Write(&w);
-      FieldValueEncodeUnit value_encode_unit(p.second);
+      DLOG_INFO << "`" << p.second.type() << "'";
+      FieldValueEncodeUnit value_encode_unit(p.second, env_);
       value_encode_unit.Write(&w);
     }
   }

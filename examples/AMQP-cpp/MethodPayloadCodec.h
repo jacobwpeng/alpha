@@ -23,9 +23,10 @@ class Frame;
 class CodedWriterBase;
 class EncodeUnit;
 class DecodeUnit;
+class CodecEnv;
 class EncoderBase {
   public:
-    EncoderBase(ClassID class_id, MethodID method_id);
+    EncoderBase(ClassID class_id, MethodID method_id, const CodecEnv* env);
     virtual ~EncoderBase() = default;
     virtual void Init() = 0;
 
@@ -37,6 +38,7 @@ class EncoderBase {
 
   private:
     bool inited_;
+    const CodecEnv* env_;
     std::vector<std::unique_ptr<EncodeUnit>> encode_units_;
 };
 
@@ -53,10 +55,11 @@ class DecoderBase {
     ArgType Get() const;
 
   protected:
-    DecoderBase();
+    DecoderBase(const CodecEnv* env);
     void* ptr_;
 
   private:
+    const CodecEnv* env_;
     std::vector<std::unique_ptr<DecodeUnit>> decode_units_;
     ClassID class_id_;
     MethodID method_id_;

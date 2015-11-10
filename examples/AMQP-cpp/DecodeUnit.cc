@@ -13,6 +13,7 @@
 #include "DecodeUnit.h"
 #include <alpha/logger.h>
 #include <alpha/format.h>
+#include "CodecEnv.h"
 #include "CodedInputStream.h"
 
 namespace amqp {
@@ -116,8 +117,8 @@ namespace amqp {
   }
 
   FieldTableDecodeUnit::FieldTableDecodeUnit(
-      FieldTableDecodeUnit::ResultType res)
-    :res_(res), underlying_decode_unit_(&raw_) {
+      FieldTableDecodeUnit::ResultType res, const CodecEnv* env)
+    :env_(env), res_(res), underlying_decode_unit_(&raw_) {
   }
 
   int FieldTableDecodeUnit::ProcessMore(alpha::Slice& data) {
@@ -141,7 +142,7 @@ namespace amqp {
         LOG_WARNING << "Decode FieldTable value type failed, rc = " << rc;
         return rc;
       }
-      auto value_decode_unit = FieldValueDecodeUnitFactory::New(value_type);
+      auto value_decode_unit = env_->NewDecodeUnit(value_type);
       rc = value_decode_unit->ProcessMore(table_data);
       if (rc != 0) {
         LOG_WARNING << "Decode FieldTable value failed, value_type = " << value_type;
@@ -161,60 +162,5 @@ namespace amqp {
 
   int FieldValueDecodeUnit::ProcessMore(alpha::Slice& data) {
     return underlying_decode_unit_->ProcessMore(data);
-  }
-
-  std::unique_ptr<FieldValueDecodeUnit> FieldValueDecodeUnitFactory::New(
-      uint8_t value_type) {
-    auto type = static_cast<FieldValue::Type>(value_type);
-    switch (type) {
-      case FieldValue::Type::kBoolean:
-        return FieldValueDecodeUnit::Create<OctetDecodeUnit,
-                                            bool,
-                                            uint8_t>();
-      case FieldValue::Type::kShortShortInt:
-        return FieldValueDecodeUnit::Create<OctetDecodeUnit,
-                                            int8_t,
-                                            uint8_t>();
-      case FieldValue::Type::kShortShortUInt:
-        return FieldValueDecodeUnit::Create<OctetDecodeUnit,
-                                            uint8_t,
-                                            uint8_t>();
-      case FieldValue::Type::kShortInt:
-        return FieldValueDecodeUnit::Create<ShortDecodeUnit,
-                                            int16_t,
-                                            uint16_t>();
-      case FieldValue::Type::kShortUInt:
-        return FieldValueDecodeUnit::Create<ShortDecodeUnit,
-                                            uint16_t,
-                                            uint16_t>();
-      case FieldValue::Type::kLongInt:
-        return FieldValueDecodeUnit::Create<LongDecodeUnit,
-                                            int32_t,
-                                            uint32_t>();
-      case FieldValue::Type::kLongUInt:
-        return FieldValueDecodeUnit::Create<LongDecodeUnit,
-                                            uint32_t,
-                                            uint32_t>();
-      case FieldValue::Type::kLongLongInt:
-        return FieldValueDecodeUnit::Create<LongLongDecodeUnit,
-                                            int64_t,
-                                            uint64_t>();
-      case FieldValue::Type::kLongLongUInt:
-        return FieldValueDecodeUnit::Create<LongLongDecodeUnit,
-                                            uint64_t,
-                                            uint64_t>();
-      case FieldValue::Type::kShortString:
-        return FieldValueDecodeUnit::Create<ShortStringDecodeUnit,
-                                            ShortString>(type);
-      case FieldValue::Type::kLongString:
-        return FieldValueDecodeUnit::Create<LongStringDecodeUnit,
-                                            std::string>(type);
-      case FieldValue::Type::kFieldTable:
-        return FieldValueDecodeUnit::Create<FieldTableDecodeUnit,
-                                            FieldTable>();
-      default:
-        CHECK(false) << "Unknown value_type: `" << value_type << "'";
-        return nullptr;
-    }
   }
 }

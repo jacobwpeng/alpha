@@ -14,6 +14,7 @@
 #error This file may only be included from DecodeUnit.h.
 #endif
 
+#include <alpha/compiler.h>
 #include <alpha/logger.h>
 
 namespace amqp {
@@ -22,13 +23,10 @@ namespace amqp {
            typename ValueCppType,
            typename DecodeUnitArgType>
   std::unique_ptr<FieldValueDecodeUnit> FieldValueDecodeUnit::Create() {
-    std::unique_ptr<FieldValueDecodeUnit> res(new FieldValueDecodeUnit());
+    auto res = alpha::make_unique<FieldValueDecodeUnit>();
     res->val_ = FieldValue(ValueCppType());
-    res->underlying_decode_unit_ = std::unique_ptr<UnderlyingDecodeUnitType>(
-        new UnderlyingDecodeUnitType(
-          reinterpret_cast<DecodeUnitArgType*>(res->val_.Ptr())
-        )
-    );
+    res->underlying_decode_unit_ = alpha::make_unique<UnderlyingDecodeUnitType>(
+      reinterpret_cast<DecodeUnitArgType*>(res->val_.Ptr()));
     return res;
   }
 
@@ -36,22 +34,21 @@ namespace amqp {
            typename ValueCppType>
   std::unique_ptr<FieldValueDecodeUnit> FieldValueDecodeUnit::Create(
       FieldValue::Type string_type) {
-    std::unique_ptr<FieldValueDecodeUnit> res(new FieldValueDecodeUnit());
-    //DLOG_INFO << "Before copy FieldValue";
+    auto res = alpha::make_unique<FieldValueDecodeUnit>();
     res->val_ = FieldValue(string_type, "");
-    //DLOG_INFO << "res->val_.AsPtr() = " << res->val_.AsPtr<std::string>();
-    res->underlying_decode_unit_ = std::unique_ptr<UnderlyingDecodeUnitType>(
-        new UnderlyingDecodeUnitType(res->val_.AsPtr<ValueCppType>()));
+    res->underlying_decode_unit_ = alpha::make_unique<UnderlyingDecodeUnitType>(
+        res->val_.AsPtr<ValueCppType>());
     return res;
   }
 
   template<typename UnderlyingDecodeUnitType,
            typename ValueCppType>
-  std::unique_ptr<FieldValueDecodeUnit> FieldValueDecodeUnit::Create() {
-    std::unique_ptr<FieldValueDecodeUnit> res(new FieldValueDecodeUnit());
+  std::unique_ptr<FieldValueDecodeUnit> FieldValueDecodeUnit::Create(
+      const CodecEnv* env) {
+    auto res = alpha::make_unique<FieldValueDecodeUnit>();
     res->val_ = FieldValue(ValueCppType());
-    res->underlying_decode_unit_ = std::unique_ptr<UnderlyingDecodeUnitType>(
-        new UnderlyingDecodeUnitType(res->val_.AsPtr<ValueCppType>()));
+    res->underlying_decode_unit_ = alpha::make_unique<UnderlyingDecodeUnitType>(
+        res->val_.AsPtr<ValueCppType>(), env);
     return res;
   }
 }

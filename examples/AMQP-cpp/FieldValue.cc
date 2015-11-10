@@ -30,6 +30,31 @@ namespace detail {
 }
 
 namespace amqp {
+  uint64_t FieldValue::AsInteger() const {
+    switch (type()) {
+      case Type::kBoolean:
+        return boolean;
+      case Type::kShortShortInt:
+        return int8;
+      case Type::kShortShortUInt:
+        return uint8;
+      case Type::kShortInt:
+        return int16;
+      case Type::kShortUInt:
+        return uint16;
+      case Type::kLongInt:
+        return int32;
+      case Type::kLongUInt:
+        return uint32;
+      case Type::kLongLongInt:
+        return int64;
+      case Type::kLongLongUInt:
+        return uint64;
+      default:
+        CHECK(false) << "Invalid type as Integer: " << type();
+        return 0;
+    }
+  }
 #define FieldValueAs(cpp_type, type_enum, field)                     \
   template<>                                                         \
   cpp_type FieldValue::As<cpp_type> () const {                       \

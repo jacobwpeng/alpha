@@ -20,6 +20,7 @@
 #include "CodedOutputStream.h"
 #include "MethodPayloadCodec.h"
 #include "FieldValue.h"
+#include "CodecEnv.h"
 
 static alpha::TcpConnectionPtr connection;
 static const uint8_t kMajorVersion = 9;
@@ -77,9 +78,9 @@ void OnDisconnected(alpha::TcpConnectionPtr conn) {
 void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
   DLOG_INFO << "Frame type: " << static_cast<int>(frame->type())
     << ", Frame channel: " << frame->channel_id()
-    << ", Frame expeced payload size: " << frame->expected_payload_size()
+    << ", Frame expected payload size: " << frame->expected_payload_size()
     << ", Frame paylaod size: " << frame->payload_size();
-  amqp::MethodStartArgsDecoder d;
+  amqp::MethodStartArgsDecoder d(amqp::GetCodecEnv("Default"));
   int rc = d.Decode(frame->payload());
   if (rc == 0) {
     auto args = d.Get();
@@ -91,7 +92,7 @@ void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
     for (const auto& p : args.server_properties.underlying_map()) {
       DLOG_INFO << p.first << ": " << p.second;
     }
-
+    auto env = amqp::GetCodecEnv("RabbitMQ");
     //std::string payload;
     //MemoryStringWriter w(&payload);
     //EncoderBase(ok).Encode(&w);
@@ -125,11 +126,11 @@ void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
     ok.client_properties.Insert("Product",
         amqp::FieldValue(amqp::FieldValue::Type::kLongString, "AMQP-cpp"));
     ok.client_properties.Insert("Version",
-        amqp::FieldValue(amqp::FieldValue::Type::kLongString, "0.01"));
+        amqp::FieldValue(amqp::FieldValue::Type::kShortString, "0.01"));
 
     std::string payload;
     amqp::MemoryStringWriter w(&payload);
-    amqp::MethodStartOkArgsEncoder encoder(ok);
+    amqp::MethodStartOkArgsEncoder encoder(ok, env);
     bool done = encoder.Encode(&w);
     CHECK(done);
     DLOG_INFO << '\n' << alpha::HexDump(payload);
@@ -140,6 +141,7 @@ void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
     stream.WriteBigEndianUInt32(payload.size());
     stream.WriteBinary(payload.data(), payload.size());
     stream.WriteUInt8(0xCE);
+
     //bool done = amqp::MethodStartOkArgsEncoder(ok).WriteTo(conn);
     //if (!done) {
     //  SetContext(

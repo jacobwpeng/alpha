@@ -24,24 +24,24 @@ class FieldTable;
 class FieldValue {
   public:
     enum class Type : uint8_t {
-      kBoolean = 't',
-      kShortShortInt = 'b',
-      kShortShortUInt = 'B',
-      kShortInt = 'U',
-      kShortUInt = 'u',
-      kLongInt = 'I',
-      kLongUInt = 'i',
-      kLongLongInt = 'L',
-      kLongLongUInt = 'l',
-      kFloat = 'f',
-      kDouble = 'd',
-      kDecimal = 'D',
-      kShortString = 's',
-      kLongString = 'S',
-      kFieldArray = 'A',
-      kTimestamp = 'T',
-      kFieldTable = 'F',
-      kEmpty = 'V'
+      kBoolean,
+      kShortShortInt,
+      kShortShortUInt,
+      kShortInt,
+      kShortUInt,
+      kLongInt,
+      kLongUInt,
+      kLongLongInt,
+      kLongLongUInt,
+      kFloat,
+      kDouble,
+      kDecimal,
+      kShortString,
+      kLongString,
+      kFieldArray,
+      kTimestamp,
+      kFieldTable,
+      kEmpty
     };
 
   private:
@@ -118,6 +118,8 @@ class FieldValue {
     const void* CustomPtr() const {
       return custom.ptr;
     }
+
+    uint64_t AsInteger() const;
 
     template<typename Target>
     Target As() const;
