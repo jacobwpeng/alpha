@@ -51,6 +51,8 @@ namespace alpha {
             void Clear();
             bool empty() const { return buf_ == NULL || len_ == 0; }
             const char * data() const { return buf_; }
+            const char* begin() const { return buf_; }
+            const char* end() const { return empty() ? buf_ : buf_ + len_; };
             size_t size() const { return len_; }
             /* KMP style find using next array */
             size_t find(const Slice& s) const;

@@ -28,4 +28,13 @@
     type(type&&) = delete; \
     type& operator=(type&&) = delete
 
+#include <memory>
+
+namespace alpha {
+  template<typename T, typename ...Args>
+  std::unique_ptr<T> make_unique(Args&& ...args) {
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)... ));
+  }
+}
+
 #endif   /* ----- #ifndef __COMPILER_H__----- */
