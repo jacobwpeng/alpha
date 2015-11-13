@@ -97,6 +97,7 @@ class LogMessage {
   LogLevel level_;
   bool errno_message_;
   const char* expr_;
+  std::vector<char> log_buffer_;
   alpha::LoggerStream stream_;
 };
 }

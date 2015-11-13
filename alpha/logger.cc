@@ -37,7 +37,6 @@ const char* LogDestination::prog_name_ = nullptr;
 LogDestination::LogFilesPtr LogDestination::files_;
 
 static const int kLogBufferSize = 30 * 1024;
-static thread_local char log_buffer[kLogBufferSize];
 
 static const char* const_basename(const char* name) {
   auto p = ::strrchr(name, '/');
@@ -145,7 +144,8 @@ LogMessage::LogMessage(const char* file, int line, LogLevel level,
       line_(line),
       level_(level),
       errno_message_(errno_message),
-      expr_(expr) {
+      expr_(expr),
+      log_buffer_(kLogBufferSize) {
   static const int kTimeFormatBufferSize = 256;
   static thread_local struct tm tm;
   static thread_local time_t last_second = 0;
@@ -168,10 +168,11 @@ LogMessage::LogMessage(const char* file, int line, LogLevel level,
     }
   }
   auto nbytes =
-      snprintf(log_buffer, kLogBufferSize, time_format, tv.tv_usec, tid,
+      snprintf(log_buffer_.data(), kLogBufferSize, time_format, tv.tv_usec, tid,
                Logger::GetLogLevelName(level), const_basename(file_), line_);
   assert(nbytes > 0 && nbytes < kLogBufferSize);
-  stream_.rdbuf()->pubsetbuf(log_buffer + nbytes, kLogBufferSize - nbytes - 1);
+  stream_.rdbuf()->pubsetbuf(log_buffer_.data() + nbytes,
+                             kLogBufferSize - nbytes - 1);
   header_size_ = nbytes;
 }
 
@@ -197,11 +198,12 @@ void LogMessage::Flush() {
     return;
   }
   int len = header_size_ + stream_.streambuf()->used();
-  if (log_buffer[len - 1] != '\n') {
-    log_buffer[len] = '\n';
+  assert(len < kLogBufferSize);
+  if (log_buffer_[len - 1] != '\n') {
+    log_buffer_[len] = '\n';
     len += 1;
   }
-  Logger::SendLog(level_, log_buffer, len);
+  Logger::SendLog(level_, log_buffer_.data(), len);
   flushed_ = true;
 }
 }
