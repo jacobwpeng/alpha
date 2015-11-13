@@ -101,7 +101,6 @@ bool FieldTableEncodeUnit::Write(CodedWriterBase* w) {
       key_encode_unit.Write(&w);
       OctetEncodeUnit value_type_encode_unit(env_->FieldValueType(p.second));
       value_type_encode_unit.Write(&w);
-      DLOG_INFO << "`" << p.second.type() << "'";
       FieldValueEncodeUnit value_encode_unit(p.second, env_);
       value_encode_unit.Write(&w);
     }
@@ -113,5 +112,15 @@ bool FieldTableEncodeUnit::Write(CodedWriterBase* w) {
 
   // Then write as LongString
   return long_string_encode_unit_->Write(w);
+}
+
+size_t FieldTableEncodeUnit::ByteSize() const {
+  size_t total = 0;
+  for (const auto& p : ft_.underlying_map()) {
+    total += ShortStringEncodeUnit(ShortString(p.first)).ByteSize();
+    total += 1;
+    total += FieldValueEncodeUnit(p.second, env_).ByteSize();
+  }
+  return total;
 }
 }

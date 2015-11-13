@@ -21,11 +21,12 @@
 #include "MethodPayloadCodec.h"
 #include "FieldValue.h"
 #include "CodecEnv.h"
+#include "ConnectionEstablishFSM.h"
 
 static alpha::TcpConnectionPtr connection;
 static const uint8_t kMajorVersion = 9;
 static const uint8_t kMinorVersion = 1;
-amqp::FrameCodec codec;
+static amqp::FrameCodec codec;
 void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame);
 
 void OnMessage(alpha::TcpConnectionPtr conn,
@@ -46,14 +47,11 @@ void OnMessage(alpha::TcpConnectionPtr conn,
 void OnConnected(alpha::TcpConnectionPtr conn) {
   using namespace std::placeholders;
   DLOG_INFO << "Connected to " << conn->PeerAddr().FullAddress();
-  connection = conn;
+  // connection = conn;
   conn->SetOnRead(std::bind(OnMessage, _1, _2));
-  std::string handshake = "AMQP";
-  handshake += char(0);
-  handshake += char(0);
-  handshake += char(kMajorVersion);
-  handshake += char(kMinorVersion);
-  conn->Write(handshake);
+  auto w = new amqp::TcpConnectionWriter(conn);
+  auto fsm = new amqp::ConnectionEstablishFSM(w, amqp::GetCodecEnv(""));
+  conn->SetContext(fsm);
 }
 
 void OnConnectError(const alpha::NetAddress& addr) {
@@ -62,7 +60,7 @@ void OnConnectError(const alpha::NetAddress& addr) {
 
 void OnDisconnected(alpha::TcpConnectionPtr conn) {
   DLOG_INFO << "Disconnected from " << conn->PeerAddr().FullAddress();
-  connection.reset();
+  // connection.reset();
 }
 
 // void OnWriteDone(alpha::TcpConnectionPtr conn) {
@@ -75,12 +73,47 @@ void OnDisconnected(alpha::TcpConnectionPtr conn) {
 //  }
 //}
 
+void OnWriteDone(alpha::TcpConnectionPtr conn,
+                 amqp::ConnectionEstablishFSM* fsm) {
+  if (fsm->FlushReply()) {
+    conn->SetOnWriteDone(nullptr);
+  }
+}
+
 void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
   DLOG_INFO << "Frame type: " << static_cast<int>(frame->type())
             << ", Frame channel: " << frame->channel_id()
             << ", Frame expected payload size: "
             << frame->expected_payload_size()
             << ", Frame paylaod size: " << frame->payload_size();
+  auto p = conn->GetContext<amqp::ConnectionEstablishFSM*>();
+  CHECK(p && *p);
+  auto fsm = *p;
+  auto status = fsm->HandleFrame(std::move(frame));
+  switch (status) {
+    case amqp::ConnectionEstablishFSM::Status::kDone:
+      DLOG_INFO << "Connection established";
+      break;
+    case amqp::ConnectionEstablishFSM::Status::kWaitMoreFrame:
+      DLOG_INFO << "FSM needs more frames";
+      break;
+    case amqp::ConnectionEstablishFSM::Status::kWaitForWrite:
+      DLOG_INFO << "FSM is waiting";
+      conn->SetOnWriteDone(std::bind(OnWriteDone, std::placeholders::_1, fsm));
+      break;
+  }
+#if 0
+  auto fsm = conn->GetContext();
+  auto status = fsm->HandleFrame(std::move(frame));
+  switch (status) {
+    case kDone:
+      break;
+    case kWriteMore:
+      OnWriteDone(fsm);
+      break;
+    default:
+      break;
+  }
   amqp::MethodStartArgsDecoder d(amqp::GetCodecEnv("Default"));
   int rc = d.Decode(frame->payload());
   if (rc == 0) {
@@ -133,6 +166,8 @@ void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
         "Version",
         amqp::FieldValue(amqp::FieldValue::Type::kShortString, "0.01"));
 
+    codec->Write(&ok, w, kMethod, channel);
+
     std::string payload;
     amqp::MemoryStringWriter w(&payload);
     amqp::MethodStartOkArgsEncoder encoder(ok, env);
@@ -158,6 +193,7 @@ void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
   } else {
     DLOG_INFO << "Decode returns: " << rc;
   }
+#endif
 }
 
 int main(int argc, char* argv[]) {
@@ -166,6 +202,7 @@ int main(int argc, char* argv[]) {
     LOG_INFO << "Usage: " << argv[0] << " [ip] [port]";
     return -1;
   }
+#if 1
   alpha::EventLoop loop;
   alpha::TcpClient client(&loop);
   client.SetOnConnected(OnConnected);
@@ -174,5 +211,20 @@ int main(int argc, char* argv[]) {
   auto addr = alpha::NetAddress(argv[1], std::atoi(argv[2]));
   client.ConnectTo(addr);
   loop.Run();
+#endif
+#if 0
+  // Blocking Connection
+  auto auth = amqp::PlainAuthorization(user, passwd);
+  auto conn = amqp::BlockingConnection(host, port, auth);
+  auto channel = conn->NewChannel();
+  auto exchange = channel->DeclareExchange(exchange_name, exchange_type,
+                                           exchange_properties);
+  auto queue = channel->DeclareQueue(queue_name, queue_properties);
+  channel->BindQueue(exchange, queue);
+
+  channel->SetQueueMessageCallback(queue, callback);
+  while (channel->Wait(timeout))
+    ;
+#endif
   return 0;
 }

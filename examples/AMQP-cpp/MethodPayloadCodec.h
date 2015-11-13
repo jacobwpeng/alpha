@@ -14,6 +14,7 @@
 #define __METHODPAYLOADCODEC_H__
 
 #include <memory>
+#include <vector>
 #include <type_traits>
 #include "MethodArgs.h"
 
@@ -26,15 +27,16 @@ class DecodeUnit;
 class CodecEnv;
 class EncoderBase {
  public:
-  EncoderBase(ClassID class_id, MethodID method_id, const CodecEnv* env);
   virtual ~EncoderBase() = default;
-  virtual void Init() = 0;
-
   bool Encode(CodedWriterBase* w);
+  size_t ByteSize() const;
 
+ protected:
+  EncoderBase(ClassID class_id, MethodID method_id, const CodecEnv* env);
   void AddEncodeUnit();
   template <typename Arg, typename... Tail>
   void AddEncodeUnit(Arg&& arg, Tail&&... tail);
+  virtual void Init() = 0;
 
  private:
   bool inited_;
@@ -45,17 +47,18 @@ class EncoderBase {
 class DecoderBase {
  public:
   virtual ~DecoderBase() = default;
-  virtual void Init() = 0;
   int Decode(alpha::Slice data);
 
-  void AddDecodeUnit();
-  template <typename Arg, typename... Tail>
-  void AddDecodeUnit(Arg&& arg, Tail&&... tail);
   template <typename ArgType>
   ArgType Get() const;
 
  protected:
   DecoderBase(const CodecEnv* env);
+  virtual void Init() = 0;
+  void AddDecodeUnit();
+  template <typename Arg, typename... Tail>
+  void AddDecodeUnit(Arg&& arg, Tail&&... tail);
+
   void* ptr_;
 
  private:

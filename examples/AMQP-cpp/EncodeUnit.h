@@ -25,6 +25,7 @@ class EncodeUnit {
  public:
   virtual ~EncodeUnit() {}
   virtual bool Write(CodedWriterBase* w) = 0;
+  virtual size_t ByteSize() const = 0;
 };
 
 class OctetEncodeUnit final : public EncodeUnit {
@@ -32,6 +33,7 @@ class OctetEncodeUnit final : public EncodeUnit {
   explicit OctetEncodeUnit(int8_t val) : val_(val) {}
   explicit OctetEncodeUnit(uint8_t val) : val_(val) {}
   virtual bool Write(CodedWriterBase* w);
+  virtual size_t ByteSize() const override { return 1; };
 
  private:
   uint8_t val_;
@@ -42,6 +44,7 @@ class ShortEncodeUnit final : public EncodeUnit {
   explicit ShortEncodeUnit(int16_t val) : val_(val) {}
   explicit ShortEncodeUnit(uint16_t val) : val_(val) {}
   virtual bool Write(CodedWriterBase* w);
+  virtual size_t ByteSize() const override { return 2; };
 
  private:
   uint16_t val_;
@@ -52,6 +55,7 @@ class LongEncodeUnit final : public EncodeUnit {
   explicit LongEncodeUnit(int32_t val) : val_(val) {}
   explicit LongEncodeUnit(uint32_t val) : val_(val) {}
   virtual bool Write(CodedWriterBase* w);
+  virtual size_t ByteSize() const override { return 4; };
 
  private:
   uint32_t val_;
@@ -62,6 +66,7 @@ class LongLongEncodeUnit final : public EncodeUnit {
   explicit LongLongEncodeUnit(int64_t val) : val_(val) {}
   explicit LongLongEncodeUnit(uint64_t val) : val_(val) {}
   virtual bool Write(CodedWriterBase* w);
+  virtual size_t ByteSize() const override { return 8; };
 
  private:
   uint64_t val_;
@@ -71,6 +76,7 @@ class ShortStringEncodeUnit final : public EncodeUnit {
  public:
   explicit ShortStringEncodeUnit(const ShortString& s);
   virtual bool Write(CodedWriterBase* w);
+  virtual size_t ByteSize() const override { return 1 + s_.size(); };
 
  private:
   bool size_done_;
@@ -83,6 +89,7 @@ class LongStringEncodeUnit final : public EncodeUnit {
   explicit LongStringEncodeUnit(const LongString& s);
   explicit LongStringEncodeUnit(alpha::Slice s);
   virtual bool Write(CodedWriterBase* w);
+  virtual size_t ByteSize() const override { return 4 + s_.size(); };
 
  private:
   LongString saved_;
@@ -95,6 +102,9 @@ class FieldValueEncodeUnit final : public EncodeUnit {
  public:
   explicit FieldValueEncodeUnit(const FieldValue& v, const CodecEnv* env);
   virtual bool Write(CodedWriterBase* w);
+  virtual size_t ByteSize() const override {
+    return underlying_encode_unit_->ByteSize();
+  }
 
  private:
   const CodecEnv* env_;
@@ -106,6 +116,7 @@ class FieldTableEncodeUnit final : public EncodeUnit {
  public:
   explicit FieldTableEncodeUnit(const FieldTable& ft, const CodecEnv* env);
   virtual bool Write(CodedWriterBase* w);
+  virtual size_t ByteSize() const override;
 
  private:
   const CodecEnv* env_;
