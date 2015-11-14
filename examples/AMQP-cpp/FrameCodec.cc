@@ -14,9 +14,39 @@
 #include <alpha/logger.h>
 #include "Frame.h"
 #include "CodedInputStream.h"
+#include "CodedWriter.h"
+#include "MethodPayloadCodec.h"
+#include "CodedOutputStream.h"
 
 namespace amqp {
 static const size_t kFrameHeaderSize = 7;
+
+FramePacker::FramePacker(ChannelID channel_id, Frame::Type frame_type,
+                         EncoderBase* e)
+    : frame_header_done_(false),
+      frame_payload_done_(false),
+      frame_end_done_(false),
+      channel_id_(channel_id),
+      frame_type_(frame_type),
+      e_(e) {}
+
+bool FramePacker::WriteTo(CodedWriterBase* w) {
+  CodedOutputStream stream(w);
+  if (!frame_header_done_ && w->CanWrite(7)) {
+    stream.WriteUInt8(frame_type_);
+    stream.WriteBigEndianUInt16(channel_id_);
+    stream.WriteBigEndianUInt32(e_->ByteSize());
+    frame_header_done_ = true;
+  }
+  if (!frame_payload_done_) {
+    frame_payload_done_ = e_->Encode(w);
+  }
+  if (frame_payload_done_ && !frame_end_done_ && w->CanWrite(1)) {
+    stream.WriteUInt8(0xCE);
+    frame_end_done_ = true;
+  }
+  return true;
+}
 
 FramePtr FrameCodec::Process(alpha::Slice& data) {
   if (frame_ == nullptr) {

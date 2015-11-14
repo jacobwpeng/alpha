@@ -16,17 +16,12 @@ namespace amqp {
 
 EncoderBase::EncoderBase(ClassID class_id, MethodID method_id,
                          const CodecEnv* env)
-    : inited_(false), env_(env) {
+    : env_(env) {
   AddEncodeUnit(class_id);
   AddEncodeUnit(method_id);
 }
 
 bool EncoderBase::Encode(CodedWriterBase* w) {
-  if (!inited_) {
-    Init();
-    inited_ = true;
-  }
-
   while (!encode_units_.empty()) {
     auto cur = encode_units_.begin();
     bool done = (*cur)->Write(w);
@@ -41,16 +36,15 @@ bool EncoderBase::Encode(CodedWriterBase* w) {
 size_t EncoderBase::ByteSize() const {
   size_t total = 0;
   for (const auto& unit : encode_units_) {
-    DLOG_INFO << "unit->ByteSize() = " << unit->ByteSize();
     total += unit->ByteSize();
   }
-  DLOG_INFO << "total = " << total;
   return total;
 }
 
 void EncoderBase::AddEncodeUnit() {}
 
-DecoderBase::DecoderBase(const CodecEnv* env) : env_(env), inited_(false) {
+DecoderBase::DecoderBase(const CodecEnv* env)
+    : inited_(false), class_id_(0), method_id_(0), env_(env) {
   AddDecodeUnit(&class_id_, &method_id_);
 }
 
@@ -67,8 +61,6 @@ int DecoderBase::Decode(alpha::Slice data) {
       return rc;
     }
     decode_units_.erase(cur);
-    // DLOG_INFO << decode_units_.size() << " DecodeUnit(s) left"
-    //  << ", data.size() = " << data.size();
   }
   return kDone;
 }

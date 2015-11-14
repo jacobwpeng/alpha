@@ -210,6 +210,7 @@ int main(int argc, char* argv[]) {
   client.SetOnClose(OnDisconnected);
   auto addr = alpha::NetAddress(argv[1], std::atoi(argv[2]));
   client.ConnectTo(addr);
+  loop.TrapSignal(SIGINT, [&loop] { loop.Quit(); });
   loop.Run();
 #endif
 #if 0

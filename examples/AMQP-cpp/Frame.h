@@ -18,7 +18,6 @@
 #include <alpha/slice.h>
 
 namespace amqp {
-
 using ChannelID = uint16_t;
 
 class Frame {

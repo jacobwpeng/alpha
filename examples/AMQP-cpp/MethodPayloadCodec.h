@@ -39,7 +39,6 @@ class EncoderBase {
   virtual void Init() = 0;
 
  private:
-  bool inited_;
   const CodecEnv* env_;
   std::vector<std::unique_ptr<EncodeUnit>> encode_units_;
 };
@@ -50,7 +49,7 @@ class DecoderBase {
   int Decode(alpha::Slice data);
 
   template <typename ArgType>
-  ArgType Get() const;
+  ArgType GetArg() const;
 
  protected:
   DecoderBase(const CodecEnv* env);
@@ -62,11 +61,11 @@ class DecoderBase {
   void* ptr_;
 
  private:
-  const CodecEnv* env_;
-  std::vector<std::unique_ptr<DecodeUnit>> decode_units_;
+  bool inited_;
   ClassID class_id_;
   MethodID method_id_;
-  bool inited_;
+  const CodecEnv* env_;
+  std::vector<std::unique_ptr<DecodeUnit>> decode_units_;
 };
 }
 

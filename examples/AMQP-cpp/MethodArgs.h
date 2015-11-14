@@ -36,6 +36,20 @@ struct MethodStartOkArgs {
   LongString response;
   ShortString locale;
 };
+
+struct MethodTuneArgs {
+  static const ClassID kClassID = 10;
+  static const MethodID kMethodID = 30;
+  uint16_t channel_max = 0;
+  uint32_t frame_max = 0;
+  uint16_t heartbeat_delay = 0;
+};
+
+struct MethodTuneOkArgs {
+  uint16_t channel_max;
+  uint32_t frame_max;
+  uint16_t heartbeat_delay;
+};
 }
 
 #endif /* ----- #ifndef __METHODARGS_H__  ----- */

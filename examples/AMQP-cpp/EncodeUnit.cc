@@ -115,7 +115,7 @@ bool FieldTableEncodeUnit::Write(CodedWriterBase* w) {
 }
 
 size_t FieldTableEncodeUnit::ByteSize() const {
-  size_t total = 0;
+  size_t total = 4; // Long String size
   for (const auto& p : ft_.underlying_map()) {
     total += ShortStringEncodeUnit(ShortString(p.first)).ByteSize();
     total += 1;

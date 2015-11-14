@@ -130,14 +130,14 @@ void DecoderBase::AddDecodeUnit(Arg&& arg, Tail&&... tail) {
 }
 
 template <typename ArgType>
-ArgType DecoderBase::Get() const {
+ArgType DecoderBase::GetArg() const {
   // Check ArgType with class_id_ and method_id_
   CHECK(class_id_ == ArgType::kClassID)
       << "Expected class id: " << ArgType::kClassID
-      << ", Real class id: " << class_id_;
+      << ", Actual class id: " << class_id_;
   CHECK(method_id_ == ArgType::kMethodID)
       << "Expected method id: " << ArgType::kMethodID
-      << ", Real method id: " << method_id_;
+      << ", Actual method id: " << method_id_;
   return *reinterpret_cast<ArgType*>(ptr_);
 }
 
@@ -151,7 +151,7 @@ ArgType DecoderBase::Get() const {
       AddDecodeUnit(                                                           \
           BOOST_PP_SEQ_FOR_EACH_I(MemberPtr, BOOST_PP_SEQ_SIZE(Seq), Seq));    \
     }                                                                          \
-    ArgType Get() { return arg_; }                                             \
+    ArgType Get() const { return arg_; }                                       \
                                                                                \
    private:                                                                    \
     ArgType arg_;                                                              \
@@ -161,7 +161,9 @@ ArgType DecoderBase::Get() const {
   class ArgType##Encoder final : public EncoderBase {                    \
    public:                                                               \
     ArgType##Encoder(const ArgType& arg, const CodecEnv* env)            \
-        : EncoderBase(CID, MID, env), arg_(arg) {}                       \
+        : EncoderBase(CID, MID, env), arg_(arg) {                        \
+      Init();                                                            \
+    }                                                                    \
     virtual void Init() {                                                \
       AddEncodeUnit(                                                     \
           BOOST_PP_SEQ_FOR_EACH_I(Member, BOOST_PP_SEQ_SIZE(Seq), Seq)); \
@@ -176,6 +178,11 @@ DefineArgsDecoder(MethodStartArgs, (version_major)(version_minor)(
 
 DefineArgsEncoder(MethodStartOkArgs, 10, 11,
                   (client_properties)(mechanism)(response)(locale));
+
+DefineArgsDecoder(MethodTuneArgs, (channel_max)(frame_max)(heartbeat_delay));
+
+DefineArgsEncoder(MethodTuneOkArgs, 10, 31,
+                  (channel_max)(frame_max)(heartbeat_delay));
 
 // DefineArgsDecoder(MethodStartOkArgs,
 //    (client_properties)(mechanism)(response)(locale)

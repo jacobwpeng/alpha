@@ -16,6 +16,7 @@
 #include <memory>
 #include <vector>
 #include "Frame.h"
+#include "FrameCodec.h"
 #include "MethodPayloadCodec.h"
 
 namespace amqp {
@@ -49,7 +50,7 @@ class ConnectionEstablishState {
   void AddDecodeUnit(DecoderBase* e);
 
   CodedWriterBase* w_;
-  std::vector<EncoderBase*> encoders_;
+  std::vector<FramePacker> frame_packers_;
   std::vector<DecoderBase*> decoders_;
 };
 
@@ -59,14 +60,20 @@ class ConnectionEstablishStart : public ConnectionEstablishState {
                            const MethodStartOkArgs& start_ok_args);
 
  private:
-  amqp::MethodStartOkArgsEncoder e_;
-  amqp::MethodStartArgsDecoder d_;
+  MethodStartOkArgsEncoder e_;
+  MethodStartArgsDecoder d_;
 };
 
 class ConnectionEstablishTune : public ConnectionEstablishState {
  public:
-  ConnectionEstablishTune(CodedWriterBase* w);
-  virtual bool HandleFrame(FramePtr&& frame);
+  ConnectionEstablishTune(CodedWriterBase* w, const CodecEnv* codec_env,
+                          const MethodTuneOkArgs& tune_ok_args);
+
+  void PrintServerTune() const;
+
+ private:
+  MethodTuneOkArgsEncoder e_;
+  MethodTuneArgsDecoder d_;
 };
 
 class ConnectionEstablishFSM : public FSM {
@@ -94,6 +101,7 @@ class ConnectionEstablishFSM : public FSM {
   State state_;
   std::unique_ptr<ConnectionEstablishState> state_handler_;
   amqp::MethodStartOkArgs start_ok_args_;
+  amqp::MethodTuneOkArgs tune_ok_args_;
 };
 }
 
