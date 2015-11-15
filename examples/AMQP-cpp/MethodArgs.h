@@ -50,6 +50,17 @@ struct MethodTuneOkArgs {
   uint32_t frame_max;
   uint16_t heartbeat_delay;
 };
+
+struct MethodOpenArgs {
+  ShortString vhost_path;
+  bool capabilities;
+  bool insist;
+};
+
+struct MethodOpenOkArgs {
+  static const ClassID kClassID = 10;
+  static const MethodID kMethodID = 41;
+};
 }
 
 #endif /* ----- #ifndef __METHODARGS_H__  ----- */

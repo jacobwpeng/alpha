@@ -30,6 +30,7 @@ class EncodeUnit {
 
 class OctetEncodeUnit final : public EncodeUnit {
  public:
+  explicit OctetEncodeUnit(bool val) : val_(val) {}
   explicit OctetEncodeUnit(int8_t val) : val_(val) {}
   explicit OctetEncodeUnit(uint8_t val) : val_(val) {}
   virtual bool Write(CodedWriterBase* w);

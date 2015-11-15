@@ -67,13 +67,23 @@ class ConnectionEstablishStart : public ConnectionEstablishState {
 class ConnectionEstablishTune : public ConnectionEstablishState {
  public:
   ConnectionEstablishTune(CodedWriterBase* w, const CodecEnv* codec_env,
-                          const MethodTuneOkArgs& tune_ok_args);
+                          const MethodTuneOkArgs& tune_ok_args,
+                          const MethodOpenArgs& open_args);
 
   void PrintServerTune() const;
 
  private:
   MethodTuneOkArgsEncoder e_;
   MethodTuneArgsDecoder d_;
+  MethodOpenArgsEncoder open_args_encoder_;
+};
+
+class ConnectionEstablishOpenOk : public ConnectionEstablishState {
+ public:
+  ConnectionEstablishOpenOk(CodedWriterBase* w, const CodecEnv* codec_env);
+
+ private:
+  MethodOpenOkArgsDecoder d_;
 };
 
 class ConnectionEstablishFSM : public FSM {
@@ -100,8 +110,9 @@ class ConnectionEstablishFSM : public FSM {
   std::string passwd_;
   State state_;
   std::unique_ptr<ConnectionEstablishState> state_handler_;
-  amqp::MethodStartOkArgs start_ok_args_;
-  amqp::MethodTuneOkArgs tune_ok_args_;
+  MethodStartOkArgs start_ok_args_;
+  MethodTuneOkArgs tune_ok_args_;
+  MethodOpenArgs open_args_;
 };
 }
 

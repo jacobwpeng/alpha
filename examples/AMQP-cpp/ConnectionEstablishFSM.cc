@@ -99,10 +99,14 @@ ConnectionEstablishStart::ConnectionEstablishStart(
 
 ConnectionEstablishTune::ConnectionEstablishTune(
     CodedWriterBase* w, const CodecEnv* codec_env,
-    const MethodTuneOkArgs& tune_ok_args)
-    : ConnectionEstablishState(w), e_(tune_ok_args, codec_env), d_(codec_env) {
+    const MethodTuneOkArgs& tune_ok_args, const MethodOpenArgs& open_args)
+    : ConnectionEstablishState(w),
+      e_(tune_ok_args, codec_env),
+      d_(codec_env),
+      open_args_encoder_(open_args, codec_env) {
   AddEncodeUnit(&e_);
   AddDecodeUnit(&d_);
+  AddEncodeUnit(&open_args_encoder_);
 }
 
 void ConnectionEstablishTune::PrintServerTune() const {
@@ -111,6 +115,12 @@ void ConnectionEstablishTune::PrintServerTune() const {
   DLOG_INFO << "Channel-Max: " << args.channel_max
             << ", Frame-Max: " << args.frame_max
             << ", Heartbeat-Delay: " << args.heartbeat_delay;
+}
+
+ConnectionEstablishOpenOk::ConnectionEstablishOpenOk(CodedWriterBase* w,
+                                                     const CodecEnv* codec_env)
+    : ConnectionEstablishState(w), d_(codec_env) {
+  AddDecodeUnit(&d_);
 }
 
 ConnectionEstablishFSM::Status ConnectionEstablishFSM::HandleFrame(
@@ -140,14 +150,21 @@ std::unique_ptr<ConnectionEstablishState> ConnectionEstablishFSM::SwitchState(
   switch (current_state) {
     case State::kWaitingStart:
       state_ = State::kWaitingTune;
-      tune_ok_args_.channel_max = 1;
-      tune_ok_args_.frame_max = 1 << 20;
-      tune_ok_args_.heartbeat_delay = 1 << 10;
-      return alpha::make_unique<ConnectionEstablishTune>(w_, codec_env_,
-                                                         tune_ok_args_);
+      tune_ok_args_.channel_max = 0;
+      tune_ok_args_.frame_max = 1 << 17;
+      tune_ok_args_.heartbeat_delay = 600;
+      open_args_.vhost_path = "/";
+      open_args_.capabilities = false;
+      open_args_.insist = true;
+      return alpha::make_unique<ConnectionEstablishTune>(
+          w_, codec_env_, tune_ok_args_, open_args_);
     case State::kWaitingTune:
       dynamic_cast<ConnectionEstablishTune*>(state_handler_.get())
           ->PrintServerTune();
+      state_ = State::kWaitingOpenOk;
+      return alpha::make_unique<ConnectionEstablishOpenOk>(w_, codec_env_);
+    case State::kWaitingOpenOk:
+      DLOG_INFO << "Done";
       return nullptr;
     default:
       CHECK(false) << "Invalid current_state = "

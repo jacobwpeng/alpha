@@ -98,121 +98,29 @@ void OnNewFrame(alpha::TcpConnectionPtr& conn, amqp::FramePtr&& frame) {
       DLOG_INFO << "FSM needs more frames";
       break;
     case amqp::ConnectionEstablishFSM::Status::kWaitForWrite:
-      DLOG_INFO << "FSM is waiting";
+      DLOG_INFO << "FSM is waiting for more space to write reply";
       conn->SetOnWriteDone(std::bind(OnWriteDone, std::placeholders::_1, fsm));
       break;
   }
-#if 0
-  auto fsm = conn->GetContext();
-  auto status = fsm->HandleFrame(std::move(frame));
-  switch (status) {
-    case kDone:
-      break;
-    case kWriteMore:
-      OnWriteDone(fsm);
-      break;
-    default:
-      break;
-  }
-  amqp::MethodStartArgsDecoder d(amqp::GetCodecEnv("Default"));
-  int rc = d.Decode(frame->payload());
-  if (rc == 0) {
-    auto args = d.Get();
-    DLOG_INFO << "Decode done"
-              << ", version_major: "
-              << static_cast<uint16_t>(args.version_major)
-              << ", version_minor: "
-              << static_cast<uint16_t>(args.version_minor)
-              << ", mechanisms: " << args.mechanisms
-              << ", locales: " << args.locales;
-    for (const auto& p : args.server_properties.underlying_map()) {
-      DLOG_INFO << p.first << ": " << p.second;
-    }
-    auto env = amqp::GetCodecEnv("RabbitMQ");
-    // std::string payload;
-    // MemoryStringWriter w(&payload);
-    // EncoderBase(ok).Encode(&w);
-    // Write(Frame::Type::kMethod);
-    // Write(channel);
-    // Write(payload.size());
-    // Write(payload);
-    // Write(frame_end);
-
-    // TcpConnectionWriter w(conn);
-    // FrameCodec frame_encoder(&w);
-    // frame_encoder->Write(Frame::Type::kMethod, channel, payload);
-
-    // amqp::MethodStartOkArgs ok;
-    // auto payload_size = amqp::MethodStartOkArgsEncoder(ok).ByteSize();
-    // auto total_size = 1 + 2 + 4 + payload_size + 1;
-
-    // if (total_size > client_max_frame_size) {
-    //  // Split into multiple frames
-    //
-    //}
-
-    amqp::MethodStartOkArgs ok;
-    ok.mechanism = "PLAIN";
-    ok.locale = "en_US";
-    std::string user = "guest";
-    std::string passwd = "guest";
-    ok.response = '\0' + user + '\0' + passwd;
-
-    // Seems that RabbitMQ doesn't support short string field value
-    ok.client_properties.Insert(
-        "Product",
-        amqp::FieldValue(amqp::FieldValue::Type::kLongString, "AMQP-cpp"));
-    ok.client_properties.Insert(
-        "Version",
-        amqp::FieldValue(amqp::FieldValue::Type::kShortString, "0.01"));
-
-    codec->Write(&ok, w, kMethod, channel);
-
-    std::string payload;
-    amqp::MemoryStringWriter w(&payload);
-    amqp::MethodStartOkArgsEncoder encoder(ok, env);
-    bool done = encoder.Encode(&w);
-    CHECK(done);
-    DLOG_INFO << '\n' << alpha::HexDump(payload);
-    amqp::TcpConnectionWriter writer(conn);
-    amqp::CodedOutputStream stream(&writer);
-    stream.WriteUInt8(amqp::Frame::Type::kMethod);
-    stream.WriteBigEndianUInt16(0);
-    stream.WriteBigEndianUInt32(payload.size());
-    stream.WriteBinary(payload.data(), payload.size());
-    stream.WriteUInt8(0xCE);
-
-    // bool done = amqp::MethodStartOkArgsEncoder(ok).WriteTo(conn);
-    // if (!done) {
-    //  SetContext(
-    //}
-    // amqp::MethodStartArgsEncoder encoder(ok);
-    // encoder.Process([&conn](const char* data, size_t sz){
-    //  conn->Write(alpha::Slice(data, sz));
-    //});
-  } else {
-    DLOG_INFO << "Decode returns: " << rc;
-  }
-#endif
 }
 
 int main(int argc, char* argv[]) {
   alpha::Logger::Init(argv[0]);
-  if (argc != 3) {
-    LOG_INFO << "Usage: " << argv[0] << " [ip] [port]";
-    return -1;
-  }
-#if 1
+  // if (argc != 3) {
+  //   LOG_INFO << "Usage: " << argv[0] << " [ip] [port]";
+  //   return -1;
+  // }
+  std::string ip = "127.0.0.1";
+  int port = 5672;
   alpha::EventLoop loop;
   alpha::TcpClient client(&loop);
   client.SetOnConnected(OnConnected);
   client.SetOnConnectError(OnConnectError);
   client.SetOnClose(OnDisconnected);
-  auto addr = alpha::NetAddress(argv[1], std::atoi(argv[2]));
+  auto addr = alpha::NetAddress(ip, port);
   client.ConnectTo(addr);
   loop.TrapSignal(SIGINT, [&loop] { loop.Quit(); });
   loop.Run();
-#endif
 #if 0
   // Blocking Connection
   auto auth = amqp::PlainAuthorization(user, passwd);

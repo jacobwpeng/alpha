@@ -27,6 +27,12 @@ template <typename ResultType>
 struct CodecTypeHelper;
 
 template <>
+struct CodecTypeHelper<bool> {
+  using EncoderType = OctetEncodeUnit;
+  using DecoderType = OctetDecodeUnit;
+};
+
+template <>
 struct CodecTypeHelper<uint8_t> {
   using EncoderType = OctetEncodeUnit;
   using DecoderType = OctetDecodeUnit;
@@ -74,6 +80,7 @@ struct CoderFactory;
 template <typename ResultType>
 struct CoderFactory<ResultType,
                     typename std::enable_if<
+                        std::is_same<ResultType, bool>::value ||
                         std::is_same<ResultType, uint8_t>::value ||
                         std::is_same<ResultType, uint16_t>::value ||
                         std::is_same<ResultType, uint32_t>::value ||
@@ -175,18 +182,14 @@ ArgType DecoderBase::GetArg() const {
 
 DefineArgsDecoder(MethodStartArgs, (version_major)(version_minor)(
                                        server_properties)(mechanisms)(locales));
+DefineArgsDecoder(MethodTuneArgs, (channel_max)(frame_max)(heartbeat_delay));
+DefineArgsDecoder(MethodOpenOkArgs, BOOST_PP_SEQ_NIL);
 
 DefineArgsEncoder(MethodStartOkArgs, 10, 11,
                   (client_properties)(mechanism)(response)(locale));
-
-DefineArgsDecoder(MethodTuneArgs, (channel_max)(frame_max)(heartbeat_delay));
-
 DefineArgsEncoder(MethodTuneOkArgs, 10, 31,
                   (channel_max)(frame_max)(heartbeat_delay));
-
-// DefineArgsDecoder(MethodStartOkArgs,
-//    (client_properties)(mechanism)(response)(locale)
-//);
+DefineArgsEncoder(MethodOpenArgs, 10, 40, (vhost_path)(capabilities)(insist));
 
 #undef DefineArgsDecoder
 #undef MemberPtr
