@@ -25,10 +25,17 @@ class CodedWriterBase;
 class CodecEnv;
 class FSM {
  public:
+  enum class Status : uint8_t {
+    kConnectionEstablished = 0,
+    kWaitForWrite = 1,
+    kWaitMoreFrame = 2
+  };
+
   FSM(CodedWriterBase* w, const CodecEnv* env);
   virtual ~FSM() = default;
   void set_codec_env(const CodecEnv* env);
-  // virtual void HandleFrame(FramePtr&& frame) = 0;
+  virtual Status HandleFrame(FramePtr&& frame) = 0;
+  virtual bool FlushReply() = 0;
 
  protected:
   CodedWriterBase* w_;
@@ -88,14 +95,9 @@ class ConnectionEstablishOpenOk : public ConnectionEstablishState {
 
 class ConnectionEstablishFSM : public FSM {
  public:
-  enum class Status : uint8_t {
-    kDone = 0,
-    kWaitForWrite = 1,
-    kWaitMoreFrame = 2
-  };
   ConnectionEstablishFSM(CodedWriterBase* w, const CodecEnv* env);
-  Status HandleFrame(FramePtr&& frame);
-  bool FlushReply();
+  virtual Status HandleFrame(FramePtr&& frame) override;
+  virtual bool FlushReply() override;
 
  private:
   enum class State : uint8_t {

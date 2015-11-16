@@ -38,6 +38,14 @@ class FramePacker {
   EncoderBase* e_;
 };
 
+class FrameReader {
+ public:
+  FramePtr Read(alpha::Slice& data);
+
+ private:
+  FramePtr frame_;
+};
+
 class FrameCodec {
  public:
   FramePtr Process(alpha::Slice& data);

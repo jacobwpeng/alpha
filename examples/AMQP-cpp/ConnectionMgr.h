@@ -21,6 +21,7 @@
 #include <alpha/tcp_client.h>
 #include "CodedWriter.h"
 #include "CodecEnv.h"
+#include "FrameCodec.h"
 
 namespace amqp {
 class FSM;
@@ -43,6 +44,8 @@ class ConnectionMgr {
  public:
   using ConnectedCallback = std::function<void(Connection*)>;
   ConnectionMgr();
+  ~ConnectionMgr();
+  void Run() { loop_.Run(); }
   void set_connected_callback(const ConnectedCallback& cb) {
     connected_callback_ = cb;
   }
@@ -52,12 +55,17 @@ class ConnectionMgr {
  private:
   struct ConnectionContext final {
     ConnectionContext(alpha::TcpConnectionPtr& conn);
-    ~ConnectionContext();
     TcpConnectionWriter w;
     const CodecEnv* codec_env;
-    FSM* fsm;
+    std::unique_ptr<FSM> fsm;
+    FrameReader frame_reader;
+    std::unique_ptr<Connection> conn;
   };
+  void OnConnectionEstablished(Connection* conn);
   void OnTcpConnected(alpha::TcpConnectionPtr conn);
+  void OnTcpMessage(alpha::TcpConnectionPtr conn,
+                    alpha::TcpConnectionBuffer* buffer);
+  void OnTcpWriteDone(alpha::TcpConnectionPtr conn);
   void OnTcpClosed(alpha::TcpConnectionPtr conn);
   void OnTcpConnectError(const alpha::NetAddress& addr);
 
@@ -65,6 +73,8 @@ class ConnectionMgr {
   alpha::EventLoop loop_;
   alpha::TcpClient tcp_client_;
   ConnectedCallback connected_callback_;
+  std::map<alpha::TcpConnection*, std::unique_ptr<ConnectionContext>>
+      connection_context_map_;
 };
 }
 

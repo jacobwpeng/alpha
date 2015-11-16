@@ -123,14 +123,14 @@ ConnectionEstablishOpenOk::ConnectionEstablishOpenOk(CodedWriterBase* w,
   AddDecodeUnit(&d_);
 }
 
-ConnectionEstablishFSM::Status ConnectionEstablishFSM::HandleFrame(
-    FramePtr&& frame) {
+FSM::Status ConnectionEstablishFSM::HandleFrame(FramePtr&& frame) {
   bool done = state_handler_->HandleFrame(std::move(frame));
   if (done) {
     done = state_handler_->WriteReply();
     if (done) {
       state_handler_ = SwitchState(state_);
-      return state_handler_ ? Status::kWaitMoreFrame : Status::kDone;
+      return state_handler_ ? Status::kWaitMoreFrame
+                            : Status::kConnectionEstablished;
     } else {
       return Status::kWaitForWrite;
     }
