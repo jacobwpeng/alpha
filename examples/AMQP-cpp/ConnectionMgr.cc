@@ -46,11 +46,21 @@ ConnectionMgr::ConnectionMgr() : tcp_client_(&loop_) {
 }
 
 ConnectionMgr::~ConnectionMgr() { Run(); }
-void ConnectionMgr::CloseConnection(Connection* conn) {}
+void ConnectionMgr::CloseConnection(Connection* conn) {
+  // auto tcp_connection = conn->tcp_connetion();
+  // if (tcp_connetion) {
+  //   auto p = tcp_connetion->GetContext<ConnectionContext*>();
+  //   CHECK(p && *p);
+  //   auto ctx = *p;
+  //   // what if ctx->fsm is still waiting for write done ?
+  // }
+}
 
 void ConnectionMgr::OnConnectionEstablished(Connection* conn) {
   if (connected_callback_) {
     connected_callback_(conn);
+  } else {
+    conn->Close();
   }
 }
 
@@ -63,6 +73,9 @@ void ConnectionMgr::OnTcpConnected(alpha::TcpConnectionPtr conn) {
   auto p = connection_context_map_.insert(
       std::make_pair(conn.get(), alpha::make_unique<ConnectionContext>(conn)));
   CHECK(p.second) << "ConnectionContext already exists when TcpConnected";
+  if (!p.first->second->fsm->WriteInitialRequest()) {
+    CHECK(false) << "Write to newly created connection failed";
+  }
   conn->SetContext(p.first->second.get());
   using namespace std::placeholders;
   conn->SetOnRead(std::bind(&ConnectionMgr::OnTcpMessage, this, _1, _2));
@@ -81,7 +94,7 @@ void ConnectionMgr::OnTcpMessage(alpha::TcpConnectionPtr conn,
     auto status = ctx->fsm->HandleFrame(std::move(frame));
     switch (status) {
       case FSM::Status::kConnectionEstablished:
-        ctx->conn = alpha::make_unique<Connection>(this);
+        ctx->conn = alpha::make_unique<Connection>(this, conn);
         OnConnectionEstablished(ctx->conn.get());
         break;
       case FSM::Status::kWaitForWrite:

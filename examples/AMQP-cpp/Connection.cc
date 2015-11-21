@@ -14,7 +14,8 @@
 #include "ConnectionMgr.h"
 
 namespace amqp {
-Connection::Connection(ConnectionMgr* owner) : owner_(owner) {}
+Connection::Connection(ConnectionMgr* owner, alpha::TcpConnectionPtr& conn)
+    : owner_(owner), conn_(conn) {}
 
 void Connection::Close() { owner_->CloseConnection(this); }
 }

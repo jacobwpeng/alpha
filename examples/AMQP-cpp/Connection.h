@@ -19,11 +19,12 @@ namespace amqp {
 class ConnectionMgr;
 class Connection {
  public:
-  Connection(ConnectionMgr* owner);
+  Connection(ConnectionMgr* owner, alpha::TcpConnectionPtr& conn);
   void Close();
 
  private:
   ConnectionMgr* owner_;
+  alpha::TcpConnectionWeakPtr conn_;
 };
 }
 

@@ -16,17 +16,9 @@
 #include "CodecEnv.h"
 
 namespace amqp {
-FSM::FSM(CodedWriterBase* w, const CodecEnv* env) : w_(w), codec_env_(env) {}
-
-void FSM::set_codec_env(const CodecEnv* env) { codec_env_ = env; }
-
 ConnectionEstablishFSM::ConnectionEstablishFSM(CodedWriterBase* w,
                                                const CodecEnv* env)
     : FSM(w, env) {
-  std::string protocol_header = {'A', 'M', 'Q', 'P', 0, 0, 9, 1};
-  bool done = w_->Write(protocol_header.data(), protocol_header.size());
-  // TODO: throw a ConnectionException
-  CHECK(done) << "Write protocol header failed";
   user_ = "guest";
   passwd_ = "guest";
 
@@ -142,6 +134,11 @@ FSM::Status ConnectionEstablishFSM::HandleFrame(FramePtr&& frame) {
 bool ConnectionEstablishFSM::FlushReply() {
   CHECK(state_handler_);
   return state_handler_->WriteReply();
+}
+
+bool ConnectionEstablishFSM::WriteInitialRequest() {
+  std::string protocol_header = {'A', 'M', 'Q', 'P', 0, 0, 9, 1};
+  return w_->Write(protocol_header.data(), protocol_header.size());
 }
 
 std::unique_ptr<ConnectionEstablishState> ConnectionEstablishFSM::SwitchState(

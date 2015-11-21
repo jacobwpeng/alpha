@@ -15,32 +15,10 @@
 
 #include <memory>
 #include <vector>
-#include "Frame.h"
-#include "FrameCodec.h"
+#include "FSM.h"
 #include "MethodPayloadCodec.h"
 
 namespace amqp {
-
-class CodedWriterBase;
-class CodecEnv;
-class FSM {
- public:
-  enum class Status : uint8_t {
-    kConnectionEstablished = 0,
-    kWaitForWrite = 1,
-    kWaitMoreFrame = 2
-  };
-
-  FSM(CodedWriterBase* w, const CodecEnv* env);
-  virtual ~FSM() = default;
-  void set_codec_env(const CodecEnv* env);
-  virtual Status HandleFrame(FramePtr&& frame) = 0;
-  virtual bool FlushReply() = 0;
-
- protected:
-  CodedWriterBase* w_;
-  const CodecEnv* codec_env_;
-};
 
 class ConnectionEstablishState;
 using ConnectionEstablishStatePtr = std::unique_ptr<ConnectionEstablishState>;
@@ -98,6 +76,7 @@ class ConnectionEstablishFSM : public FSM {
   ConnectionEstablishFSM(CodedWriterBase* w, const CodecEnv* env);
   virtual Status HandleFrame(FramePtr&& frame) override;
   virtual bool FlushReply() override;
+  virtual bool WriteInitialRequest() override;
 
  private:
   enum class State : uint8_t {

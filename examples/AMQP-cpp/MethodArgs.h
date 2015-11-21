@@ -19,9 +19,10 @@
 #include "FieldTable.h"
 
 namespace amqp {
+static const ClassID kClassConnectionID = 10;
 
 struct MethodStartArgs {
-  static const ClassID kClassID = 10;
+  static const ClassID kClassID = kClassConnectionID;
   static const MethodID kMethodID = 10;
   uint8_t version_major = 0;
   uint8_t version_minor = 0;
@@ -31,6 +32,8 @@ struct MethodStartArgs {
 };
 
 struct MethodStartOkArgs {
+  static const ClassID kClassID = kClassConnectionID;
+  static const MethodID kMethodID = 11;
   FieldTable client_properties;
   ShortString mechanism;
   LongString response;
@@ -38,7 +41,7 @@ struct MethodStartOkArgs {
 };
 
 struct MethodTuneArgs {
-  static const ClassID kClassID = 10;
+  static const ClassID kClassID = kClassConnectionID;
   static const MethodID kMethodID = 30;
   uint16_t channel_max = 0;
   uint32_t frame_max = 0;
@@ -46,20 +49,38 @@ struct MethodTuneArgs {
 };
 
 struct MethodTuneOkArgs {
+  static const ClassID kClassID = kClassConnectionID;
+  static const MethodID kMethodID = 31;
   uint16_t channel_max;
   uint32_t frame_max;
   uint16_t heartbeat_delay;
 };
 
 struct MethodOpenArgs {
+  static const ClassID kClassID = kClassConnectionID;
+  static const MethodID kMethodID = 40;
   ShortString vhost_path;
   bool capabilities;
   bool insist;
 };
 
 struct MethodOpenOkArgs {
-  static const ClassID kClassID = 10;
+  static const ClassID kClassID = kClassConnectionID;
   static const MethodID kMethodID = 41;
+};
+
+struct MethodCloseArgs {
+  static const ClassID kClassID = kClassConnectionID;
+  static const MethodID kMethodID = 50;
+  uint16_t reply_code;
+  ShortString reply_text;
+  ClassID class_id;
+  MethodID method_id;
+};
+
+struct MethodCloseOkArgs {
+  static const ClassID kClassID = kClassConnectionID;
+  static const MethodID kMethodID = 51;
 };
 }
 

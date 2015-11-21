@@ -148,6 +148,12 @@ ArgType DecoderBase::GetArg() const {
   return *reinterpret_cast<ArgType*>(ptr_);
 }
 
+template <typename ArgType>
+ArgType GenericMethodArgsDecoder::GetArg() const {
+  CHECK(accurate_decoder_) << "No accurate decoder found";
+  return accurate_decoder_->GetArg<ArgType>();
+}
+
 #define Member(r, data, i, member) BOOST_PP_COMMA_IF(i) arg_.member
 #define MemberPtr(r, data, i, member) BOOST_PP_COMMA_IF(i) & arg_.member
 #define DefineArgsDecoder(ArgType, Seq)                                        \
@@ -164,32 +170,37 @@ ArgType DecoderBase::GetArg() const {
     ArgType arg_;                                                              \
   };
 
-#define DefineArgsEncoder(ArgType, CID, MID, Seq)                        \
-  class ArgType##Encoder final : public EncoderBase {                    \
-   public:                                                               \
-    ArgType##Encoder(const ArgType& arg, const CodecEnv* env)            \
-        : EncoderBase(CID, MID, env), arg_(arg) {                        \
-      Init();                                                            \
-    }                                                                    \
-    virtual void Init() {                                                \
-      AddEncodeUnit(                                                     \
-          BOOST_PP_SEQ_FOR_EACH_I(Member, BOOST_PP_SEQ_SIZE(Seq), Seq)); \
-    }                                                                    \
-                                                                         \
-   private:                                                              \
-    const ArgType& arg_;                                                 \
+#define DefineArgsEncoder(ArgType, Seq)                                        \
+  class ArgType##Encoder final : public EncoderBase {                          \
+   public:                                                                     \
+    ArgType##Encoder(const ArgType& arg, const CodecEnv* env)                  \
+        : EncoderBase(ArgType::kClassID, ArgType::kMethodID, env), arg_(arg) { \
+      Init();                                                                  \
+    }                                                                          \
+    virtual void Init() {                                                      \
+      AddEncodeUnit(                                                           \
+          BOOST_PP_SEQ_FOR_EACH_I(Member, BOOST_PP_SEQ_SIZE(Seq), Seq));       \
+    }                                                                          \
+                                                                               \
+   private:                                                                    \
+    const ArgType& arg_;                                                       \
   };
 
 DefineArgsDecoder(MethodStartArgs, (version_major)(version_minor)(
                                        server_properties)(mechanisms)(locales));
 DefineArgsDecoder(MethodTuneArgs, (channel_max)(frame_max)(heartbeat_delay));
 DefineArgsDecoder(MethodOpenOkArgs, BOOST_PP_SEQ_NIL);
+DefineArgsDecoder(MethodCloseArgs,
+                  (reply_code)(reply_text)(class_id)(method_id));
+DefineArgsDecoder(MethodCloseOkArgs, BOOST_PP_SEQ_NIL);
 
-DefineArgsEncoder(MethodStartOkArgs, 10, 11,
+DefineArgsEncoder(MethodStartOkArgs,
                   (client_properties)(mechanism)(response)(locale));
-DefineArgsEncoder(MethodTuneOkArgs, 10, 31,
-                  (channel_max)(frame_max)(heartbeat_delay));
-DefineArgsEncoder(MethodOpenArgs, 10, 40, (vhost_path)(capabilities)(insist));
+DefineArgsEncoder(MethodTuneOkArgs, (channel_max)(frame_max)(heartbeat_delay));
+DefineArgsEncoder(MethodOpenArgs, (vhost_path)(capabilities)(insist));
+DefineArgsEncoder(MethodCloseArgs,
+                  (reply_code)(reply_text)(class_id)(method_id));
+DefineArgsEncoder(MethodCloseOkArgs, BOOST_PP_SEQ_NIL);
 
 #undef DefineArgsDecoder
 #undef MemberPtr

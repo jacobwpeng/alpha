@@ -17,6 +17,7 @@
 #include <vector>
 #include <type_traits>
 #include "MethodArgs.h"
+#include "Frame.h"
 
 namespace amqp {
 
@@ -25,6 +26,7 @@ class CodedWriterBase;
 class EncodeUnit;
 class DecodeUnit;
 class CodecEnv;
+
 class EncoderBase {
  public:
   virtual ~EncoderBase() = default;
@@ -47,6 +49,8 @@ class DecoderBase {
  public:
   virtual ~DecoderBase() = default;
   int Decode(alpha::Slice data);
+  ClassID class_id() const { return class_id_; }
+  MethodID method_id() const { return method_id_; }
 
   template <typename ArgType>
   ArgType GetArg() const;
@@ -66,6 +70,24 @@ class DecoderBase {
   MethodID method_id_;
   const CodecEnv* env_;
   std::vector<std::unique_ptr<DecodeUnit>> decode_units_;
+};
+
+class GenericMethodArgsDecoder final {
+ public:
+  GenericMethodArgsDecoder(const CodecEnv* codec_env);
+  int Decode(FramePtr&& frame);
+  void Reset();
+  const DecoderBase* accurate_decoder() const;
+
+  template <typename ArgType>
+  ArgType GetArg() const;
+
+ private:
+  std::unique_ptr<DecoderBase> CreateAccurateDecoder(ClassID class_id,
+                                                     MethodID method_id);
+  static const size_t kMinSizeToRecognize = sizeof(ClassID) + sizeof(MethodID);
+  const CodecEnv* codec_env_;
+  std::unique_ptr<DecoderBase> accurate_decoder_;
 };
 }
 
