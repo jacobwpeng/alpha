@@ -41,14 +41,7 @@ class FramePacker {
 class FrameReader {
  public:
   FramePtr Read(alpha::Slice& data);
-
- private:
-  FramePtr frame_;
-};
-
-class FrameCodec {
- public:
-  FramePtr Process(alpha::Slice& data);
+  void Reset();
 
  private:
   FramePtr frame_;

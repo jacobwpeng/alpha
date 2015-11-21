@@ -82,7 +82,8 @@ ConnectionCloseFSM::ConnectionCloseFSM(CodedWriterBase* w, const CodecEnv* env,
                                        const MethodCloseArgs& method_close_args)
     : FSM(w, env),
       generic_decoder_(env),
-      method_close_args_encoder_(method_close_args, env) {
+      method_close_args_encoder_(method_close_args, env),
+      frame_packer_(0, Frame::Type::kMethod, &method_close_args_encoder_) {
   state_ = State::kFirstStage;
   state_handler_ = alpha::make_unique<ConnectionCloseFirstStage>(w, env);
 }
@@ -118,6 +119,6 @@ bool ConnectionCloseFSM::FlushReply() { return true; }
 bool ConnectionCloseFSM::WriteInitialRequest() {
   CHECK(state_ == State::kFirstStage);
   // Write Method Close
-  return method_close_args_encoder_.Encode(w_);
+  return frame_packer_.WriteTo(w_);
 }
 }

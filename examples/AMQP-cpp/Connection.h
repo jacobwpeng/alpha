@@ -21,6 +21,7 @@ class Connection {
  public:
   Connection(ConnectionMgr* owner, alpha::TcpConnectionPtr& conn);
   void Close();
+  alpha::TcpConnectionPtr tcp_connection() const;
 
  private:
   ConnectionMgr* owner_;

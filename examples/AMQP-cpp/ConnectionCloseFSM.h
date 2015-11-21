@@ -65,6 +65,7 @@ class ConnectionCloseFSM final : public FSM {
   std::unique_ptr<ConnectionCloseState> state_handler_;
   GenericMethodArgsDecoder generic_decoder_;
   MethodCloseArgsEncoder method_close_args_encoder_;
+  FramePacker frame_packer_;
 };
 }
 

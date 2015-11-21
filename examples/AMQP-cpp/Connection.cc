@@ -18,4 +18,8 @@ Connection::Connection(ConnectionMgr* owner, alpha::TcpConnectionPtr& conn)
     : owner_(owner), conn_(conn) {}
 
 void Connection::Close() { owner_->CloseConnection(this); }
+
+alpha::TcpConnectionPtr Connection::tcp_connection() const {
+  return conn_.lock();
+}
 }

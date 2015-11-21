@@ -15,6 +15,7 @@
 #include <alpha/logger.h>
 #include <alpha/format.h>
 #include "ConnectionEstablishFSM.h"
+#include "ConnectionCloseFSM.h"
 #include "Connection.h"
 
 namespace amqp {
@@ -47,13 +48,20 @@ ConnectionMgr::ConnectionMgr() : tcp_client_(&loop_) {
 
 ConnectionMgr::~ConnectionMgr() { Run(); }
 void ConnectionMgr::CloseConnection(Connection* conn) {
-  // auto tcp_connection = conn->tcp_connetion();
-  // if (tcp_connetion) {
-  //   auto p = tcp_connetion->GetContext<ConnectionContext*>();
-  //   CHECK(p && *p);
-  //   auto ctx = *p;
-  //   // what if ctx->fsm is still waiting for write done ?
-  // }
+  DLOG_INFO << "Try to close amqp::Connection";
+  auto tcp_connection = conn->tcp_connection();
+  if (tcp_connection) {
+    auto p = tcp_connection->GetContext<ConnectionContext*>();
+    CHECK(p && *p);
+    auto ctx = *p;
+    MethodCloseArgs method_close_args;
+    method_close_args.reply_code = 0;
+    method_close_args.reply_text = "Normal Shutdown";
+    method_close_args.class_id = method_close_args.method_id = 0;
+    ctx->fsm = alpha::make_unique<ConnectionCloseFSM>(&ctx->w, ctx->codec_env,
+                                                      method_close_args);
+    ctx->fsm->WriteInitialRequest();
+  }
 }
 
 void ConnectionMgr::OnConnectionEstablished(Connection* conn) {
@@ -93,9 +101,15 @@ void ConnectionMgr::OnTcpMessage(alpha::TcpConnectionPtr conn,
   if (frame) {
     auto status = ctx->fsm->HandleFrame(std::move(frame));
     switch (status) {
-      case FSM::Status::kConnectionEstablished:
-        ctx->conn = alpha::make_unique<Connection>(this, conn);
-        OnConnectionEstablished(ctx->conn.get());
+      case FSM::Status::kDone:
+        if (ctx->conn == nullptr) {
+          ctx->conn = alpha::make_unique<Connection>(this, conn);
+          OnConnectionEstablished(ctx->conn.get());
+        } else {
+          // Close Connection FSM
+          DLOG_INFO << "Connection closed";
+          conn->Close();
+        }
         break;
       case FSM::Status::kWaitForWrite:
         using namespace std::placeholders;

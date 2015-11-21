@@ -11,13 +11,16 @@
  */
 
 #include <alpha/logger.h>
+#include "Connection.h"
 #include "ConnectionMgr.h"
 
 int main(int argc, char* argv[]) {
   alpha::Logger::Init(argv[0]);
   amqp::ConnectionMgr mgr;
-  mgr.set_connected_callback(
-      [](amqp::Connection* conn) { DLOG_INFO << "amqp::Connection created"; });
+  mgr.set_connected_callback([](amqp::Connection* conn) {
+    DLOG_INFO << "amqp::Connection created";
+    conn->Close();
+  });
   mgr.ConnectTo(amqp::ConnectionParameters());
 #if 0
   // Blocking Connection
