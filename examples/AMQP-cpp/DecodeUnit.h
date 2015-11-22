@@ -41,9 +41,19 @@ class DecodeUnit {
   virtual int ProcessMore(alpha::Slice& data) = 0;
 };
 
+class BooleanDecodeUnit final : public DecodeUnit {
+ public:
+  explicit BooleanDecodeUnit(bool* res);
+  virtual int ProcessMore(alpha::Slice& data) override;
+
+ private:
+  bool* res_;
+};
+
 class OctetDecodeUnit final : public DecodeUnit {
  public:
-  OctetDecodeUnit(uint8_t* res);
+  explicit OctetDecodeUnit(bool* res);
+  explicit OctetDecodeUnit(uint8_t* res);
   virtual int ProcessMore(alpha::Slice& data);
 
  private:

@@ -57,8 +57,9 @@ int DecoderBase::Decode(alpha::Slice data) {
   while (!decode_units_.empty()) {
     auto cur = decode_units_.begin();
     auto rc = (*cur)->ProcessMore(data);
-    // BUG: data may be droped silently
+    // BUG: data may be dropped silently
     if (rc != kDone) {
+      CHECK(data.empty()) << "Data dropped silently, rc: " << rc;
       return rc;
     }
     decode_units_.erase(cur);

@@ -17,7 +17,7 @@
 int main(int argc, char* argv[]) {
   alpha::Logger::Init(argv[0]);
   amqp::ConnectionMgr mgr;
-  mgr.set_connected_callback([](amqp::Connection* conn) {
+  mgr.set_connected_callback([](amqp::ConnectionPtr& conn) {
     DLOG_INFO << "amqp::Connection created";
     conn->Close();
   });

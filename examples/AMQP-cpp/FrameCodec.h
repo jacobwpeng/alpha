@@ -26,7 +26,6 @@ class EncoderBase;
 class FramePacker {
  public:
   FramePacker(ChannelID channel_id, Frame::Type type, EncoderBase* e);
-
   bool WriteTo(CodedWriterBase* w);
 
  private:

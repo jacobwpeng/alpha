@@ -14,6 +14,7 @@ list(APPEND AMQP_CPP_SRCS
   "FSM.cc"
   "ConnectionEstablishFSM.cc"
   "ConnectionCloseFSM.cc"
+  "Channel.cc"
   "Connection.cc"
   "ConnectionMgr.cc"
   "main.cc"

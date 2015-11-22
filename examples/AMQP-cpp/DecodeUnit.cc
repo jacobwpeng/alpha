@@ -17,6 +17,20 @@
 #include "CodedInputStream.h"
 
 namespace amqp {
+BooleanDecodeUnit::BooleanDecodeUnit(bool* res) : res_(res) {}
+
+int BooleanDecodeUnit::ProcessMore(alpha::Slice& data) {
+  uint8_t u8;
+  CodedInputStream stream(data);
+  bool ok = stream.ReadUInt8(&u8);
+  if (ok) {
+    data.Advance(stream.consumed_bytes());
+    *res_ = u8;
+    return DecodeState::kDone;
+  }
+  return DecodeState::kNeedsMore;
+}
+
 OctetDecodeUnit::OctetDecodeUnit(uint8_t* res) : res_(res) {}
 
 int OctetDecodeUnit::ProcessMore(alpha::Slice& data) {
@@ -140,7 +154,6 @@ int FieldTableDecodeUnit::ProcessMore(alpha::Slice& data) {
     CHECK(p.second) << "Same key found in FieldTable";
     // DLOG_INFO << "Key: " << key << ", Value: " << *p.first;
   }
-  DLOG_INFO << "FieldTable done";
   return DecodeState::kDone;
 }
 

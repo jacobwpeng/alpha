@@ -16,9 +16,9 @@
 #include <cstdint>
 #include <memory>
 #include <alpha/slice.h>
+#include "MethodArgTypes.h"
 
 namespace amqp {
-using ChannelID = uint16_t;
 
 class Frame {
  public:

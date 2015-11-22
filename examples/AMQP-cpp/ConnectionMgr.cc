@@ -37,6 +37,17 @@ ConnectionMgr::ConnectionContext::ConnectionContext(
       codec_env(GetCodecEnv("")),
       fsm(alpha::make_unique<ConnectionEstablishFSM>(&w, codec_env)) {}
 
+void ConnectionMgr::ConnectionContext::FlushReply() {
+  while (!frame_packers_.empty()) {
+    auto it = frame_packers_.begin();
+    bool done = it->WriteTo(&w);
+    if (!done) {
+      break;
+    }
+    frame_packers_.erase(it);
+  }
+}
+
 ConnectionMgr::ConnectionMgr() : tcp_client_(&loop_) {
   using namespace std::placeholders;
   tcp_client_.SetOnConnected(
@@ -64,10 +75,23 @@ void ConnectionMgr::CloseConnection(Connection* conn) {
   }
 }
 
-void ConnectionMgr::OnConnectionEstablished(Connection* conn) {
+void ConnectionMgr::OpenNewChannel(Connection* conn, ChannelID channel_id) {
+  // auto tcp_connection = conn->tcp_connection();
+  // if (tcp_connection) {
+  //  auto p = tcp_connection->GetContext<ConnectionContext*>();
+  //  CHECK(p && *p);
+  //  auto ctx = *p;
+  //  ctx->frame_packers_.emplace_back(channel_id, Frame::Type::kMethod,
+  //      alpha::make_unique<MethodChannelOpenArgsEncoder>(
+  //        MethodChannelOpenArgs(), ctx->codec_env));
+  //}
+}
+
+void ConnectionMgr::OnConnectionEstablished(ConnectionPtr& conn) {
   if (connected_callback_) {
     connected_callback_(conn);
   } else {
+    DLOG_INFO << "No connected callback found, close it";
     conn->Close();
   }
 }
@@ -87,6 +111,7 @@ void ConnectionMgr::OnTcpConnected(alpha::TcpConnectionPtr conn) {
   conn->SetContext(p.first->second.get());
   using namespace std::placeholders;
   conn->SetOnRead(std::bind(&ConnectionMgr::OnTcpMessage, this, _1, _2));
+  conn->SetOnWriteDone(std::bind(&ConnectionMgr::OnTcpWriteDone, this, _1));
 }
 
 void ConnectionMgr::OnTcpMessage(alpha::TcpConnectionPtr conn,
@@ -100,11 +125,19 @@ void ConnectionMgr::OnTcpMessage(alpha::TcpConnectionPtr conn,
   buffer->ConsumeBytes(sz - data.size());
   if (frame) {
     auto status = ctx->fsm->HandleFrame(std::move(frame));
+    ctx->FlushReply();
+    if (status == FSM::Status::kDone) {
+    }
+  }
+#if 0
+  if (frame) {
+    auto status = ctx->fsm->HandleFrame(std::move(frame));
     switch (status) {
       case FSM::Status::kDone:
         if (ctx->conn == nullptr) {
-          ctx->conn = alpha::make_unique<Connection>(this, conn);
-          OnConnectionEstablished(ctx->conn.get());
+          ctx->conn = std::make_shared<Connection>(this, conn);
+          OnConnectionEstablished(ctx->conn);
+          // ctx->ctx = ConnectionWorkingFSM(ctx->conn);
         } else {
           // Close Connection FSM
           DLOG_INFO << "Connection closed";
@@ -120,17 +153,14 @@ void ConnectionMgr::OnTcpMessage(alpha::TcpConnectionPtr conn,
         break;
     }
   }
+#endif
 }
 
 void ConnectionMgr::OnTcpWriteDone(alpha::TcpConnectionPtr conn) {
-  DLOG_INFO << "Flush reply";
   auto p = conn->GetContext<ConnectionContext*>();
   CHECK(p && *p);
   auto ctx = *p;
-  bool done = ctx->fsm->FlushReply();
-  if (done) {
-    conn->SetOnWriteDone(nullptr);
-  }
+  ctx->FlushReply();
 }
 
 void ConnectionMgr::OnTcpClosed(alpha::TcpConnectionPtr conn) {

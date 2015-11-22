@@ -63,6 +63,7 @@ bool ConnectionEstablishState::HandleFrame(FramePtr&& frame) {
       CHECK(false);
     }
   }
+  // AddFramePacker(frame_packers_);
   return true;
 }
 
@@ -71,7 +72,6 @@ bool ConnectionEstablishState::WriteReply() {
   while (!frame_packers_.empty()) {
     auto it = frame_packers_.begin();
     if (it->WriteTo(w_)) {
-      DLOG_INFO << "One FramePacker done";
       frame_packers_.erase(it);
       continue;
     } else {
@@ -143,7 +143,7 @@ bool ConnectionEstablishFSM::WriteInitialRequest() {
 
 std::unique_ptr<ConnectionEstablishState> ConnectionEstablishFSM::SwitchState(
     State current_state) {
-  DLOG_INFO << "SwitchState current = " << static_cast<int>(current_state);
+  // DLOG_INFO << "SwitchState current = " << static_cast<int>(current_state);
   switch (current_state) {
     case State::kWaitingStart:
       state_ = State::kWaitingTune;
@@ -161,7 +161,6 @@ std::unique_ptr<ConnectionEstablishState> ConnectionEstablishFSM::SwitchState(
       state_ = State::kWaitingOpenOk;
       return alpha::make_unique<ConnectionEstablishOpenOk>(w_, codec_env_);
     case State::kWaitingOpenOk:
-      DLOG_INFO << "Done";
       return nullptr;
     default:
       CHECK(false) << "Invalid current_state = "

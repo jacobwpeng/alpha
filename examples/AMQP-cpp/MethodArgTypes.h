@@ -21,6 +21,8 @@ using MethodID = uint16_t;
 using Timestamp = uint64_t;
 using LongString = std::string;
 
+using ChannelID = uint16_t;
+
 class ShortString {
  public:
   ShortString();

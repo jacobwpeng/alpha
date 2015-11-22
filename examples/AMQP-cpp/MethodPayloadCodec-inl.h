@@ -29,7 +29,7 @@ struct CodecTypeHelper;
 template <>
 struct CodecTypeHelper<bool> {
   using EncoderType = OctetEncodeUnit;
-  using DecoderType = OctetDecodeUnit;
+  using DecoderType = BooleanDecodeUnit;
 };
 
 template <>
@@ -154,7 +154,6 @@ ArgType GenericMethodArgsDecoder::GetArg() const {
   return accurate_decoder_->GetArg<ArgType>();
 }
 
-#define Member(r, data, i, member) BOOST_PP_COMMA_IF(i) arg_.member
 #define MemberPtr(r, data, i, member) BOOST_PP_COMMA_IF(i) & arg_.member
 #define DefineArgsDecoder(ArgType, Seq)                                        \
   class ArgType##Decoder final : public DecoderBase {                          \
@@ -170,6 +169,7 @@ ArgType GenericMethodArgsDecoder::GetArg() const {
     ArgType arg_;                                                              \
   };
 
+#define Member(r, data, i, member) BOOST_PP_COMMA_IF(i) arg_.member
 #define DefineArgsEncoder(ArgType, Seq)                                        \
   class ArgType##Encoder final : public EncoderBase {                          \
    public:                                                                     \
@@ -186,22 +186,29 @@ ArgType GenericMethodArgsDecoder::GetArg() const {
     const ArgType& arg_;                                                       \
   };
 
-DefineArgsDecoder(MethodStartArgs, (version_major)(version_minor)(
-                                       server_properties)(mechanisms)(locales));
-DefineArgsDecoder(MethodTuneArgs, (channel_max)(frame_max)(heartbeat_delay));
-DefineArgsDecoder(MethodOpenOkArgs, BOOST_PP_SEQ_NIL);
-DefineArgsDecoder(MethodCloseArgs,
-                  (reply_code)(reply_text)(class_id)(method_id));
-DefineArgsDecoder(MethodCloseOkArgs, BOOST_PP_SEQ_NIL);
+#define DefineArgsCodec(ArgType, Seq) \
+  DefineArgsEncoder(ArgType, Seq);    \
+  DefineArgsDecoder(ArgType, Seq)
 
-DefineArgsEncoder(MethodStartOkArgs,
-                  (client_properties)(mechanism)(response)(locale));
-DefineArgsEncoder(MethodTuneOkArgs, (channel_max)(frame_max)(heartbeat_delay));
-DefineArgsEncoder(MethodOpenArgs, (vhost_path)(capabilities)(insist));
-DefineArgsEncoder(MethodCloseArgs,
-                  (reply_code)(reply_text)(class_id)(method_id));
-DefineArgsEncoder(MethodCloseOkArgs, BOOST_PP_SEQ_NIL);
+DefineArgsCodec(MethodStartArgs, (version_major)(version_minor)(
+                                     server_properties)(mechanisms)(locales));
+DefineArgsCodec(MethodStartOkArgs,
+                (client_properties)(mechanism)(response)(locale));
+DefineArgsCodec(MethodTuneArgs, (channel_max)(frame_max)(heartbeat_delay));
+DefineArgsCodec(MethodTuneOkArgs, (channel_max)(frame_max)(heartbeat_delay));
+DefineArgsCodec(MethodOpenArgs, (vhost_path)(capabilities)(insist));
+DefineArgsCodec(MethodOpenOkArgs, BOOST_PP_SEQ_NIL);
+DefineArgsCodec(MethodCloseArgs, (reply_code)(reply_text)(class_id)(method_id));
+DefineArgsCodec(MethodCloseOkArgs, BOOST_PP_SEQ_NIL);
+DefineArgsCodec(MethodChannelOpenArgs, BOOST_PP_SEQ_NIL);
+DefineArgsCodec(MethodChannelOpenOkArgs, BOOST_PP_SEQ_NIL);
+DefineArgsCodec(MethodChannelCloseArgs,
+                (reply_code)(reply_text)(class_id)(method_id));
+DefineArgsCodec(MethodChannelCloseOkArgs, BOOST_PP_SEQ_NIL);
 
+#undef DefineArgsCodec
+#undef DefineArgsEncoder
+#undef Member
 #undef DefineArgsDecoder
 #undef MemberPtr
 }
