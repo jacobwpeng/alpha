@@ -76,7 +76,7 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
   NetAddress PeerAddr() const { return *peer_addr_; }
   TcpConnectionBuffer* ReadBuffer() { return &read_buffer_; }
   TcpConnectionBuffer* WriteBuffer() { return &write_buffer_; }
-  size_t BytesCanBytes() const;
+  size_t BytesCanWrite() const;
   void SetPeerAddr(const NetAddress& addr);
 
  private:

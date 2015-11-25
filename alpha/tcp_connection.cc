@@ -179,7 +179,7 @@ void TcpConnection::GetAddressInfo() {
   }
 }
 
-size_t TcpConnection::BytesCanBytes() const {
+size_t TcpConnection::BytesCanWrite() const {
   return write_buffer_.SpaceBeforeFull();
 }
 

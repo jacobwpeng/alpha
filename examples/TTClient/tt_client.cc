@@ -354,7 +354,7 @@ int Client::Request(ProtocolCodec* codec) {
   return kOk;
 }
 
-size_t Client::MaxBytesCanWrite() { return conn_->BytesCanBytes(); }
+size_t Client::MaxBytesCanWrite() { return conn_->BytesCanWrite(); }
 
 bool Client::Write(const uint8_t* buffer, int size) {
   return conn_->Write(
