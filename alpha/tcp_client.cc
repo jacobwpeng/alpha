@@ -99,9 +99,9 @@ void TcpClient::MaybeReconnect(const NetAddress& addr) {
 }
 
 void TcpClient::RemoveAutoReconnect(const NetAddress& addr) {
-  DLOG_INFO << "RemoveAutoReconnect, addr = " << addr;
   auto it = auto_reconnect_addresses_.find(addr);
   if (it != auto_reconnect_addresses_.end()) {
+    DLOG_INFO << "RemoveAutoReconnect, addr = " << addr;
     auto_reconnect_addresses_.erase(it);
   }
 
