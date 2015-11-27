@@ -16,157 +16,102 @@
 #include "CodecEnv.h"
 
 namespace amqp {
-ConnectionEstablishFSM::ConnectionEstablishFSM(CodedWriterBase* w,
-                                               const CodecEnv* env)
-    : FSM(w, env) {
-  user_ = "guest";
-  passwd_ = "guest";
+ConnectionEstablishState::ConnectionEstablishState(const CodecEnv* codec_env)
+    : codec_env_(codec_env) {}
 
-  start_ok_args_.mechanism = "PLAIN";
-  start_ok_args_.locale = "en_US";
-  start_ok_args_.response.push_back('\0');
-  start_ok_args_.response.append(user_);
-  start_ok_args_.response.push_back('\0');
-  start_ok_args_.response.append(passwd_);
-  start_ok_args_.client_properties.Insert(
-      "Product", FieldValue(FieldValue::Type::kShortString, "AMQP-cpp"));
-  start_ok_args_.client_properties.Insert(
-      "Version", FieldValue(FieldValue::Type::kShortString, "0.01"));
-  state_ = State::kWaitingStart;
-  state_handler_ = alpha::make_unique<ConnectionEstablishStart>(w_, codec_env_,
-                                                                start_ok_args_);
-}
-
-ConnectionEstablishState::ConnectionEstablishState(CodedWriterBase* w)
-    : w_(w) {}
-
-void ConnectionEstablishState::AddEncodeUnit(EncoderBase* e) {
-  frame_packers_.emplace_back(0, Frame::Type::kMethod, e);
-}
-
-void ConnectionEstablishState::AddDecodeUnit(DecoderBase* d) {
-  decoders_.push_back(d);
-}
-
-bool ConnectionEstablishState::HandleFrame(FramePtr&& frame) {
-  while (!decoders_.empty()) {
-    auto it = decoders_.begin();
-    auto decoder = *it;
-    int rc = decoder->Decode(frame->payload());
-    if (rc == DecodeState::kDone) {
-      decoders_.erase(it);
-      continue;
-    } else if (rc == DecodeState::kNeedsMore) {
-      return false;
-    } else {
-      // TODO: throw a ConnectionException
-      CHECK(false);
-    }
-  }
-  // AddFramePacker(frame_packers_);
-  return true;
-}
-
-bool ConnectionEstablishState::WriteReply() {
-  CHECK(decoders_.empty()) << "Write reply before all decoders are done";
-  while (!frame_packers_.empty()) {
-    auto it = frame_packers_.begin();
-    if (it->WriteTo(w_)) {
-      frame_packers_.erase(it);
-      continue;
-    } else {
-      return false;
-    }
-  }
-  return true;
-}
-
-ConnectionEstablishStart::ConnectionEstablishStart(
-    CodedWriterBase* w, const CodecEnv* codec_env,
-    const MethodStartOkArgs& start_ok_args)
-    : ConnectionEstablishState(w), e_(start_ok_args, codec_env), d_(codec_env) {
-  AddEncodeUnit(&e_);
-  AddDecodeUnit(&d_);
-}
-
-ConnectionEstablishTune::ConnectionEstablishTune(
-    CodedWriterBase* w, const CodecEnv* codec_env,
-    const MethodTuneOkArgs& tune_ok_args, const MethodOpenArgs& open_args)
-    : ConnectionEstablishState(w),
-      e_(tune_ok_args, codec_env),
-      d_(codec_env),
-      open_args_encoder_(open_args, codec_env) {
-  AddEncodeUnit(&e_);
-  AddDecodeUnit(&d_);
-  AddEncodeUnit(&open_args_encoder_);
-}
-
-void ConnectionEstablishTune::PrintServerTune() const {
-  // auto args = d_.Get();
-  auto args = d_.GetArg<MethodTuneArgs>();
-  DLOG_INFO << "Channel-Max: " << args.channel_max
-            << ", Frame-Max: " << args.frame_max
-            << ", Heartbeat-Delay: " << args.heartbeat_delay;
-}
-
-ConnectionEstablishOpenOk::ConnectionEstablishOpenOk(CodedWriterBase* w,
-                                                     const CodecEnv* codec_env)
-    : ConnectionEstablishState(w), d_(codec_env) {
-  AddDecodeUnit(&d_);
-}
-
-FSM::Status ConnectionEstablishFSM::HandleFrame(FramePtr&& frame) {
-  bool done = state_handler_->HandleFrame(std::move(frame));
-  if (done) {
-    done = state_handler_->WriteReply();
-    if (done) {
-      state_handler_ = SwitchState(state_);
-      return state_handler_ ? Status::kWaitMoreFrame
-                            : Status::kConnectionEstablished;
-    } else {
-      return Status::kWaitForWrite;
-    }
+bool ConnectionEstablishState::HandleFrame(FramePtr&& frame,
+                                           SendReplyFunc send_reply_func) {
+  int rc = decoder_->Decode(frame->payload());
+  if (rc == DecodeState::kDone) {
+    std::for_each(encoders_.begin(), encoders_.end(),
+                  [&send_reply_func](std::unique_ptr<EncoderBase>& encoder) {
+      send_reply_func(0, Frame::Type::kMethod, std::move(encoder));
+    });
+    return true;
+  } else if (rc == DecodeState::kNeedsMore) {
+    return false;
   } else {
+    // TODO: throw a ConnectionException
+    CHECK(false) << "DecodeState::kError";
+    return false;
+  }
+}
+
+ConnectionEstablishFSM::ConnectionEstablishFSM(
+    const CodecEnv* codec_env, const PlainAuthorization& auth,
+    const ConnectionParameters& params)
+    : FSM(codec_env),
+      state_(State::kWaitingStart),
+      auth_(auth),
+      params_(params) {
+  MethodStartOkArgs start_ok_args;
+  start_ok_args.mechanism = "PLAIN";
+  start_ok_args.locale = "en_US";
+  start_ok_args.response.push_back('\0');
+  start_ok_args.response.append(auth_.user);
+  start_ok_args.response.push_back('\0');
+  start_ok_args.response.append(auth_.passwd);
+  start_ok_args.client_properties.Insert(
+      "Product", FieldValue(FieldValue::Type::kShortString, "AMQP-cpp"));
+  start_ok_args.client_properties.Insert(
+      "Version", FieldValue(FieldValue::Type::kShortString, "0.01"));
+  state_handler_ = CreateStateHandler();
+  state_handler_->set_decoder<MethodStartArgsDecoder>();
+  state_handler_->add_encoder<MethodStartOkArgsEncoder>(start_ok_args);
+}
+
+bool ConnectionEstablishFSM::done() const { return state_ == State::kDone; }
+
+FSM::Status ConnectionEstablishFSM::HandleFrame(FramePtr&& frame,
+                                                SendReplyFunc send_reply_func) {
+  bool done = state_handler_->HandleFrame(std::move(frame), send_reply_func);
+  if (!done) {
+    DLOG_INFO << "Needs more frame for state handler";
     return Status::kWaitMoreFrame;
   }
-}
-
-bool ConnectionEstablishFSM::FlushReply() {
-  CHECK(state_handler_);
-  return state_handler_->WriteReply();
-}
-
-bool ConnectionEstablishFSM::WriteInitialRequest() {
-  std::string protocol_header = {'A', 'M', 'Q', 'P', 0, 0, 9, 1};
-  return w_->Write(protocol_header.data(), protocol_header.size());
-}
-
-std::unique_ptr<ConnectionEstablishState> ConnectionEstablishFSM::SwitchState(
-    State current_state) {
-  // DLOG_INFO << "SwitchState current = " << static_cast<int>(current_state);
-  switch (current_state) {
-    case State::kWaitingStart:
-      state_ = State::kWaitingTune;
-      tune_ok_args_.channel_max = 0;
-      tune_ok_args_.frame_max = 1 << 17;
-      tune_ok_args_.heartbeat_delay = 600;
-      open_args_.vhost_path = "/";
-      open_args_.capabilities = false;
-      open_args_.insist = true;
-      return alpha::make_unique<ConnectionEstablishTune>(
-          w_, codec_env_, tune_ok_args_, open_args_);
-    case State::kWaitingTune:
-      dynamic_cast<ConnectionEstablishTune*>(state_handler_.get())
-          ->PrintServerTune();
-      state_ = State::kWaitingOpenOk;
-      return alpha::make_unique<ConnectionEstablishOpenOk>(w_, codec_env_);
-    case State::kWaitingOpenOk:
-      return nullptr;
-    default:
-      CHECK(false) << "Invalid current_state = "
-                   << static_cast<int>(current_state);
-      break;
+  state_handler_ = SwitchState();
+  if (state_handler_ == nullptr) {
+    return Status::kDone;
   }
-  return nullptr;
+  return Status::kWaitMoreFrame;
+}
+
+std::unique_ptr<ConnectionEstablishState>
+ConnectionEstablishFSM::CreateStateHandler() {
+  auto state_handler = alpha::make_unique<ConnectionEstablishState>(codec_env_);
+  return std::move(state_handler);
+}
+
+std::unique_ptr<ConnectionEstablishState>
+ConnectionEstablishFSM::SwitchState() {
+  DLOG_INFO << "SwitchState, current state: " << static_cast<int>(state_);
+  std::unique_ptr<ConnectionEstablishState> state_handler;
+  if (state_ == State::kWaitingStart) {
+    MethodTuneOkArgs tune_ok_args;
+    tune_ok_args.channel_max = params_.channel_max;
+    tune_ok_args.frame_max = params_.frame_max;
+    tune_ok_args.heartbeat_delay = params_.heartbeat_delay;
+
+    MethodOpenArgs open_args;
+    open_args.vhost_path = params_.vhost;
+    open_args.capabilities = false;
+    open_args.insist = true;
+
+    state_handler = CreateStateHandler();
+    state_handler->set_decoder<MethodTuneArgsDecoder>();
+    state_handler->add_encoder<MethodTuneOkArgsEncoder>(tune_ok_args);
+    state_handler->add_encoder<MethodOpenArgsEncoder>(open_args);
+
+    state_ = State::kWaitingTune;
+  } else if (state_ == State::kWaitingTune) {
+    state_handler = CreateStateHandler();
+    state_handler->set_decoder<MethodOpenOkArgsDecoder>();
+    state_ = State::kWaitingOpenOk;
+  } else {
+    CHECK(state_ == State::kWaitingOpenOk) << "Invalid state: " << state_;
+    state_ = State::kDone;
+    ;
+  }
+  return std::move(state_handler);
 }
 }

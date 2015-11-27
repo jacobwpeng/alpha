@@ -25,7 +25,8 @@ class CodedWriterBase;
 class EncoderBase;
 class FramePacker {
  public:
-  FramePacker(ChannelID channel_id, Frame::Type type, EncoderBase* e);
+  FramePacker(ChannelID channel_id, Frame::Type type,
+              std::unique_ptr<EncoderBase> e);
   bool WriteTo(CodedWriterBase* w);
 
  private:
@@ -34,7 +35,7 @@ class FramePacker {
   bool frame_end_done_;
   ChannelID channel_id_;
   Frame::Type frame_type_;
-  EncoderBase* e_;
+  std::unique_ptr<EncoderBase> e_;
 };
 
 class FrameReader {

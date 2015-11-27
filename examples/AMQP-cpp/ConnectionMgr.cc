@@ -14,42 +14,35 @@
 
 #include <alpha/logger.h>
 #include <alpha/format.h>
+#include "Frame.h"
 #include "ConnectionEstablishFSM.h"
 #include "ConnectionCloseFSM.h"
 #include "Connection.h"
 
 namespace amqp {
 
-ConnectionParameters::ConnectionParameters()
-    : host("127.0.0.1"),
-      port(5672),
-      vhost("/"),
-      channel_max(0),          // Unlimited channel num (up to 65535)
-      frame_max(1 << 17),      // 128K same as default RabbitMQ configure
-      heartbeat_delay(600),    // 600s same as default RabbitMQ configure
-      connection_attempts(3),  // Try to connect 3 times at most
-      socket_timeout(3000)     // 3000ms before timeout
-{}
-
+using namespace std::placeholders;
 ConnectionMgr::ConnectionContext::ConnectionContext(
     alpha::TcpConnectionPtr& conn)
     : w(conn),
       codec_env(GetCodecEnv("")),
-      fsm(alpha::make_unique<ConnectionEstablishFSM>(&w, codec_env)) {}
+      fsm(alpha::make_unique<ConnectionEstablishFSM>(
+          codec_env, PlainAuthorization({"guest", "guest"}),
+          ConnectionParameters())) {}
 
-void ConnectionMgr::ConnectionContext::FlushReply() {
+bool ConnectionMgr::ConnectionContext::FlushReply() {
   while (!frame_packers_.empty()) {
     auto it = frame_packers_.begin();
     bool done = it->WriteTo(&w);
     if (!done) {
-      break;
+      return false;
     }
     frame_packers_.erase(it);
   }
+  return true;
 }
 
 ConnectionMgr::ConnectionMgr() : tcp_client_(&loop_) {
-  using namespace std::placeholders;
   tcp_client_.SetOnConnected(
       std::bind(&ConnectionMgr::OnTcpConnected, this, _1));
   tcp_client_.SetOnConnectError(
@@ -69,25 +62,26 @@ void ConnectionMgr::CloseConnection(Connection* conn) {
     method_close_args.reply_code = 0;
     method_close_args.reply_text = "Normal Shutdown";
     method_close_args.class_id = method_close_args.method_id = 0;
-    ctx->fsm = alpha::make_unique<ConnectionCloseFSM>(&ctx->w, ctx->codec_env,
-                                                      method_close_args);
-    ctx->fsm->WriteInitialRequest();
+    ctx->fsm = ConnectionCloseFSM::ActiveClose(
+        ctx->codec_env, ctx->send_reply_func, method_close_args);
+    ctx->FlushReply();
   }
 }
 
 void ConnectionMgr::OpenNewChannel(Connection* conn, ChannelID channel_id) {
-  // auto tcp_connection = conn->tcp_connection();
-  // if (tcp_connection) {
-  //  auto p = tcp_connection->GetContext<ConnectionContext*>();
-  //  CHECK(p && *p);
-  //  auto ctx = *p;
-  //  ctx->frame_packers_.emplace_back(channel_id, Frame::Type::kMethod,
-  //      alpha::make_unique<MethodChannelOpenArgsEncoder>(
-  //        MethodChannelOpenArgs(), ctx->codec_env));
-  //}
+  auto tcp_connection = conn->tcp_connection();
+  if (tcp_connection) {
+    auto p = tcp_connection->GetContext<ConnectionContext*>();
+    CHECK(p && *p);
+    auto ctx = *p;
+    ctx->send_reply_func(channel_id, Frame::Type::kMethod,
+                         alpha::make_unique<MethodChannelOpenArgsEncoder>(
+                             MethodChannelOpenArgs(), ctx->codec_env));
+  }
 }
 
 void ConnectionMgr::OnConnectionEstablished(ConnectionPtr& conn) {
+  DLOG_INFO << "AMQP Connection established";
   if (connected_callback_) {
     connected_callback_(conn);
   } else {
@@ -105,13 +99,15 @@ void ConnectionMgr::OnTcpConnected(alpha::TcpConnectionPtr conn) {
   auto p = connection_context_map_.insert(
       std::make_pair(conn.get(), alpha::make_unique<ConnectionContext>(conn)));
   CHECK(p.second) << "ConnectionContext already exists when TcpConnected";
-  if (!p.first->second->fsm->WriteInitialRequest()) {
-    CHECK(false) << "Write to newly created connection failed";
-  }
+  const std::string amqp_protocol_header = {'A', 'M', 'Q', 'P', 0, 0, 9, 1};
+  conn->Write(amqp_protocol_header);
   conn->SetContext(p.first->second.get());
-  using namespace std::placeholders;
   conn->SetOnRead(std::bind(&ConnectionMgr::OnTcpMessage, this, _1, _2));
-  conn->SetOnWriteDone(std::bind(&ConnectionMgr::OnTcpWriteDone, this, _1));
+  auto ctx = p.first->second.get();
+  ctx->send_reply_func = [&ctx](ChannelID channel, Frame::Type type,
+                                std::unique_ptr<EncoderBase>&& encoder) {
+    ctx->frame_packers_.emplace_back(channel, type, std::move(encoder));
+  };
 }
 
 void ConnectionMgr::OnTcpMessage(alpha::TcpConnectionPtr conn,
@@ -123,44 +119,34 @@ void ConnectionMgr::OnTcpMessage(alpha::TcpConnectionPtr conn,
   auto sz = data.size();
   auto frame = ctx->frame_reader.Read(data);
   buffer->ConsumeBytes(sz - data.size());
-  if (frame) {
-    auto status = ctx->fsm->HandleFrame(std::move(frame));
-    ctx->FlushReply();
-    if (status == FSM::Status::kDone) {
+  if (frame == nullptr) return;
+  DLOG_INFO << "New frame, type: " << static_cast<int>(frame->type())
+            << ", payload_size: " << frame->payload_size();
+  ctx->fsm->HandleFrame(std::move(frame), ctx->send_reply_func);
+  bool flushed = ctx->FlushReply();
+  if (!flushed) {
+    conn->SetOnWriteDone(std::bind(&ConnectionMgr::OnTcpWriteDone, this, _1));
+  }
+  if (flushed && ctx->fsm->done()) {
+    auto p = ctx->fsm.get();
+    if (dynamic_cast<ConnectionEstablishFSM*>(p)) {
+      ctx->conn = std::make_shared<Connection>(this, conn);
+      OnConnectionEstablished(ctx->conn);
+    } else if (dynamic_cast<ConnectionCloseFSM*>(p)) {
+      DLOG_INFO << "AMQP Connection closed";
+      conn->Close();
     }
   }
-#if 0
-  if (frame) {
-    auto status = ctx->fsm->HandleFrame(std::move(frame));
-    switch (status) {
-      case FSM::Status::kDone:
-        if (ctx->conn == nullptr) {
-          ctx->conn = std::make_shared<Connection>(this, conn);
-          OnConnectionEstablished(ctx->conn);
-          // ctx->ctx = ConnectionWorkingFSM(ctx->conn);
-        } else {
-          // Close Connection FSM
-          DLOG_INFO << "Connection closed";
-          conn->Close();
-        }
-        break;
-      case FSM::Status::kWaitForWrite:
-        using namespace std::placeholders;
-        conn->SetOnWriteDone(
-            std::bind(&ConnectionMgr::OnTcpWriteDone, this, _1));
-        break;
-      case FSM::Status::kWaitMoreFrame:
-        break;
-    }
-  }
-#endif
 }
 
 void ConnectionMgr::OnTcpWriteDone(alpha::TcpConnectionPtr conn) {
   auto p = conn->GetContext<ConnectionContext*>();
   CHECK(p && *p);
   auto ctx = *p;
-  ctx->FlushReply();
+  bool flushed = ctx->FlushReply();
+  if (flushed) {
+    conn->SetOnWriteDone(nullptr);
+  }
 }
 
 void ConnectionMgr::OnTcpClosed(alpha::TcpConnectionPtr conn) {

@@ -18,54 +18,27 @@
 
 namespace amqp {
 
-class ConnectionCloseState {
- public:
-  virtual ~ConnectionCloseState() = default;
-  virtual bool HandleFrame(FramePtr&& frame) = 0;
-  virtual bool WriteReply() = 0;
-};
-
-// Accept Both Close/Close-OK methods
-class ConnectionCloseFirstStage final : public ConnectionCloseState {
- public:
-  ConnectionCloseFirstStage(CodedWriterBase* w, const CodecEnv* codec_env);
-  virtual bool HandleFrame(FramePtr&& frame) override;
-  virtual bool WriteReply() override;
-  bool should_goto_second_stage() const { return should_goto_second_stage_; }
-
- private:
-  bool should_goto_second_stage_;
-  CodedWriterBase* w_;
-  MethodCloseOkArgsEncoder e_;
-  GenericMethodArgsDecoder generic_decoder_;
-};
-
-// Accept Close-OK only
-class ConnectionCloseSecondStage final : public ConnectionCloseState {
- public:
-  ConnectionCloseSecondStage(const CodecEnv* codec_env);
-  virtual bool HandleFrame(FramePtr&& frame) override;
-  virtual bool WriteReply() override;
-
- private:
-  MethodCloseOkArgsDecoder d_;
-};
-
 class ConnectionCloseFSM final : public FSM {
  public:
-  ConnectionCloseFSM(CodedWriterBase* w, const CodecEnv* env,
-                     const MethodCloseArgs& method_close_args);
-  virtual Status HandleFrame(FramePtr&& frame) override;
-  virtual bool FlushReply() override;
-  virtual bool WriteInitialRequest() override;
+  static std::unique_ptr<ConnectionCloseFSM> ActiveClose(
+      const CodecEnv* codec_env, SendReplyFunc send_reply_func,
+      const MethodCloseArgs& close_args);
+  static std::unique_ptr<ConnectionCloseFSM> PassiveClose(
+      const CodecEnv* codec_env, SendReplyFunc send_reply_func);
+
+  virtual bool done() const override;
+  virtual Status HandleFrame(FramePtr&& frame,
+                             SendReplyFunc send_reply_func) override;
 
  private:
-  enum class State : uint8_t { kFirstStage = 1, kSecondStage = 2 };
+  enum class State : uint8_t {
+    kDone = 0,
+    kWaitingCloseOk = 1,
+  };
+  ConnectionCloseFSM(const CodecEnv* codec_env);
+
   State state_;
-  std::unique_ptr<ConnectionCloseState> state_handler_;
   GenericMethodArgsDecoder generic_decoder_;
-  MethodCloseArgsEncoder method_close_args_encoder_;
-  FramePacker frame_packer_;
 };
 }
 

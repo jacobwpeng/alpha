@@ -22,13 +22,13 @@ namespace amqp {
 static const size_t kFrameHeaderSize = 7;
 
 FramePacker::FramePacker(ChannelID channel_id, Frame::Type frame_type,
-                         EncoderBase* e)
+                         std::unique_ptr<EncoderBase> e)
     : frame_header_done_(false),
       frame_payload_done_(false),
       frame_end_done_(false),
       channel_id_(channel_id),
       frame_type_(frame_type),
-      e_(e) {}
+      e_(std::move(e)) {}
 
 bool FramePacker::WriteTo(CodedWriterBase* w) {
   CodedOutputStream stream(w);

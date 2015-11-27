@@ -11,6 +11,7 @@ list(APPEND AMQP_CPP_SRCS
   "Frame.cc"
   "FrameCodec.cc"
   "MethodPayloadCodec.cc"
+  "ConnectionParameters.cc"
   "FSM.cc"
   "ConnectionEstablishFSM.cc"
   "ConnectionCloseFSM.cc"

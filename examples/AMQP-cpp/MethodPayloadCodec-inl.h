@@ -183,7 +183,7 @@ ArgType GenericMethodArgsDecoder::GetArg() const {
     }                                                                          \
                                                                                \
    private:                                                                    \
-    const ArgType& arg_;                                                       \
+    ArgType arg_;                                                              \
   };
 
 #define DefineArgsCodec(ArgType, Seq) \

@@ -17,66 +17,39 @@
 #include <vector>
 #include "FSM.h"
 #include "MethodPayloadCodec.h"
+#include "ConnectionParameters.h"
+#include "BasicAuthorization.h"
 
 namespace amqp {
 
+class EncoderBase;
+class DecoderBase;
 class ConnectionEstablishState;
 using ConnectionEstablishStatePtr = std::unique_ptr<ConnectionEstablishState>;
 
-class ConnectionEstablishState {
+class ConnectionEstablishState final {
  public:
-  virtual ~ConnectionEstablishState() = default;
-  bool HandleFrame(FramePtr&& frame);
-  bool WriteReply();
+  ConnectionEstablishState(const CodecEnv* codec_env);
+  bool HandleFrame(FramePtr&& frame, SendReplyFunc send_reply_func);
+
+  template <typename DecoderType>
+  void set_decoder();
+  template <typename EncoderType, typename Args>
+  void add_encoder(Args&& args);
 
  protected:
-  ConnectionEstablishState(CodedWriterBase* w);
-  void AddEncodeUnit(EncoderBase* e);
-  void AddDecodeUnit(DecoderBase* e);
-
-  CodedWriterBase* w_;
-  std::vector<FramePacker> frame_packers_;
-  std::vector<DecoderBase*> decoders_;
-};
-
-class ConnectionEstablishStart : public ConnectionEstablishState {
- public:
-  ConnectionEstablishStart(CodedWriterBase* w, const CodecEnv* codec_env,
-                           const MethodStartOkArgs& start_ok_args);
-
- private:
-  MethodStartOkArgsEncoder e_;
-  MethodStartArgsDecoder d_;
-};
-
-class ConnectionEstablishTune : public ConnectionEstablishState {
- public:
-  ConnectionEstablishTune(CodedWriterBase* w, const CodecEnv* codec_env,
-                          const MethodTuneOkArgs& tune_ok_args,
-                          const MethodOpenArgs& open_args);
-
-  void PrintServerTune() const;
-
- private:
-  MethodTuneOkArgsEncoder e_;
-  MethodTuneArgsDecoder d_;
-  MethodOpenArgsEncoder open_args_encoder_;
-};
-
-class ConnectionEstablishOpenOk : public ConnectionEstablishState {
- public:
-  ConnectionEstablishOpenOk(CodedWriterBase* w, const CodecEnv* codec_env);
-
- private:
-  MethodOpenOkArgsDecoder d_;
+  const CodecEnv* codec_env_;
+  std::unique_ptr<DecoderBase> decoder_;
+  std::vector<std::unique_ptr<EncoderBase>> encoders_;
 };
 
 class ConnectionEstablishFSM : public FSM {
  public:
-  ConnectionEstablishFSM(CodedWriterBase* w, const CodecEnv* env);
-  virtual Status HandleFrame(FramePtr&& frame) override;
-  virtual bool FlushReply() override;
-  virtual bool WriteInitialRequest() override;
+  ConnectionEstablishFSM(const CodecEnv* env, const PlainAuthorization& auth,
+                         const ConnectionParameters& params);
+  virtual bool done() const override;
+  virtual Status HandleFrame(FramePtr&& frame,
+                             SendReplyFunc send_reply_func) override;
 
  private:
   enum class State : uint8_t {
@@ -85,16 +58,25 @@ class ConnectionEstablishFSM : public FSM {
     kWaitingTune = 2,
     kWaitingOpenOk = 3
   };
+  std::unique_ptr<ConnectionEstablishState> CreateStateHandler();
+  std::unique_ptr<ConnectionEstablishState> SwitchState();
 
-  std::unique_ptr<ConnectionEstablishState> SwitchState(State current_state);
-  std::string user_;
-  std::string passwd_;
   State state_;
   std::unique_ptr<ConnectionEstablishState> state_handler_;
-  MethodStartOkArgs start_ok_args_;
-  MethodTuneOkArgs tune_ok_args_;
-  MethodOpenArgs open_args_;
+  PlainAuthorization auth_;
+  ConnectionParameters params_;
 };
+
+template <typename DecoderType>
+void ConnectionEstablishState::set_decoder() {
+  decoder_ = alpha::make_unique<DecoderType>(codec_env_);
+}
+
+template <typename EncoderType, typename Args>
+void ConnectionEstablishState::add_encoder(Args&& args) {
+  encoders_.emplace_back(
+      alpha::make_unique<EncoderType>(std::forward<Args&&>(args), codec_env_));
+}
 }
 
 #endif /* ----- #ifndef __CONNECTIONESTABLISHFSM_H__  ----- */

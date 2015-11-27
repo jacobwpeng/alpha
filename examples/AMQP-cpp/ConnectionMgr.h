@@ -23,22 +23,11 @@
 #include "CodecEnv.h"
 #include "FrameCodec.h"
 #include "Connection.h"
+#include "ConnectionParameters.h"
+#include "BasicAuthorization.h"
+#include "FSM.h"
 
 namespace amqp {
-class FSM;
-
-struct ConnectionParameters {
-  ConnectionParameters();
-
-  std::string host;
-  int port;
-  std::string vhost;
-  uint16_t channel_max;
-  uint32_t frame_max;
-  uint16_t heartbeat_delay;
-  uint16_t connection_attempts;
-  uint16_t socket_timeout;
-};
 
 class ConnectionMgr {
  public:
@@ -65,8 +54,9 @@ class ConnectionMgr {
     FrameReader frame_reader;
     ConnectionPtr conn;
     std::vector<FramePacker> frame_packers_;
+    SendReplyFunc send_reply_func;
 
-    void FlushReply();
+    bool FlushReply();
   };
   void OnConnectionEstablished(ConnectionPtr& conn);
   void OnTcpConnected(alpha::TcpConnectionPtr conn);

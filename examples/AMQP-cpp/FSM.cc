@@ -13,7 +13,7 @@
 #include "FSM.h"
 
 namespace amqp {
-FSM::FSM(CodedWriterBase* w, const CodecEnv* env) : w_(w), codec_env_(env) {}
+FSM::FSM(const CodecEnv* env) : codec_env_(env) {}
 
 void FSM::set_codec_env(const CodecEnv* env) { codec_env_ = env; }
 }

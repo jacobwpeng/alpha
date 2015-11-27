@@ -13,32 +13,31 @@
 #ifndef __FSM_H__
 #define __FSM_H__
 
+#include <functional>
 #include "Frame.h"
 #include "FrameCodec.h"
 
 namespace amqp {
 
+class EncoderBase;
 class CodedWriterBase;
 class CodecEnv;
 
+using SendReplyFunc =
+    std::function<void(ChannelID channel_id, Frame::Type type,
+                       std::unique_ptr<EncoderBase>&& encoder)>;
 class FSM {
  public:
-  enum class Status : uint8_t {
-    kDone = 0,
-    kConnectionEstablished = 0,
-    kWaitForWrite = 1,
-    kWaitMoreFrame = 2
-  };
-
-  FSM(CodedWriterBase* w, const CodecEnv* env);
+  enum class Status : uint8_t { kDone = 0, kWaitMoreFrame = 1 };
+  FSM(const CodecEnv* env);
   virtual ~FSM() = default;
   void set_codec_env(const CodecEnv* env);
-  virtual Status HandleFrame(FramePtr&& frame) = 0;
-  virtual bool FlushReply() = 0;
-  virtual bool WriteInitialRequest() = 0;
+
+  virtual bool done() const = 0;
+  virtual Status HandleFrame(FramePtr&& frame,
+                             SendReplyFunc send_reply_func) = 0;
 
  protected:
-  CodedWriterBase* w_;
   const CodecEnv* codec_env_;
 };
 }
