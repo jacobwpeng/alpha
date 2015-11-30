@@ -14,13 +14,14 @@
 #define __COROUTINE_H__
 
 #include <ucontext.h>
+#include <cstdint>
 #include <vector>
 
 namespace alpha {
 class Coroutine {
  public:
-  enum class Status { kSuspended = 1, kRunning = 2, kDead = 3 };
-  static const size_t kMaxStackSize = 1 << 23;
+  enum class Status { kReady = 0, kSuspended = 1, kRunning = 2, kDead = 3 };
+  static const size_t kMaxStackSize = 1 << 20;
 
   Coroutine();
   virtual ~Coroutine();
@@ -34,10 +35,12 @@ class Coroutine {
   bool IsSuspended() const;
 
  private:
-  static void InternalRoutine(Coroutine* co);
+  static void InternalRoutine(uint32_t hi, uint32_t lo);
   void Done();
 
  private:
+  void SaveStack();
+  void RestoreStack();
   Status status_;
   ucontext_t yield_recovery_point_;
   ucontext_t execution_point_;
