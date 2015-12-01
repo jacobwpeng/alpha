@@ -58,7 +58,7 @@ void TcpConnection::Close() {
   state_ = State::kDisconnected;
   DLOG_INFO << "TcpConnection closed, fd = " << fd_;
   if (close_callback_) {
-    //给个机会把connection里面缓存的写数据写出去
+    // 给个机会把connection里面缓存的写数据写出去
     loop_->QueueInLoop(std::bind(close_callback_, fd_));
   }
 }
@@ -70,7 +70,7 @@ void TcpConnection::CloseByPeer() {
   state_ = State::kDisconnected;
   DLOG_INFO << "TcpConnection closed by peer, fd = " << fd_;
   if (close_callback_) {
-    //给个机会把connection里面缓存的写数据写出去
+    // 正在Channel::HandleEvent, 所以不能直接调用
     loop_->QueueInLoop(std::bind(close_callback_, fd_));
   }
 }

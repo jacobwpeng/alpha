@@ -55,8 +55,8 @@ void TcpClient::OnConnected(int fd) {
   TcpConnectionPtr conn = std::make_shared<TcpConnection>(loop_, fd, state);
 
   using namespace std::placeholders;
-  connected_callback_(conn);
   conn->SetOnClose(std::bind(&TcpClient::OnClose, this, _1));
+  connected_callback_(conn);
   connections_.emplace(fd, conn);
 }
 
