@@ -98,4 +98,8 @@ void AsyncTcpConnection::Close() {
   //  co_->Yield();
   //}
 }
+
+bool AsyncTcpConnection::HasCachedData() const {
+  return conn_->ReadBuffer()->Read().size() != 0;
+}
 }

@@ -35,6 +35,7 @@ class AsyncTcpConnection {
   std::string ReadCached(size_t bytes = 0);
   void Close();
   // Coroutine* co() { return co_; }
+  bool HasCachedData() const;
   Status status() const { return status_; };
   bool closed() const { return status_ == Status::kClosed; };
 
