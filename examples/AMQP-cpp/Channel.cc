@@ -11,14 +11,32 @@
  */
 
 #include "Channel.h"
+#include <alpha/compiler.h>
+#include <alpha/logger.h>
 
 namespace amqp {
-Channel::Channel(ChannelID channel_id, ConnectionPtr&& conn)
-    : channel_id_(channel_id), conn_(conn) {}
+Channel::Channel(ChannelID channel_id, const std::shared_ptr<Connection>& conn)
+    : id_(channel_id), conn_(conn) {}
 
-void Channel::Close() {
-  if (auto conn = conn_.lock()) {
-    conn->CloseChannel(channel_id_);
+void Channel::AddCachedFrame(FramePtr&& frame) {
+  if (unlikely(cached_frames_.size() == kMaxCachedFrameNum)) {
+    CHECK(false) << "Too many cached frames, channel id: " << id_;
   }
+  cached_frames_.emplace(std::move(frame));
 }
+
+FramePtr Channel::PopCachedFrame() {
+  if (cached_frames_.empty()) {
+    return nullptr;
+  }
+  auto frame = std::move(cached_frames_.front());
+  cached_frames_.pop();
+  return std::move(frame);
+}
+
+// void Channel::Close() {
+//  if (auto conn = conn_.lock()) {
+//    conn->CloseChannel(channel_id_);
+//  }
+//}
 }

@@ -14,23 +14,41 @@
 #define __CONNECTION_H__
 
 #include <map>
-#include <alpha/tcp_connection.h>
+#include <alpha/AsyncTcpConnection.h>
 #include "Frame.h"
+#include "FrameCodec.h"
 #include "MethodArgTypes.h"
 
 namespace amqp {
+class CodecEnv;
 class Channel;
 class ConnectionMgr;
 class Connection final : public std::enable_shared_from_this<Connection> {
  public:
-  Connection(ConnectionMgr* owner, alpha::TcpConnectionPtr& conn);
-  ~Connection();
-  void Close();
-
-  bool HandleFrame(FramePtr&& frame);
+  Connection(const CodecEnv* codec_env, alpha::AsyncTcpConnection* conn);
+  //~Connection();
+  // void Close();
 
   // Channel operation
-  void NewChannel();
+  std::shared_ptr<Channel> NewChannel();
+  void CloseChannel(const std::shared_ptr<Channel>& conn);
+
+ private:
+  // Handle all frames until frame.channel_id() == stop_channel_id
+  // if such frame exists, return that frame
+  // else return nullptr
+  FramePtr HandleIncomingFrames(ChannelID stop_channel_id,
+                                bool cached_only = true);
+  void HandleConnectionFrame(FramePtr&& frame);
+  std::shared_ptr<Channel> CreateChannel(ChannelID channel_id);
+  std::shared_ptr<Channel> FindChannel(ChannelID channel_id) const;
+  uint32_t next_channel_id_;
+  const CodecEnv* codec_env_;
+  alpha::AsyncTcpConnection* conn_;
+  FrameWriter w_;
+  FrameReader r_;
+  std::map<ChannelID, std::shared_ptr<Channel>> channels_;
+#if 0
   void CloseChannel(ChannelID channel_id);
   alpha::TcpConnectionPtr tcp_connection() const;
 
@@ -41,6 +59,7 @@ class Connection final : public std::enable_shared_from_this<Connection> {
   ConnectionMgr* owner_;
   alpha::TcpConnectionWeakPtr conn_;
   ChannelMap channels_;
+#endif
 };
 
 using ConnectionPtr = std::shared_ptr<Connection>;

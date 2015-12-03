@@ -87,6 +87,7 @@ struct MethodCloseOkArgs {
 struct MethodChannelOpenArgs {
   static const ClassID kClassID = kClassChannelID;
   static const MethodID kMethodID = 10;
+  bool reserved;
 };
 
 struct MethodChannelOpenOkArgs {

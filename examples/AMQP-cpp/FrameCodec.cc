@@ -12,6 +12,7 @@
 
 #include "FrameCodec.h"
 #include <alpha/logger.h>
+#include <alpha/AsyncTcpConnection.h>
 #include "Frame.h"
 #include "CodedInputStream.h"
 #include "CodedWriter.h"
@@ -21,6 +22,7 @@
 namespace amqp {
 static const size_t kFrameHeaderSize = 7;
 
+#if 0
 FramePacker::FramePacker(ChannelID channel_id, Frame::Type frame_type,
                          std::unique_ptr<EncoderBase> e)
     : frame_header_done_(false),
@@ -47,59 +49,39 @@ bool FramePacker::WriteTo(CodedWriterBase* w) {
   }
   return true;
 }
+#endif
+FrameWriter::FrameWriter(alpha::AsyncTcpConnection* conn) : conn_(conn) {}
 
-FramePtr FrameReader::Read(alpha::Slice& data) {
-  if (frame_ == nullptr) {
-    if (data.size() < kFrameHeaderSize) {
-      return nullptr;  // needs more data to proceed
-    } else {
-      CodedInputStream stream(data);
-      uint8_t frame_type;
-      ChannelID frame_channel;
-      uint32_t frame_payload_size;
-      stream.ReadUInt8(&frame_type);
-      stream.ReadBigEndianUInt16(&frame_channel);
-      stream.ReadBigEndianUInt32(&frame_payload_size);
-      // TODO: Throw a ConnectionException
-      CHECK(Frame::ValidType(frame_type))
-          << "Invalid frame type: " << frame_type;
-      ;
-      frame_.reset(new Frame(static_cast<Frame::Type>(frame_type),
-                             frame_channel, frame_payload_size));
-      data.Advance(stream.consumed_bytes());
-    }
-  }
-  CHECK(frame_);
-  DLOG_INFO << "Expected frame size = " << frame_->expected_payload_size()
-            << ", current frame size = " << frame_->payload_size()
-            << ", data.size() = " << data.size();
-  size_t sz = 0;
-  if (frame_->payload_all_received()) {
-    // Waiting for frame end
-    sz = std::min<size_t>(1, data.size());
-  } else {
-    sz = std::min(frame_->expected_payload_size(), data.size());
-  }
-  frame_->AddPayload(data.subslice(0, sz));
-  data.Advance(sz);
-  if (frame_->payload_all_received()) {
-    // All payloads arrived, check frame end
-    static const char kFrameEnd = 0xCE;
-    if (!data.empty() && *data.data() == kFrameEnd) {
-      // Valid frame, return it
-      data.Advance(1);
-      return std::move(frame_);
-    } else if (!data.empty()) {
-      // Invalid frame end, log first
-      LOG_WARNING << "Invalid frame end: " << static_cast<int>(*data.data());
-      // TODO: Throw a ConnectionException
-      CHECK(false);
-    } else {
-      // Waiting for frame end
-    }
-  }
-  return nullptr;
+void FrameWriter::WriteMethod(ChannelID channel_id, EncoderBase* e) {
+  AsyncTcpConnectionWriter w(conn_);
+  CodedOutputStream stream(&w);
+  stream.WriteUInt8(Frame::Type::kMethod);
+  stream.WriteBigEndianUInt16(channel_id);
+  stream.WriteBigEndianUInt32(e->ByteSize());
+  e->WriteTo(&w);
+  stream.WriteUInt8(kFrameEnd);
 }
 
-void FrameReader::Reset() { frame_.reset(); }
+FrameReader::FrameReader(alpha::AsyncTcpConnection* conn) : conn_(conn) {}
+
+FramePtr FrameReader::Read() {
+  auto frame_header = conn_->Read(7);
+  CodedInputStream stream(frame_header);
+  uint8_t frame_type;
+  ChannelID frame_channel;
+  uint32_t payload_size;
+  stream.ReadUInt8(&frame_type);
+  stream.ReadBigEndianUInt16(&frame_channel);
+  stream.ReadBigEndianUInt32(&payload_size);
+  CHECK(Frame::ValidType(frame_type))
+      << "Invalid frame type: " << static_cast<int>(frame_type);
+  auto payload = conn_->Read(payload_size);
+  CodedInputStream frame_end_stream(conn_->Read(1));
+  uint8_t frame_end;
+  frame_end_stream.ReadUInt8(&frame_end);
+  CHECK(frame_end == kFrameEnd)
+      << "Invalid frame end: " << static_cast<int>(frame_end);
+  return alpha::make_unique<Frame>(static_cast<Frame::Type>(frame_type),
+                                   frame_channel, std::move(payload));
+}
 }

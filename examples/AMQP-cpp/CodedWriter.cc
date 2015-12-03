@@ -12,29 +12,20 @@
 
 #include "CodedWriter.h"
 #include <alpha/logger.h>
+#include <alpha/AsyncTcpConnection.h>
 
 namespace amqp {
 
-TcpConnectionWriter::TcpConnectionWriter(alpha::TcpConnectionPtr& conn)
+AsyncTcpConnectionWriter::AsyncTcpConnectionWriter(
+    alpha::AsyncTcpConnection* conn)
     : conn_(conn) {}
 
-bool TcpConnectionWriter::CanWrite(size_t sz) const {
-  if (auto conn = conn_.lock()) {
-    return conn->WriteBuffer()->SpaceBeforeFull() >= sz;
-  }
-  return false;
-}
+bool AsyncTcpConnectionWriter::CanWrite(size_t sz) const { return true; }
 
-size_t TcpConnectionWriter::Write(const void* buf, size_t sz) {
-  if (auto conn = conn_.lock()) {
-    auto writable_size = std::min(sz, conn->WriteBuffer()->SpaceBeforeFull());
-    auto data = reinterpret_cast<const char*>(buf);
-    bool ok = conn->Write(alpha::Slice(data, writable_size));
-    CHECK(ok) << "Write to TcpConnection failed, writable_size: "
-              << writable_size;
-    return writable_size;
-  }
-  return 0;
+size_t AsyncTcpConnectionWriter::Write(const void* buf, size_t sz) {
+  alpha::Slice data(reinterpret_cast<const char*>(buf), sz);
+  conn_->Write(data);
+  return sz;
 }
 
 bool MemoryStringWriter::CanWrite(size_t sz) const { return true; }

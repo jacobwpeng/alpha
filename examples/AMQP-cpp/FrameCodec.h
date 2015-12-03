@@ -19,10 +19,14 @@
 #include "MethodArgTypes.h"
 #include "Frame.h"
 
-namespace amqp {
+namespace alpha {
+class AsyncTcpConnection;
+}
 
+namespace amqp {
 class CodedWriterBase;
 class EncoderBase;
+#if 0
 class FramePacker {
  public:
   FramePacker(ChannelID channel_id, Frame::Type type,
@@ -45,6 +49,25 @@ class FrameReader {
 
  private:
   FramePtr frame_;
+};
+#endif
+
+class FrameWriter {
+ public:
+  explicit FrameWriter(alpha::AsyncTcpConnection* conn);
+  void WriteMethod(ChannelID channel_id, EncoderBase* e);
+
+ private:
+  alpha::AsyncTcpConnection* conn_;
+};
+
+class FrameReader {
+ public:
+  explicit FrameReader(alpha::AsyncTcpConnection* conn);
+  FramePtr Read();
+
+ private:
+  alpha::AsyncTcpConnection* conn_;
 };
 }
 

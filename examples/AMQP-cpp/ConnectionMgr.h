@@ -19,6 +19,7 @@
 #include <alpha/slice.h>
 #include <alpha/tcp_connection.h>
 #include <alpha/tcp_client.h>
+#include <alpha/AsyncTcpClient.h>
 #include "CodedWriter.h"
 #include "CodecEnv.h"
 #include "FrameCodec.h"
@@ -32,13 +33,20 @@ namespace amqp {
 class ConnectionMgr {
  public:
   using ConnectedCallback = std::function<void(ConnectionPtr& conn)>;
-  ConnectionMgr();
-  ~ConnectionMgr();
-  void Run() { loop_.Run(); }
+  ConnectionMgr(alpha::EventLoop* loop);
   void set_connected_callback(const ConnectedCallback& cb) {
     connected_callback_ = cb;
   }
+  void ConnectTo(const ConnectionParameters& params,
+                 const PlainAuthorization& auth);
 
+ private:
+  alpha::EventLoop* loop_;
+  alpha::AsyncTcpClient async_tcp_client_;
+  ConnectedCallback connected_callback_;
+};
+
+#if 0
   template <typename... Args>
   void AddFramePacker(alpha::TcpConnection* conn, Args&&... args);
   void ConnectTo(ConnectionParameters params);
@@ -69,6 +77,7 @@ class ConnectionMgr {
  private:
   alpha::EventLoop loop_;
   alpha::TcpClient tcp_client_;
+  alpha::AsyncTcpClient async_tcp_client_;
   ConnectedCallback connected_callback_;
   std::map<alpha::TcpConnection*, std::unique_ptr<ConnectionContext>>
       connection_context_map_;
@@ -80,6 +89,7 @@ void ConnectionMgr::AddFramePacker(alpha::TcpConnection* conn, Args&&... args) {
   CHECK(it != connection_context_map_.end());
   it->second->frame_packers_.emplace_back(std::forward<Args>(args)...);
 }
+#endif
 }
 
 #endif /* ----- #ifndef __CONNECTIONMGR_H__  ----- */

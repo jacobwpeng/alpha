@@ -16,7 +16,7 @@
 #include <cstdint>
 #include <string>
 #include <memory>
-#include <alpha/tcp_connection.h>
+#include <alpha/AsyncTcpConnection.h>
 
 namespace amqp {
 
@@ -28,15 +28,15 @@ class CodedWriterBase {
   virtual size_t Write(const void*, size_t sz) = 0;
 };
 
-class TcpConnectionWriter final : public CodedWriterBase {
+class AsyncTcpConnectionWriter final : public CodedWriterBase {
  public:
-  explicit TcpConnectionWriter(alpha::TcpConnectionPtr& conn);
+  explicit AsyncTcpConnectionWriter(alpha::AsyncTcpConnection* conn);
 
   virtual bool CanWrite(size_t sz) const override;
   virtual size_t Write(const void* buf, size_t sz) override;
 
  private:
-  alpha::TcpConnectionWeakPtr conn_;
+  alpha::AsyncTcpConnection* conn_;
 };
 
 class MemoryStringWriter final : public CodedWriterBase {

@@ -183,7 +183,7 @@ ArgType GenericMethodArgsDecoder::GetArg() const {
     }                                                                          \
                                                                                \
    private:                                                                    \
-    ArgType arg_;                                                              \
+    const ArgType& arg_;                                                       \
   };
 
 #define DefineArgsCodec(ArgType, Seq) \
@@ -200,7 +200,7 @@ DefineArgsCodec(MethodOpenArgs, (vhost_path)(capabilities)(insist));
 DefineArgsCodec(MethodOpenOkArgs, BOOST_PP_SEQ_NIL);
 DefineArgsCodec(MethodCloseArgs, (reply_code)(reply_text)(class_id)(method_id));
 DefineArgsCodec(MethodCloseOkArgs, BOOST_PP_SEQ_NIL);
-DefineArgsCodec(MethodChannelOpenArgs, BOOST_PP_SEQ_NIL);
+DefineArgsCodec(MethodChannelOpenArgs, (reserved));
 DefineArgsCodec(MethodChannelOpenOkArgs, BOOST_PP_SEQ_NIL);
 DefineArgsCodec(MethodChannelCloseArgs,
                 (reply_code)(reply_text)(class_id)(method_id));

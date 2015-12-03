@@ -21,16 +21,10 @@ EncoderBase::EncoderBase(ClassID class_id, MethodID method_id,
   AddEncodeUnit(method_id);
 }
 
-bool EncoderBase::Encode(CodedWriterBase* w) {
-  while (!encode_units_.empty()) {
-    auto cur = encode_units_.begin();
-    bool done = (*cur)->Write(w);
-    if (!done) {
-      break;
-    }
-    encode_units_.erase(cur);
+void EncoderBase::WriteTo(CodedWriterBase* w) {
+  for (auto& unit : encode_units_) {
+    unit->Write(w);
   }
-  return encode_units_.empty();
 }
 
 size_t EncoderBase::ByteSize() const {
@@ -48,23 +42,20 @@ DecoderBase::DecoderBase(const CodecEnv* env)
   AddDecodeUnit(&class_id_, &method_id_);
 }
 
-int DecoderBase::Decode(alpha::Slice data) {
+void DecoderBase::Decode(FramePtr&& frame) {
   if (!inited_) {
     Init();
     inited_ = true;
   }
 
+  alpha::Slice data(frame->payload());
   while (!decode_units_.empty()) {
     auto cur = decode_units_.begin();
     auto rc = (*cur)->ProcessMore(data);
-    // BUG: data may be dropped silently
-    if (rc != kDone) {
-      CHECK(data.empty()) << "Data dropped silently, rc: " << rc;
-      return rc;
-    }
+    // Assume all method args arrived in one frame
+    CHECK(rc == kDone) << "Method frame should not be seperated";
     decode_units_.erase(cur);
   }
-  return kDone;
 }
 
 void DecoderBase::AddDecodeUnit() {}
@@ -78,7 +69,7 @@ const DecoderBase* GenericMethodArgsDecoder::accurate_decoder() const {
   return accurate_decoder_.get();
 }
 
-int GenericMethodArgsDecoder::Decode(FramePtr&& frame) {
+void GenericMethodArgsDecoder::Decode(FramePtr&& frame) {
   CHECK(frame->type() == Frame::Type::kMethod)
       << "Invalid frame type: " << frame->type();
   alpha::Slice payload(frame->payload());
@@ -98,7 +89,7 @@ int GenericMethodArgsDecoder::Decode(FramePtr&& frame) {
     accurate_decoder_ = CreateAccurateDecoder(class_id, method_id);
     payload = frame->payload();
   }
-  return accurate_decoder_->Decode(payload);
+  accurate_decoder_->Decode(std::move(frame));
 }
 
 std::unique_ptr<DecoderBase> GenericMethodArgsDecoder::CreateAccurateDecoder(

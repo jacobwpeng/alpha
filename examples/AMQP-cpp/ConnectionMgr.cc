@@ -14,12 +14,94 @@
 
 #include <alpha/logger.h>
 #include <alpha/format.h>
+#include <alpha/AsyncTcpConnectionException.h>
+#include "MethodPayloadCodec.h"
+#if 0
 #include "Frame.h"
 #include "ConnectionEstablishFSM.h"
 #include "ConnectionCloseFSM.h"
 #include "Connection.h"
+#include "CodedInputStream.h"
+#endif
 
 namespace amqp {
+ConnectionMgr::ConnectionMgr(alpha::EventLoop* loop)
+    : loop_(loop), async_tcp_client_(loop) {}
+
+void ConnectionMgr::ConnectTo(const ConnectionParameters& params,
+                              const PlainAuthorization& auth) {
+  async_tcp_client_.RunInCoroutine([this, params, auth](
+      alpha::AsyncTcpClient* client, alpha::AsyncTcpConnectionCoroutine* co) {
+    auto conn =
+        client->ConnectTo(alpha::NetAddress(params.host, params.port), co);
+    if (!conn) {
+      DLOG_INFO << "Connect to " << params.host << ":" << params.port
+                << " failed";
+      return;
+    }
+    const std::string amqp_protocol_header = {'A', 'M', 'Q', 'P', 0, 0, 9, 1};
+    try {
+      // Send protocol header
+      conn->Write(amqp_protocol_header);
+      FrameReader frame_reader(conn.get());
+      FrameWriter frame_writer(conn.get());
+
+      // Receive Start
+      auto frame = frame_reader.Read();
+      MethodStartArgsDecoder start_ok_decoder(GetCodecEnv(""));
+      start_ok_decoder.Decode(std::move(frame));
+      const CodecEnv* codec_env = GetCodecEnv("");
+
+      AsyncTcpConnectionWriter w(conn.get());
+      // Send Start-OK
+      MethodStartOkArgs start_ok_args;
+      start_ok_args.mechanism = "PLAIN";
+      start_ok_args.locale = "en_US";
+      start_ok_args.response.push_back('\0');
+      start_ok_args.response.append(auth.user);
+      start_ok_args.response.push_back('\0');
+      start_ok_args.response.append(auth.passwd);
+      start_ok_args.client_properties.Insert(
+          "Product", FieldValue(FieldValue::Type::kShortString, "AMQP-cpp"));
+      start_ok_args.client_properties.Insert(
+          "Version", FieldValue(FieldValue::Type::kShortString, "0.01"));
+      MethodStartOkArgsEncoder start_ok_encoder(start_ok_args, codec_env);
+      frame_writer.WriteMethod(0, &start_ok_encoder);
+
+      // Receive Tune
+      MethodTuneArgsDecoder tune_decoder(codec_env);
+      tune_decoder.Decode(frame_reader.Read());
+
+      // Send Tune-OK
+      MethodTuneOkArgs tune_ok_args;
+      tune_ok_args.channel_max = params.channel_max;
+      tune_ok_args.frame_max = params.frame_max;
+      tune_ok_args.heartbeat_delay = params.heartbeat_delay;
+      MethodTuneOkArgsEncoder tune_ok_encoder(tune_ok_args, codec_env);
+      frame_writer.WriteMethod(0, &tune_ok_encoder);
+
+      // Send Open
+      MethodOpenArgs open_args;
+      open_args.vhost_path = params.vhost;
+      open_args.capabilities = false;
+      open_args.insist = true;
+      MethodOpenArgsEncoder open_encoder(open_args, codec_env);
+      frame_writer.WriteMethod(0, &open_encoder);
+
+      // Receive Open-OK
+      MethodOpenOkArgsDecoder open_ok_decoder(codec_env);
+      open_ok_decoder.Decode(frame_reader.Read());
+
+      DLOG_INFO << "Connection established";
+      auto amqp_conn = std::make_shared<Connection>(codec_env, conn.get());
+      auto amqp_channel = amqp_conn->NewChannel();
+
+    } catch (alpha::AsyncTcpConnectionException& e) {
+      DLOG_WARNING << e.what();
+    }
+  });
+}
+#if 0
 
 using namespace std::placeholders;
 ConnectionMgr::ConnectionContext::ConnectionContext(
@@ -42,7 +124,8 @@ bool ConnectionMgr::ConnectionContext::FlushReply() {
   return true;
 }
 
-ConnectionMgr::ConnectionMgr() : tcp_client_(&loop_) {
+ConnectionMgr::ConnectionMgr()
+    : tcp_client_(&loop_), async_tcp_client_(&loop_) {
   tcp_client_.SetOnConnected(
       std::bind(&ConnectionMgr::OnTcpConnected, this, _1));
   tcp_client_.SetOnConnectError(
@@ -91,7 +174,40 @@ void ConnectionMgr::OnConnectionEstablished(ConnectionPtr& conn) {
 }
 
 void ConnectionMgr::ConnectTo(ConnectionParameters params) {
-  tcp_client_.ConnectTo(alpha::NetAddress(params.host, params.port));
+  async_tcp_client_.RunInCoroutine([this, params](
+      alpha::AsyncTcpClient* client, alpha::AsyncTcpConnectionCoroutine* co) {
+    auto conn =
+        client->ConnectTo(alpha::NetAddress(params.host, params.port), co);
+    if (!conn) {
+      DLOG_INFO << "Connect to " << params.host << ":" << params.port
+                << " failed";
+      return;
+    }
+    const std::string amqp_protocol_header = {'A', 'M', 'Q', 'P', 0, 0, 9, 1};
+    try {
+      conn->Write(amqp_protocol_header);
+      auto frame = FrameReader(conn).Read();
+      auto frame_header = conn->Read(7);
+      CodedInputStream stream(frame_header);
+      uint8_t frame_type;
+      ChannelID channel_id;
+      uint32_t payload_size;
+      stream.ReadUInt8(&frame_type);
+      stream.ReadBigEndianUInt16(&channel_id);
+      stream.ReadBigEndianUInt32(&payload_size);
+
+      auto payload = conn->Read(payload_size);
+      auto frame_end = conn->Read(1);
+
+      DLOG_INFO << "Frame type: " << static_cast<int>(frame_type)
+                << ", Channel ID: " << channel_id
+                << ", Payload size: " << payload_size
+                << ", payload.size(): " << payload.size();
+    } catch (alpha::AsyncTcpConnectionException& e) {
+      DLOG_WARNING << e.what();
+    }
+  });
+  // tcp_client_.ConnectTo(alpha::NetAddress(params.host, params.port));
 }
 
 void ConnectionMgr::OnTcpConnected(alpha::TcpConnectionPtr conn) {
@@ -158,4 +274,5 @@ void ConnectionMgr::OnTcpClosed(alpha::TcpConnectionPtr conn) {
 void ConnectionMgr::OnTcpConnectError(const alpha::NetAddress& addr) {
   DLOG_INFO << "Cannot connect to " << addr;
 }
+#endif
 }

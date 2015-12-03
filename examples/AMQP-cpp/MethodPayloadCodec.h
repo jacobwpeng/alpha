@@ -30,7 +30,7 @@ class CodecEnv;
 class EncoderBase {
  public:
   virtual ~EncoderBase() = default;
-  bool Encode(CodedWriterBase* w);
+  void WriteTo(CodedWriterBase* w);
   size_t ByteSize() const;
 
  protected:
@@ -48,7 +48,7 @@ class EncoderBase {
 class DecoderBase {
  public:
   virtual ~DecoderBase() = default;
-  int Decode(alpha::Slice data);
+  void Decode(FramePtr&& frame);
   ClassID class_id() const { return class_id_; }
   MethodID method_id() const { return method_id_; }
 
@@ -75,7 +75,7 @@ class DecoderBase {
 class GenericMethodArgsDecoder final {
  public:
   GenericMethodArgsDecoder(const CodecEnv* codec_env);
-  int Decode(FramePtr&& frame);
+  void Decode(FramePtr&& frame);
   void Reset();
   const DecoderBase* accurate_decoder() const;
 
