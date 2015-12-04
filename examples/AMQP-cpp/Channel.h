@@ -25,15 +25,22 @@ class Channel final : public std::enable_shared_from_this<Channel> {
   explicit Channel(ChannelID channel_id,
                    const std::shared_ptr<Connection>& conn);
 
+  void Close();
+  bool closed() const { return closed_; }
   ChannelID id() const { return id_; }
-  void AddCachedFrame(FramePtr&& frame);
-  FramePtr PopCachedFrame();
 
  private:
   static const size_t kMaxCachedFrameNum = 100;
+
+  void AddCachedFrame(FramePtr&& frame);
+  FramePtr PopCachedFrame();
+  void set_closed() { closed_ = true; }
+
+  bool closed_;
   ChannelID id_;
   std::weak_ptr<Connection> conn_;
   std::queue<FramePtr> cached_frames_;
+  friend class Connection;
 };
 }
 

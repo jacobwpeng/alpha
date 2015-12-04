@@ -27,27 +27,31 @@ class Connection final : public std::enable_shared_from_this<Connection> {
  public:
   Connection(const CodecEnv* codec_env, alpha::AsyncTcpConnection* conn);
   //~Connection();
-  // void Close();
+  void Close();
 
   // Channel operation
   std::shared_ptr<Channel> NewChannel();
-  void CloseChannel(const std::shared_ptr<Channel>& conn);
 
  private:
+  FramePtr HandleCachedFrames();
+  FramePtr HandleIncomingFramesUntil(ChannelID channel_id);
   // Handle all frames until frame.channel_id() == stop_channel_id
   // if such frame exists, return that frame
   // else return nullptr
-  FramePtr HandleIncomingFrames(ChannelID stop_channel_id,
-                                bool cached_only = true);
+  FramePtr HandleIncomingFrames(ChannelID stop_channel_id, bool cached_only);
   void HandleConnectionFrame(FramePtr&& frame);
   std::shared_ptr<Channel> CreateChannel(ChannelID channel_id);
   std::shared_ptr<Channel> FindChannel(ChannelID channel_id) const;
+  void DestroyChannel(ChannelID channel_id);
+  void CloseChannel(ChannelID channel_id);
+
   uint32_t next_channel_id_;
   const CodecEnv* codec_env_;
   alpha::AsyncTcpConnection* conn_;
   FrameWriter w_;
   FrameReader r_;
   std::map<ChannelID, std::shared_ptr<Channel>> channels_;
+  friend class Channel;
 #if 0
   void CloseChannel(ChannelID channel_id);
   alpha::TcpConnectionPtr tcp_connection() const;

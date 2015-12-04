@@ -25,12 +25,50 @@ Connection::Connection(const CodecEnv* codec_env,
       w_(conn),
       r_(conn) {}
 
+void Connection::Close() {
+  if (conn_->closed()) {
+    return;
+  }
+
+  MethodCloseArgs close_args;
+  close_args.reply_code = 0;
+  close_args.reply_text = "Normal Shutdown";
+  close_args.class_id = close_args.method_id = 0;
+  MethodCloseArgsEncoder close_encoder(close_args, codec_env_);
+  w_.WriteMethod(0, &close_encoder);
+  while (1) {
+    auto frame = HandleIncomingFramesUntil(0);
+    if (frame->type() != Frame::Type::kMethod) {
+      continue;  // Skip all non-method frames
+    }
+    GenericMethodArgsDecoder decoder(codec_env_);
+    decoder.Decode(std::move(frame));
+    auto accurate_decoder = decoder.accurate_decoder();
+    if (accurate_decoder->class_id() != kClassConnectionID) {
+      continue;  // Skip all non-connection methods
+    }
+    if (accurate_decoder->method_id() == MethodCloseOkArgs::kMethodID) {
+      // Close OK, we are done
+      break;
+    } else if (accurate_decoder->method_id() == MethodCloseArgs::kMethodID) {
+      // Simultaneous Close
+      MethodCloseOkArgs close_ok_args;
+      MethodCloseOkArgsEncoder close_ok_encoder(close_ok_args, codec_env_);
+      w_.WriteMethod(0, &close_ok_encoder);
+      // We are done here
+      break;
+    } else {
+      // Skip all other connection methods
+    }
+  }
+}
+
 std::shared_ptr<Channel> Connection::NewChannel() {
   MethodChannelOpenArgs channel_open_args;
   MethodChannelOpenArgsEncoder channel_open_encoder(channel_open_args,
                                                     codec_env_);
   w_.WriteMethod(next_channel_id_, &channel_open_encoder);
-  auto frame = HandleIncomingFrames(next_channel_id_, false);
+  auto frame = HandleIncomingFramesUntil(next_channel_id_);
   MethodChannelOpenOkArgsDecoder channel_open_ok_decoder(codec_env_);
   channel_open_ok_decoder.Decode(std::move(frame));
   auto channel = CreateChannel(next_channel_id_);
@@ -39,9 +77,11 @@ std::shared_ptr<Channel> Connection::NewChannel() {
   return channel;
 }
 
-void CloseChannel(const std::shared_ptr<Channel>& conn) {
-  // MethodCloseArgs close_args;
-  // close_args.reply_code = 0;
+FramePtr Connection::HandleCachedFrames() {
+  return HandleIncomingFrames(next_channel_id_, true);
+}
+FramePtr Connection::HandleIncomingFramesUntil(ChannelID channel_id) {
+  return HandleIncomingFrames(channel_id, false);
 }
 
 FramePtr Connection::HandleIncomingFrames(ChannelID stop_channel_id,
@@ -90,10 +130,28 @@ std::shared_ptr<Channel> Connection::FindChannel(ChannelID channel_id) const {
   return it == std::end(channels_) ? nullptr : it->second;
 }
 
+void Connection::CloseChannel(ChannelID channel_id) {
+  auto channel = FindChannel(channel_id);
+  CHECK(channel) << "No channel found in this connection, id: " << channel_id;
+  MethodChannelCloseArgs close_args;
+  close_args.reply_code = 0;
+  close_args.reply_text = "Normal Shutdown";
+  close_args.class_id = close_args.method_id = 0;
+  MethodChannelCloseArgsEncoder close_encoder(close_args, codec_env_);
+  w_.WriteMethod(channel_id, &close_encoder);
+  auto frame = HandleIncomingFramesUntil(channel_id);
+  MethodChannelCloseOkArgsDecoder(codec_env_).Decode(std::move(frame));
+  DestroyChannel(channel_id);
+  DLOG_INFO << "Channel closed";
+}
+
+void Connection::DestroyChannel(ChannelID channel_id) {
+  channels_.erase(channel_id);
+}
+
 #if 0
 Connection::~Connection() = default;
 
-void Connection::Close() { owner_->CloseConnection(this); }
 
 bool Connection::HandleFrame(FramePtr&& frame) { return false; }
 

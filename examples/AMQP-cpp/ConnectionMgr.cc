@@ -16,6 +16,7 @@
 #include <alpha/format.h>
 #include <alpha/AsyncTcpConnectionException.h>
 #include "MethodPayloadCodec.h"
+#include "Channel.h"
 #if 0
 #include "Frame.h"
 #include "ConnectionEstablishFSM.h"
@@ -94,7 +95,14 @@ void ConnectionMgr::ConnectTo(const ConnectionParameters& params,
 
       DLOG_INFO << "Connection established";
       auto amqp_conn = std::make_shared<Connection>(codec_env, conn.get());
-      auto amqp_channel = amqp_conn->NewChannel();
+
+      if (connected_callback_) {
+        connected_callback_(amqp_conn);
+      } else {
+        amqp_conn->Close();
+        DLOG_INFO << "Connection closed";
+        conn->Close();
+      }
 
     } catch (alpha::AsyncTcpConnectionException& e) {
       DLOG_WARNING << e.what();

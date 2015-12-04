@@ -13,6 +13,7 @@
 #include <alpha/logger.h>
 #include "Connection.h"
 #include "ConnectionMgr.h"
+#include "Channel.h"
 #if 0
 
 Connection::NewChannel() {
@@ -43,24 +44,25 @@ Connection::HandleChannelFrames(ChannelID newly_created_channel_id) {
   //  ThrowConnectionException();
   //}
 }
+#endif
 
+#if 1
 void Process(amqp::ConnectionPtr& conn) {
   auto channel = conn->NewChannel();
-  auto channel2 = conn->NewChannel();
-  Exchange* exchange = channel->DeclareExchange();
-  Queue* queue = channel->DeclareQueue();
-  channel->BindQueue(exchange, queue);
+  channel->Close();
+  conn->Close();
+  // Exchange* exchange = channel->DeclareExchange();
+  // Queue* queue = channel->DeclareQueue();
+  // channel->BindQueue(exchange, queue);
 }
 #endif
 
 int main(int argc, char* argv[]) {
   alpha::Logger::Init(argv[0]);
   alpha::EventLoop loop;
+  loop.TrapSignal(SIGINT, [&loop] { loop.Quit(); });
   amqp::ConnectionMgr mgr(&loop);
-  // mgr.set_connected_callback([](amqp::ConnectionPtr& conn) {
-  //  DLOG_INFO << "amqp::Connection created";
-  //  conn->Close();
-  //});
+  mgr.set_connected_callback(Process);
   auto auth = amqp::PlainAuthorization();
   auth.user = "guest";
   auth.passwd = "guest";
