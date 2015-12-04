@@ -38,6 +38,9 @@ class Logger {
  public:
   using LoggerOutput = void (*)(LogLevel level, const char*, int);
   static void Init(const char* prog_name);
+  static void set_logtostderr(bool enable);
+  static void set_minloglevel(int level);
+  static void set_logdir(alpha::Slice logdir);
   static void SendLog(LogLevel level, const char* buf, int len);
   static const char* GetLogLevelName(int level);
   static LogVoidify dummy_;
@@ -56,6 +59,7 @@ class LogEnv {
   static std::string logdir();
 
  private:
+  friend class Logger;
   static bool logtostderr_;
   static LogLevel minloglevel_;
   static std::string logdir_;

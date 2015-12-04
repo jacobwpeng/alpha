@@ -49,6 +49,18 @@ void Logger::Init(const char* prog_name) {
   initialized_ = true;
 }
 
+void Logger::set_logtostderr(bool enable) { LogEnv::logtostderr_ = enable; }
+void Logger::set_minloglevel(int level) {
+  if (level < 0 || level >= kLogLevelNum) {
+    alpha::Slice warning("[WARN]Invalid minloglevel, default to kLogLevelInfo");
+    LogEnv::minloglevel_ = kLogLevelInfo;
+  }
+  LogEnv::minloglevel_ = static_cast<LogLevel>(level);
+}
+void Logger::set_logdir(alpha::Slice logdir) {
+  LogEnv::logdir_ = logdir.ToString();
+}
+
 const char* Logger::GetLogLevelName(int level) {
   assert(level < kLogLevelNum);
   return LogLevelNames_[level];
@@ -64,7 +76,9 @@ void Logger::SendLog(LogLevel level, const char* buf, int len) {
     first_log_before_init = false;
   }
   if (LogEnv::logtostderr() || !initialized_) {
-    LogDestination::SendLogToStderr(level, buf, len);
+    if (level >= LogEnv::minloglevel()) {
+      LogDestination::SendLogToStderr(level, buf, len);
+    }
   } else {
     if (level == kLogLevelFatal) {
       LogDestination::SendLogToStderr(level, buf, len);
