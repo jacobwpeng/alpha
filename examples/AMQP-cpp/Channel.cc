@@ -14,10 +14,20 @@
 #include <alpha/compiler.h>
 #include <alpha/logger.h>
 #include "Connection.h"
+#include "MethodArgs.h"
 
 namespace amqp {
 Channel::Channel(ChannelID channel_id, const std::shared_ptr<Connection>& conn)
     : closed_(false), id_(channel_id), conn_(conn) {}
+
+void Channel::Close() {
+  if (closed()) {
+    return;
+  }
+  if (auto conn = conn_.lock()) {
+    conn->CloseChannel(id_);
+  }
+}
 
 void Channel::AddCachedFrame(FramePtr&& frame) {
   if (unlikely(cached_frames_.size() == kMaxCachedFrameNum)) {
@@ -35,12 +45,20 @@ FramePtr Channel::PopCachedFrame() {
   return std::move(frame);
 }
 
-void Channel::Close() {
-  if (closed()) {
-    return;
-  }
-  if (auto conn = conn_.lock()) {
-    conn->CloseChannel(id_);
-  }
+std::shared_ptr<Connection> Channel::CheckConnection() { return conn_.lock(); }
+
+void Channel::ExchangeDeclare(alpha::Slice exchange_name,
+                              alpha::Slice exchange_type, bool passive,
+                              bool durable, bool auto_delete,
+                              const FieldTable& arguments) {
+  MethodExchangeDeclareArgs args;
+  args.ticket = 0;
+  args.exchange = exchange_name.ToString();
+  args.type = exchange_type.ToString();
+  args.passive = passive;
+  args.durable = durable;
+  args.auto_delete = auto_delete;
+  args.arguments = arguments;
+  CheckConnection()->WriteMethod(id(), args);
 }
 }

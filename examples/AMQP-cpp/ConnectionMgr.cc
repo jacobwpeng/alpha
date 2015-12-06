@@ -84,7 +84,7 @@ void ConnectionMgr::ConnectTo(const ConnectionParameters& params,
       // Send Open
       MethodOpenArgs open_args;
       open_args.vhost_path = params.vhost;
-      open_args.capabilities = false;
+      open_args.capabilities = 0;
       open_args.insist = true;
       MethodOpenArgsEncoder open_encoder(open_args, codec_env);
       frame_writer.WriteMethod(0, &open_encoder);
@@ -98,11 +98,12 @@ void ConnectionMgr::ConnectTo(const ConnectionParameters& params,
 
       if (connected_callback_) {
         connected_callback_(amqp_conn);
+        conn->Close();
       } else {
         amqp_conn->Close();
-        DLOG_INFO << "Connection closed";
         conn->Close();
       }
+      DLOG_INFO << "Connection closed";
 
     } catch (alpha::AsyncTcpConnectionException& e) {
       DLOG_WARNING << e.what();

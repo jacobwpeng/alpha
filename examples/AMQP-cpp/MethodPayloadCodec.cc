@@ -106,6 +106,13 @@ std::unique_ptr<DecoderBase> GenericMethodArgsDecoder::CreateAccurateDecoder(
       Case(MethodCloseArgs);
       Case(MethodCloseOkArgs);
     }
+  } else if (class_id == kClassChannelID) {
+    switch (method_id) {
+      Case(MethodChannelOpenArgs);
+      Case(MethodChannelOpenOkArgs);
+      Case(MethodChannelCloseArgs);
+      Case(MethodChannelCloseOkArgs);
+    }
   }
   CHECK(false) << "Invalid class_id - method_id combination, "
                << " class_id: " << class_id << ", method_id: " << method_id;

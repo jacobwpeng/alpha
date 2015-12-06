@@ -19,6 +19,38 @@
 
 namespace amqp {
 
+BooleanEncodeUnit::BooleanEncodeUnit(bool val) : bits_(0), writed_bits_(0) {
+  ::memset(packed_, 0x0, kMaxByte);
+  Add(val);
+}
+
+void BooleanEncodeUnit::Add(bool val) {
+  CHECK(bits_ < kMaxByte * 8) << "Exceed maximum contiguous bits";
+  uint8_t masked = (val ? 1 : 0) << (bits_ % 8);
+  packed_[bits_ / 8] |= masked;
+  ++bits_;
+}
+
+bool BooleanEncodeUnit::Write(CodedWriterBase* w) {
+  const auto used = ByteSize();
+  CHECK(writed_bits_ <= used);
+  while (writed_bits_ < used) {
+    if (!OctetEncodeUnit(packed_[writed_bits_]).Write(w)) {
+      return false;
+    }
+    ++writed_bits_;
+  }
+  return true;
+}
+
+size_t BooleanEncodeUnit::ByteSize() const {
+  CHECK(bits_ != 0) << "Empty BooleanEncodeUnit";
+  // 1 - 8 -> 1
+  // 9 - 16 -> 2
+  // ...
+  return (bits_ - 1) / 8 + 1;
+}
+
 bool OctetEncodeUnit::Write(CodedWriterBase* w) {
   return CodedOutputStream(w).WriteUInt8(val_);
 }
@@ -115,7 +147,7 @@ bool FieldTableEncodeUnit::Write(CodedWriterBase* w) {
 }
 
 size_t FieldTableEncodeUnit::ByteSize() const {
-  size_t total = 4; // Long String size
+  size_t total = 4;  // Long String size
   for (const auto& p : ft_.underlying_map()) {
     total += ShortStringEncodeUnit(ShortString(p.first)).ByteSize();
     total += 1;

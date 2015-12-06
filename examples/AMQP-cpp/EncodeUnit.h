@@ -28,9 +28,22 @@ class EncodeUnit {
   virtual size_t ByteSize() const = 0;
 };
 
+class BooleanEncodeUnit final : public EncodeUnit {
+ public:
+  BooleanEncodeUnit(bool val);
+  void Add(bool val);
+  virtual bool Write(CodedWriterBase* w) override;
+  virtual size_t ByteSize() const;
+
+ private:
+  static const size_t kMaxByte = 8;
+  size_t bits_;
+  size_t writed_bits_;
+  uint8_t packed_[kMaxByte];
+};
+
 class OctetEncodeUnit final : public EncodeUnit {
  public:
-  explicit OctetEncodeUnit(bool val) : val_(val) {}
   explicit OctetEncodeUnit(int8_t val) : val_(val) {}
   explicit OctetEncodeUnit(uint8_t val) : val_(val) {}
   virtual bool Write(CodedWriterBase* w);

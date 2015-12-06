@@ -49,6 +49,7 @@ Connection::HandleChannelFrames(ChannelID newly_created_channel_id) {
 #if 1
 void Process(amqp::ConnectionPtr& conn) {
   auto channel = conn->NewChannel();
+  channel->ExchangeDeclare("test-exchange", "direct", false, true, false);
   channel->Close();
   conn->Close();
   // Exchange* exchange = channel->DeclareExchange();
@@ -59,6 +60,7 @@ void Process(amqp::ConnectionPtr& conn) {
 
 int main(int argc, char* argv[]) {
   alpha::Logger::Init(argv[0]);
+  alpha::Logger::set_logtostderr(true);
   alpha::EventLoop loop;
   loop.TrapSignal(SIGINT, [&loop] { loop.Quit(); });
   amqp::ConnectionMgr mgr(&loop);

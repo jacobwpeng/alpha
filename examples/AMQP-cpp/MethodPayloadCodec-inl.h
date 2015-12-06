@@ -23,12 +23,13 @@
 
 namespace amqp {
 namespace detail {
+
 template <typename ResultType>
 struct CodecTypeHelper;
 
 template <>
 struct CodecTypeHelper<bool> {
-  using EncoderType = OctetEncodeUnit;
+  using EncoderType = BooleanEncodeUnit;
   using DecoderType = BooleanDecodeUnit;
 };
 
@@ -117,14 +118,50 @@ struct CoderFactory<ResultType, typename std::enable_if<std::is_same<
     return alpha::make_unique<DecoderType>(p, env);
   }
 };
+
+template <bool BoolEncodeUnit>
+struct AddEncodeUnitHelper;
+
+template <>
+struct AddEncodeUnitHelper<true> {
+  template <typename Arg>
+  static void Add(std::vector<std::unique_ptr<EncodeUnit>>* units, Arg&& arg,
+                  const CodecEnv* env) {
+    CHECK(units);
+    BooleanEncodeUnit* bool_encode_unit =
+        units->empty()
+            ? nullptr
+            : dynamic_cast<BooleanEncodeUnit*>(units->rbegin()->get());
+    if (bool_encode_unit) {
+      bool_encode_unit->Add(arg);
+    } else {
+      units->push_back(
+          CoderFactory<bool>::NewEncoder(std::forward<Arg>(arg), env));
+    }
+  }
+};
+
+template <>
+struct AddEncodeUnitHelper<false> {
+  template <typename Arg>
+  static void Add(std::vector<std::unique_ptr<EncodeUnit>>* units, Arg&& arg,
+                  const CodecEnv* env) {
+    using RawArgType = typename std::remove_pointer<typename std::remove_cv<
+        typename std::remove_reference<Arg>::type>::type>::type;
+    CHECK(units);
+    units->push_back(
+        CoderFactory<RawArgType>::NewEncoder(std::forward<Arg>(arg), env));
+  }
+};
 }
 
 template <typename Arg, typename... Tail>
 void EncoderBase::AddEncodeUnit(Arg&& arg, Tail&&... tail) {
-  encode_units_.push_back(
-      detail::CoderFactory<typename std::remove_pointer<typename std::remove_cv<
-          typename std::remove_reference<Arg>::type>::type>::type>::
-          NewEncoder(std::forward<Arg>(arg), env_));
+  using RawArgType = typename std::remove_pointer<typename std::remove_cv<
+      typename std::remove_reference<Arg>::type>::type>::type;
+
+  detail::AddEncodeUnitHelper<std::is_same<RawArgType, bool>::value>::Add(
+      &encode_units_, std::forward<Arg>(arg), env_);
   AddEncodeUnit(tail...);
 }
 
@@ -186,26 +223,55 @@ ArgType GenericMethodArgsDecoder::GetArg() const {
     const ArgType& arg_;                                                       \
   };
 
+#define DefineArgsToCodecHelper(ArgType)  \
+  template <>                             \
+  struct ArgsToCodecHelper<ArgType> {     \
+    using EncoderType = ArgType##Encoder; \
+    using DecoderType = ArgType##Decoder; \
+  };
+
 #define DefineArgsCodec(ArgType, Seq) \
   DefineArgsEncoder(ArgType, Seq);    \
-  DefineArgsDecoder(ArgType, Seq)
+  DefineArgsDecoder(ArgType, Seq);    \
+  DefineArgsToCodecHelper(ArgType)
 
-DefineArgsCodec(MethodStartArgs, (version_major)(version_minor)(
-                                     server_properties)(mechanisms)(locales));
-DefineArgsCodec(MethodStartOkArgs,
-                (client_properties)(mechanism)(response)(locale));
-DefineArgsCodec(MethodTuneArgs, (channel_max)(frame_max)(heartbeat_delay));
-DefineArgsCodec(MethodTuneOkArgs, (channel_max)(frame_max)(heartbeat_delay));
-DefineArgsCodec(MethodOpenArgs, (vhost_path)(capabilities)(insist));
-DefineArgsCodec(MethodOpenOkArgs, BOOST_PP_SEQ_NIL);
-DefineArgsCodec(MethodCloseArgs, (reply_code)(reply_text)(class_id)(method_id));
-DefineArgsCodec(MethodCloseOkArgs, BOOST_PP_SEQ_NIL);
-DefineArgsCodec(MethodChannelOpenArgs, (reserved));
-DefineArgsCodec(MethodChannelOpenOkArgs, BOOST_PP_SEQ_NIL);
-DefineArgsCodec(MethodChannelCloseArgs,
-                (reply_code)(reply_text)(class_id)(method_id));
-DefineArgsCodec(MethodChannelCloseOkArgs, BOOST_PP_SEQ_NIL);
+#define DefineRequestToResponseHelper(Req, Resp) \
+  template <>                                    \
+  struct RequestToResponseHelper<Req> {          \
+    using ResponseType = Resp;                   \
+  };
 
+#define DefineRequestResponsePair(RequestType, RequestSeq, ResponseType, \
+                                  ResponseSeq)                           \
+  DefineArgsCodec(RequestType, RequestSeq);                              \
+  DefineArgsCodec(ResponseType, ResponseSeq);                            \
+  DefineRequestToResponseHelper(RequestType, ResponseType)
+
+DefineRequestResponsePair(
+    MethodStartArgs,
+    (version_major)(version_minor)(server_properties)(mechanisms)(locales),
+    MethodStartOkArgs, (client_properties)(mechanism)(response)(locale));
+
+DefineRequestResponsePair(MethodTuneArgs,
+                          (channel_max)(frame_max)(heartbeat_delay),
+                          MethodTuneOkArgs,
+                          (channel_max)(frame_max)(heartbeat_delay));
+DefineRequestResponsePair(MethodOpenArgs, (vhost_path)(capabilities)(insist),
+                          MethodOpenOkArgs, BOOST_PP_SEQ_NIL);
+DefineRequestResponsePair(MethodCloseArgs,
+                          (reply_code)(reply_text)(class_id)(method_id),
+                          MethodCloseOkArgs, BOOST_PP_SEQ_NIL);
+DefineRequestResponsePair(MethodChannelOpenArgs, (reserved),
+                          MethodChannelOpenOkArgs, BOOST_PP_SEQ_NIL);
+DefineRequestResponsePair(MethodChannelCloseArgs,
+                          (reply_code)(reply_text)(class_id)(method_id),
+                          MethodChannelCloseOkArgs, BOOST_PP_SEQ_NIL);
+DefineRequestResponsePair(MethodExchangeDeclareArgs,
+                          (ticket)(exchange)(type)(passive)(durable)(
+                              auto_delete)(internal)(nowait)(arguments),
+                          MethodExchangeDeclareOkArgs, BOOST_PP_SEQ_NIL);
+
+#undef DefineArgsToCodecHelper
 #undef DefineArgsCodec
 #undef DefineArgsEncoder
 #undef Member

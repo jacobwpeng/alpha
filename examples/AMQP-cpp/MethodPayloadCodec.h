@@ -89,6 +89,12 @@ class GenericMethodArgsDecoder final {
   const CodecEnv* codec_env_;
   std::unique_ptr<DecoderBase> accurate_decoder_;
 };
+
+template <typename Args>
+struct ArgsToCodecHelper;
+
+template <typename RequestType>
+struct RequestToResponseHelper;
 }
 
 #include "MethodPayloadCodec-inl.h"

@@ -18,6 +18,7 @@
 #include "Frame.h"
 #include "FrameCodec.h"
 #include "MethodArgTypes.h"
+#include "MethodPayloadCodec.h"
 
 namespace amqp {
 class CodecEnv;
@@ -43,7 +44,11 @@ class Connection final : public std::enable_shared_from_this<Connection> {
   std::shared_ptr<Channel> CreateChannel(ChannelID channel_id);
   std::shared_ptr<Channel> FindChannel(ChannelID channel_id) const;
   void DestroyChannel(ChannelID channel_id);
+
+  // Used by Class Channel
   void CloseChannel(ChannelID channel_id);
+  template <typename Args>
+  void WriteMethod(ChannelID channel_id, Args&& args);
 
   uint32_t next_channel_id_;
   const CodecEnv* codec_env_;
@@ -52,22 +57,33 @@ class Connection final : public std::enable_shared_from_this<Connection> {
   FrameReader r_;
   std::map<ChannelID, std::shared_ptr<Channel>> channels_;
   friend class Channel;
-#if 0
-  void CloseChannel(ChannelID channel_id);
-  alpha::TcpConnectionPtr tcp_connection() const;
-
- private:
-  using ChannelMap = std::map<ChannelID, std::unique_ptr<Channel>>;
-  void OnChannelOpened(ChannelID channel_id);
-  int next_channel_id_;
-  ConnectionMgr* owner_;
-  alpha::TcpConnectionWeakPtr conn_;
-  ChannelMap channels_;
-#endif
 };
 
 using ConnectionPtr = std::shared_ptr<Connection>;
 using ConnectionWeakPtr = std::weak_ptr<Connection>;
+
+template <typename Args>
+void Connection::WriteMethod(ChannelID channel_id, Args&& args) {
+  using RawArgType = typename std::remove_pointer<typename std::remove_cv<
+      typename std::remove_reference<Args>::type>::type>::type;
+  using RequestEncoderType =
+      typename ArgsToCodecHelper<RawArgType>::EncoderType;
+  RequestEncoderType encoder(std::forward<Args>(args), codec_env_);
+  w_.WriteMethod(channel_id, &encoder);
+  auto frame = HandleIncomingFramesUntil(channel_id);
+  using ResponseDecoderType = typename ArgsToCodecHelper<
+      typename RequestToResponseHelper<RawArgType>::ResponseType>::DecoderType;
+  GenericMethodArgsDecoder generic_decoder(codec_env_);
+  generic_decoder.Decode(std::move(frame));
+  // auto response_class_id = generic_decoder.accurate_decoder()->class_id();
+  // auto response_method_id = generic_decoder.accurate_decoder()->method_id();
+  // if (response_class_id == kClassChannelID && response_method_id ==
+  // MethodChannelCloseArgs::kMethodID) {
+  //  //
+  //}
+  // ResponseDecoderType decoder(codec_env_);
+  // decoder.Decode(std::move(frame));
+}
 }
 
 #endif /* ----- #ifndef __CONNECTION_H__  ----- */

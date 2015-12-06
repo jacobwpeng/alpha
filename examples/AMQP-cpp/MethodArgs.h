@@ -21,6 +21,7 @@
 namespace amqp {
 static const ClassID kClassConnectionID = 10;
 static const ClassID kClassChannelID = 20;
+static const ClassID kClassExchangeID = 40;
 
 struct MethodStartArgs {
   static const ClassID kClassID = kClassConnectionID;
@@ -61,7 +62,7 @@ struct MethodOpenArgs {
   static const ClassID kClassID = kClassConnectionID;
   static const MethodID kMethodID = 40;
   ShortString vhost_path;
-  bool capabilities;
+  uint8_t capabilities;
   bool insist;
 };
 
@@ -107,6 +108,25 @@ struct MethodChannelCloseArgs {
 struct MethodChannelCloseOkArgs {
   static const ClassID kClassID = kClassChannelID;
   static const MethodID kMethodID = 41;
+};
+
+struct MethodExchangeDeclareArgs {
+  static const ClassID kClassID = kClassExchangeID;
+  static const MethodID kMethodID = 10;
+  uint16_t ticket;
+  ShortString exchange;
+  ShortString type;
+  bool passive;
+  bool durable;
+  bool auto_delete;
+  bool internal;
+  bool nowait;
+  FieldTable arguments;
+};
+
+struct MethodExchangeDeclareOkArgs {
+  static const ClassID kClassID = kClassExchangeID;
+  static const MethodID kMethodID = 11;
 };
 }
 
