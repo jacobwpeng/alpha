@@ -33,6 +33,7 @@ void Coroutine::Resume() {
   CHECK(current == nullptr) << "Recursive resume called";
   int err = 0;
   auto ptr = reinterpret_cast<uintptr_t>(this);
+  uint64_t p = ptr;
   switch (status_) {
     case Status::kReady:
       err = getcontext(&execution_point_);
@@ -41,7 +42,7 @@ void Coroutine::Resume() {
       execution_point_.uc_stack.ss_sp = shared_stack;
       execution_point_.uc_stack.ss_size = sizeof(shared_stack);
       makecontext(&execution_point_, (void (*)(void))Coroutine::InternalRoutine,
-                  2, (uint32_t)(ptr >> 32), (uint32_t)(ptr));
+                  2, (uint32_t)(p >> 32), (uint32_t)(p));
       status_ = Status::kRunning;
       current = this;
       swapcontext(&yield_recovery_point_, &execution_point_);
@@ -94,8 +95,9 @@ void Coroutine::RestoreStack() {
 }
 
 void Coroutine::InternalRoutine(uint32_t hi, uint32_t lo) {
-  uintptr_t ptr =
-      (static_cast<uintptr_t>(hi) << 32) | static_cast<uintptr_t>(lo);
+  uint64_t p =
+      (static_cast<uint64_t>(hi) << 32) | static_cast<uint64_t>(lo);
+  uintptr_t ptr = static_cast<uintptr_t>(p);
   auto co = reinterpret_cast<Coroutine*>(ptr);
   co->Routine();
   co->Done();

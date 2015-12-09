@@ -71,8 +71,8 @@ void Connection::WriteMethod(ChannelID channel_id, Args&& args) {
   RequestEncoderType encoder(std::forward<Args>(args), codec_env_);
   w_.WriteMethod(channel_id, &encoder);
   auto frame = HandleIncomingFramesUntil(channel_id);
-  using ResponseDecoderType = typename ArgsToCodecHelper<
-      typename RequestToResponseHelper<RawArgType>::ResponseType>::DecoderType;
+  //using ResponseDecoderType = typename ArgsToCodecHelper<
+  //    typename RequestToResponseHelper<RawArgType>::ResponseType>::DecoderType;
   GenericMethodArgsDecoder generic_decoder(codec_env_);
   generic_decoder.Decode(std::move(frame));
   // auto response_class_id = generic_decoder.accurate_decoder()->class_id();

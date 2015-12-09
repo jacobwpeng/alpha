@@ -26,7 +26,9 @@
 #include "net_address.h"
 #include "socket_ops.h"
 
-static void DelayChannelDestroy(std::shared_ptr<alpha::Channel> channel) {}
+static void DelayChannelDestroy(std::shared_ptr<alpha::Channel> channel) {
+  (void) channel;
+}
 
 namespace alpha {
 TcpConnector::TcpConnector(EventLoop* loop) : loop_(loop) {}

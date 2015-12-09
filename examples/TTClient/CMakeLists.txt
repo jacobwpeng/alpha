@@ -1,5 +1,6 @@
 file(GLOB TOKYO_TYRANT_CLIENT_EXAMPLE_SRCS "*.cc")
 #list(APPEND TOKYO_TYRANT_CLIENT_EXAMPLE_SRCS "main.cc")
 find_library(GFLAGS "gflags")
+find_library(PTHREAD "pthread")
 add_executable("ttclient" ${TOKYO_TYRANT_CLIENT_EXAMPLE_SRCS})
-target_link_libraries("ttclient" ${GFLAGS} "alpha")
+target_link_libraries("ttclient" ${GFLAGS} ${PTHREAD} "alpha")
