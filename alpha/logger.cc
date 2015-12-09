@@ -187,6 +187,9 @@ LogMessage::LogMessage(const char* file, int line, LogLevel level,
   assert(nbytes > 0 && nbytes < kLogBufferSize);
   stream_.rdbuf()->pubsetbuf(log_buffer_.data() + nbytes,
                              kLogBufferSize - nbytes - 1);
+  if (unlikely(expr_ != nullptr)) {
+    stream() << "Check failed: " << expr_ << " ";
+  }
   header_size_ = nbytes;
 }
 
@@ -195,6 +198,8 @@ LogMessage::~LogMessage() {
     char message[256];
     char* m = strerror_r(preserved_errno(), message, sizeof(message));
     stream() << ": " << m;
+  } else if (unlikely(expr_ != nullptr)) {
+    stream() << "\n*** Check failure stack trace: ***";
   }
   Flush();
   errno = preserved_errno_;
