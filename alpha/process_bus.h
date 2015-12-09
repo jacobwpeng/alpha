@@ -47,8 +47,8 @@ class ProcessBus {
  private:
   std::string filepath_;
   Header* header_;
-  std::unique_ptr<RingBuffer> buf_;
   std::unique_ptr<MMapFile> file_;
+  std::unique_ptr<RingBuffer> buf_;
 };
 }
 
