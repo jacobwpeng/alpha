@@ -11,7 +11,7 @@
  */
 
 #include "CodedOutputStream.h"
-#include <endian.h>
+#include <alpha/Endian.h>
 #include "CodedWriter.h"
 
 namespace amqp {
@@ -24,7 +24,7 @@ bool CodedOutputStream::WriteUInt8(uint8_t val) {
 
 bool CodedOutputStream::WriteBigEndianUInt16(uint16_t val) {
   if (w_->CanWrite(2)) {
-    auto v = htobe16(val);
+    auto v = alpha::HostToBigEndian(val);
     return w_->Write(&v, 2);
   }
   return false;
@@ -32,7 +32,7 @@ bool CodedOutputStream::WriteBigEndianUInt16(uint16_t val) {
 
 bool CodedOutputStream::WriteBigEndianUInt32(uint32_t val) {
   if (w_->CanWrite(4)) {
-    auto v = htobe32(val);
+    auto v = alpha::HostToBigEndian(val);
     return w_->Write(&v, 4);
   }
   return false;
@@ -40,7 +40,7 @@ bool CodedOutputStream::WriteBigEndianUInt32(uint32_t val) {
 
 bool CodedOutputStream::WriteBigEndianUInt64(uint64_t val) {
   if (w_->CanWrite(8)) {
-    auto v = htobe64(val);
+    auto v = alpha::HostToBigEndian(val);
     return w_->Write(&v, 8);
   }
   return false;
