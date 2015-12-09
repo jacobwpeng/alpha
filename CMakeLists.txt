@@ -1,17 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 project(alpha CXX)
 
-include(CheckCXXCompilerFlag)
-function(add_compile_options_if_supported flag)
-  STRING(REGEX REPLACE "-" "_" FLAG_NAME ${flag})
-  CHECK_CXX_COMPILER_FLAG(${flag} FLAG_SUPPORTED_${FLAG_NAME})
-  if(FLAG_SUPPORTED_${FLAG_NAME})
-    add_compile_options(${flag})
-  else()
-    message("FLAG_SUPPORTED_${FLAG_NAME} not supported")
-  endif()
-endfunction(add_compile_options_if_supported)
-
 include_directories(${PROJECT_SOURCE_DIR})
 add_compile_options(-std=c++11)
 add_compile_options(-Wall -Wextra -Werror)
@@ -19,9 +8,17 @@ add_compile_options(-D_FILE_OFFSET_BITS=64)
 add_compile_options("$<$<CONFIG:DEBUG>:-ggdb>")
 add_compile_options("$<$<CONFIG:RELEASE>:-O3 -DNDEBUG>")
 add_compile_options(-Wno-unused-parameter)
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-add_compile_options(-Wno-unused-private-field)
-add_compile_options(-Wno-unused-const-variable)
+
+include(CheckCXXCompilerFlag)
+
+check_cxx_compiler_flag(-Wunused-const-variable FLAG_SUPPORT_UNUSED_CONST_VARIABLE)
+if(FLAG_SUPPORT_UNUSED_CONST_VARIABLE)
+  add_compile_options(-Wno-unused-const-variable)
+endif()
+
+check_cxx_compiler_flag(-Wunused-private-field FLAG_SUPPORT_UNUSED_PRIVATE_FIELD)
+if(FLAG_SUPPORT_UNUSED_PRIVATE_FIELD)
+  add_compile_options(-Wno-unused-private-field)
 endif()
 
 option(STATIC_LINK_LIBSTDC++ "Static link to libstdc++" OFF)
