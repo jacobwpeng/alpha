@@ -29,7 +29,7 @@ class MMapFile {
   };
 
  public:
-  static std::unique_ptr<MMapFile> Open(Slice path, size_t size,
+  static std::unique_ptr<MMapFile> Open(Slice path, size_t size = 0,
                                         int flags = kDefault);
   DISABLE_COPY_ASSIGNMENT(MMapFile);
   ~MMapFile();

@@ -49,9 +49,10 @@ std::unique_ptr<MMapFile> MMapFile::Open(Slice path, size_t size, int flags) {
     newly_created = true;
   }
 
-  off_t real_size = size;
+  off_t real_size;
   if ((flags & kTruncate) || newly_created) {
-    ::ftruncate(fd, real_size);
+    ::ftruncate(fd, size);
+    real_size = size;
   } else {
     struct stat sb;
     if (fstat(fd, &sb) < 0) {

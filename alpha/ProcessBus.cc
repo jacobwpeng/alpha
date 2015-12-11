@@ -16,15 +16,14 @@
 namespace alpha {
 ProcessBus::ProcessBus() : header_(nullptr) {}
 
-std::unique_ptr<ProcessBus> ProcessBus::RestoreFrom(
-    const alpha::Slice& filepath, size_t size) {
-  if (size < kHeaderSize) {
+std::unique_ptr<ProcessBus> ProcessBus::RestoreFrom(alpha::Slice filepath) {
+  std::unique_ptr<ProcessBus> bus(new ProcessBus);
+  bus->file_ = std::move(MMapFile::Open(filepath));
+  if (bus->file_ == nullptr) {
     return nullptr;
   }
 
-  std::unique_ptr<ProcessBus> bus(new ProcessBus);
-  bus->file_ = std::move(MMapFile::Open(filepath, size));
-  if (bus->file_ == nullptr) {
+  if (bus->file_->size() < kHeaderSize) {
     return nullptr;
   }
 
@@ -43,7 +42,7 @@ std::unique_ptr<ProcessBus> ProcessBus::RestoreFrom(
   return bus;
 }
 
-std::unique_ptr<ProcessBus> ProcessBus::CreateFrom(const alpha::Slice& filepath,
+std::unique_ptr<ProcessBus> ProcessBus::CreateFrom(alpha::Slice filepath,
                                                    size_t size) {
   if (size < kHeaderSize) {
     return nullptr;
@@ -70,9 +69,10 @@ std::unique_ptr<ProcessBus> ProcessBus::CreateFrom(const alpha::Slice& filepath,
   return bus;
 }
 
-std::unique_ptr<ProcessBus> ProcessBus::RestoreOrCreate(
-    const alpha::Slice& filepath, size_t size, bool force) {
-  auto bus = RestoreFrom(filepath, size);
+std::unique_ptr<ProcessBus> ProcessBus::RestoreOrCreate(alpha::Slice filepath,
+                                                        size_t size,
+                                                        bool force) {
+  auto bus = RestoreFrom(filepath);
   if (!bus && force) {
     bus = CreateFrom(filepath, size);
   }

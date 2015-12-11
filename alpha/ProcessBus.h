@@ -30,11 +30,11 @@ class ProcessBus {
   ProcessBus();
 
  public:
-  static std::unique_ptr<ProcessBus> RestoreOrCreate(
-      const alpha::Slice& filepath, size_t size, bool force = false);
-  static std::unique_ptr<ProcessBus> RestoreFrom(const alpha::Slice& filepath,
-                                                 size_t size);
-  static std::unique_ptr<ProcessBus> CreateFrom(const alpha::Slice& filepath,
+  static std::unique_ptr<ProcessBus> RestoreOrCreate(alpha::Slice filepath,
+                                                     size_t size,
+                                                     bool force = false);
+  static std::unique_ptr<ProcessBus> RestoreFrom(alpha::Slice filepath);
+  static std::unique_ptr<ProcessBus> CreateFrom(alpha::Slice filepath,
                                                 size_t size);
   static const size_t kMaxBufferBodyLength = RingBuffer::kMaxBufferBodyLength;
 
