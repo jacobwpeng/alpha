@@ -22,6 +22,7 @@ struct sockaddr_in;
 namespace alpha {
 class NetAddress {
  public:
+  NetAddress();
   /* IPv4 addr only */
   NetAddress(const Slice& ip, int port);
   NetAddress(const sockaddr_in& sa);

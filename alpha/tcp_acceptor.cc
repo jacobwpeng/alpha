@@ -42,7 +42,7 @@ bool TcpAcceptor::Bind(const alpha::NetAddress& addr) {
   int ret = ::bind(listen_fd_, reinterpret_cast<sockaddr*>(&sock_addr),
                    sizeof(sockaddr));
   if (unlikely(ret == -1)) {
-    PLOG_ERROR << "bind failed";
+    PLOG_ERROR << "bind to " << addr.ip() << ":" << addr.port() << " failed";
     return false;
   }
   const int kTimeoutMicroSeconds = 5000000;

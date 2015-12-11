@@ -37,6 +37,8 @@ bool operator<(const NetAddress& lhs, const NetAddress& rhs) {
   return lhs.ToSockAddr().sin_addr.s_addr < rhs.ToSockAddr().sin_addr.s_addr;
 }
 
+NetAddress::NetAddress() : port_(0) {}
+
 NetAddress::NetAddress(const alpha::Slice& ip, int port)
     : ip_(ip.ToString()), port_(port) {}
 
