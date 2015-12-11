@@ -76,7 +76,7 @@ void LoggerFile::MaybeChangeLogFile() {
 }
 
 void LoggerFile::UpdateSymLinkFile(const char* file) {
-  static std::string symlink_path = SymLinkPath();
+  std::string symlink_path = SymLinkPath();
   unlink(symlink_path.data());
   symlink(file, symlink_path.data());
 }
