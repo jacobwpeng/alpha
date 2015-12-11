@@ -57,7 +57,7 @@ class TimerManager::Impl {
 
   Timer* Insert(alpha::TimeStamp expire_time, TimerFunctor functor);
 
-  TimerId current_;
+  TimerId current_ = 0;
   TimerSet timers_;
   ActiveTimerMap active_timers_;
 };
