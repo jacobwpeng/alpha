@@ -1,7 +1,7 @@
 /*
  * ==============================================================================
  *
- *       Filename:  http_message_codec.h
+ *       Filename:  HTTPMessageCodec.h
  *        Created:  05/03/15 19:40:11
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
@@ -10,30 +10,32 @@
  * ==============================================================================
  */
 
-#ifndef __HTTP_MESSAGE_CODEC_H__
-#define __HTTP_MESSAGE_CODEC_H__
+#pragma once
 
 #include <map>
 #include <string>
 #include <alpha/slice.h>
 #include <alpha/tcp_connection.h>
-#include <alpha/http_message.h>
+#include <alpha/HTTPMessage.h>
 
 namespace alpha {
 class HTTPMessageCodec {
  public:
-  enum class Status {
+  /*
+   * == 0 Done
+   * < 0 Error
+   * > 0 NeedsMore
+   */
+  enum Status {
     kDone = 0,
-    kNeedsMore = 1,
-    kUnknownError = 2,
 
-    kInvalidMethod = 10,
-    kInvalidStartLine = 11,
-    kInvalidHTTPVersion = 12,
-    kInvalidHeadLine = 13,
-    kDuplicatedHead = 14,
-    kInvalidContentLength = 15,
-    kTooMuchContent = 16,
+    kInvalidMethod = -100,
+    kInvalidStartLine = -101,
+    kInvalidHTTPVersion = -102,
+    kInvalidHeadLine = -103,
+    kDuplicatedHead = -104,
+    kInvalidContentLength = -105,
+    kTooMuchContent = -106,
 
     kParseStartLine = 100,
     kParseHeader = 101,
@@ -43,18 +45,16 @@ class HTTPMessageCodec {
 
   using HTTPHeader = std::map<std::string, std::string>;
 
-  Status Process(Slice slice, int* consumed);
+  Status Process(Slice& data);
   HTTPMessage& Done();
 
  private:
-  Status ParseStartLine(Slice start_line);
-  Status ParseHeader(Slice data, int* consumed);
+  Status ParseStartLine(Slice& data);
+  Status ParseHeader(Slice& data);
   Status OperationAfterParseHeader();
-  Status AppendData(Slice data);
-  Status status_ = Status::kParseStartLine;
-  int content_length_ = -1;
+  Status AppendData(Slice& data);
+  Status status_{Status::kParseStartLine};
+  uint32_t content_length_{std::numeric_limits<uint32_t>::max()};
   HTTPMessage http_message_;
 };
 }
-
-#endif /* ----- #ifndef __HTTP_MESSAGE_CODEC_H__  ----- */

@@ -1,7 +1,7 @@
 /*
  * ==============================================================================
  *
- *       Filename:  simple_http_server.cc
+ *       Filename:  SimpleHTTPServer.cc
  *        Created:  05/03/15 19:16:30
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
@@ -10,14 +10,14 @@
  * ==============================================================================
  */
 
-#include "simple_http_server.h"
+#include "SimpleHTTPServer.h"
 #include "compiler.h"
 #include "logger.h"
 #include "format.h"
 #include "net_address.h"
 #include "event_loop.h"
 #include "tcp_server.h"
-#include "http_message_codec.h"
+#include "HTTPMessageCodec.h"
 
 namespace alpha {
 SimpleHTTPServer::SimpleHTTPServer(EventLoop* loop,
@@ -57,12 +57,12 @@ void SimpleHTTPServer::OnMessage(TcpConnectionPtr conn,
   HTTPMessageCodec** p = conn->GetContext<HTTPMessageCodec*>();
   assert(p && *p);
   auto codec = *p;
-  int consumed;
   auto data = buffer->Read();
-  // DLOG_INFO << "data = \n" << HexDump(data);
-  auto status = codec->Process(data, &consumed);
+  auto data_size = data.size();
+  auto status = codec->Process(data);
+  int consumed = data_size - data.size();
   assert(consumed >= 0);
-  if (status == HTTPMessageCodec::Status::kNeedsMore) {
+  if (status > 0) {
     DLOG_INFO << "codec consume " << consumed << " bytes";
     buffer->ConsumeBytes(consumed);
   } else if (status == HTTPMessageCodec::Status::kDone) {

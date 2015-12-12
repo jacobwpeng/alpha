@@ -1,7 +1,7 @@
 /*
  * ==============================================================================
  *
- *       Filename:  simple_http_server.h
+ *       Filename:  SimpleHTTPServer.h
  *        Created:  05/03/15 19:11:14
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
@@ -9,14 +9,14 @@
  *
  * ==============================================================================
  */
-#ifndef __SIMPLE_HTTP_SERVER_H__
-#define __SIMPLE_HTTP_SERVER_H__
+
+#pragma once
 
 #include <map>
 #include "slice.h"
 #include "net_address.h"
 #include "tcp_connection.h"
-#include "http_message_codec.h"
+#include "HTTPMessageCodec.h"
 
 namespace alpha {
 class EventLoop;
@@ -49,5 +49,3 @@ class SimpleHTTPServer {
   Callback callback_;
 };
 }
-
-#endif /* ----- #ifndef __SIMPLE_HTTP_SERVER_H__  ----- */

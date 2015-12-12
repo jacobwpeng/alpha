@@ -10,7 +10,7 @@
  * =============================================================================
  */
 
-#include "http_response_builder.h"
+#include "HTTPResponseBuilder.h"
 #include <cassert>
 
 namespace alpha {

@@ -1,7 +1,7 @@
 /*
  * ==============================================================================
  *
- *       Filename:  http_message_codec.cc
+ *       Filename:  HTTPMessageCodec.cc
  *        Created:  05/03/15 19:53:30
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
@@ -10,49 +10,37 @@
  * ==============================================================================
  */
 
-#include "http_message_codec.h"
+#include "HTTPMessageCodec.h"
 #include "logger.h"
 
 namespace alpha {
 static const Slice CRLF("\r\n");
 static const Slice DoubleCRLF("\r\n\r\n");
-HTTPMessageCodec::Status HTTPMessageCodec::Process(Slice slice, int* consumed) {
-  *consumed = 0;
-  if (status_ < Status::kParseStartLine) {
+HTTPMessageCodec::Status HTTPMessageCodec::Process(Slice& data) {
+  if (status_ < 0) {
     return status_;
   }
 
   if (status_ == Status::kParseStartLine) {
-    auto pos = slice.find(CRLF);
-    if (pos == Slice::npos) {
-      return Status::kNeedsMore;
-    } else {
-      auto start_line = slice.subslice(0, pos);
-      status_ = ParseStartLine(start_line);
-      if (status_ != Status::kParseHeader) {
-        return status_;
-      }
-      *consumed += pos + CRLF.size();
-      slice.Advance(*consumed);
+    status_ = ParseStartLine(data);
+    if (status_ < 0) {
+      return status_;
     }
+    DLOG_INFO << "StartLine parsed";
   }
 
   if (status_ == Status::kParseHeader) {
-    int consumed_by_parse_header = 0;
-    status_ = ParseHeader(slice, &consumed_by_parse_header);
-    if (status_ != Status::kParseData && status_ != Status::kDone) {
+    status_ = ParseHeader(data);
+    if (status_ < 0) {
       return status_;
     }
-    *consumed += consumed_by_parse_header;
-    slice.Advance(consumed_by_parse_header);
+    DLOG_INFO << "HTTPHeader parsed";
   }
 
   if (status_ == Status::kParseData) {
-    status_ = AppendData(slice);
-    if (status_ != Status::kNeedsMore && status_ != Status::kDone) {
-      return status_;
-    } else {
-      *consumed += slice.size();
+    status_ = AppendData(data);
+    if (status_ == Status::kDone) {
+      DLOG_INFO << "Received all data";
     }
   }
   return status_;
@@ -63,7 +51,13 @@ HTTPMessage& HTTPMessageCodec::Done() {
   return http_message_;
 }
 
-HTTPMessageCodec::Status HTTPMessageCodec::ParseStartLine(Slice start_line) {
+HTTPMessageCodec::Status HTTPMessageCodec::ParseStartLine(Slice& data) {
+  auto pos = data.find(CRLF);
+  if (pos == Slice::npos) {
+    return Status::kParseStartLine;
+    ;
+  }
+  auto start_line = data.subslice(0, pos);
   const auto kVersionLength = Slice(" HTTP/1.0").size();
   if (!start_line.EndsWith(" HTTP/1.0") && !start_line.EndsWith(" HTTP/1.1")) {
     return Status::kInvalidHTTPVersion;
@@ -94,15 +88,15 @@ HTTPMessageCodec::Status HTTPMessageCodec::ParseStartLine(Slice start_line) {
     http_message_.SetPath(path.substr(0, query_string_start));
     http_message_.SetQueryString(path.substr(query_string_start + 1));
   }
+  data.Advance(pos + CRLF.size());
   return Status::kParseHeader;
 }
 
-HTTPMessageCodec::Status HTTPMessageCodec::ParseHeader(Slice data,
-                                                       int* consumed) {
+HTTPMessageCodec::Status HTTPMessageCodec::ParseHeader(Slice& data) {
   auto pos = data.find(CRLF);
   while (pos != Slice::npos) {
     if (pos == 0) {
-      *consumed += 2;
+      data.Advance(CRLF.size());
       return OperationAfterParseHeader();
     }
     auto line = data.subslice(0, pos);
@@ -113,11 +107,10 @@ HTTPMessageCodec::Status HTTPMessageCodec::ParseHeader(Slice data,
     auto key = line.subslice(0, sp_pos);
     auto val = line.subslice(key.size() + 2);
     http_message_.Headers().Add(key, val);
-    *consumed += line.size() + CRLF.size();
     data.Advance(line.size() + CRLF.size());
     pos = data.find(CRLF);
   }
-  return Status::kNeedsMore;
+  return Status::kParseHeader;
 }
 
 HTTPMessageCodec::Status HTTPMessageCodec::OperationAfterParseHeader() {
@@ -125,34 +118,31 @@ HTTPMessageCodec::Status HTTPMessageCodec::OperationAfterParseHeader() {
                                                           : Status::kDone;
 }
 
-HTTPMessageCodec::Status HTTPMessageCodec::AppendData(Slice data) {
-  if (content_length_ == -1) {
+HTTPMessageCodec::Status HTTPMessageCodec::AppendData(Slice& data) {
+  if (content_length_ == std::numeric_limits<uint32_t>::max()) {
     const size_t kMaxContentLengthDigitNum = 12;
-    const int kMaxContentLength = 1024;
+    const uint32_t kMaxContentLength = 1 << 20;
     assert(http_message_.Headers().Exists("Content-Length"));
     auto content_length_str = http_message_.Headers().Get("Content-Length");
     if (content_length_str.size() >= kMaxContentLengthDigitNum) {
       return Status::kInvalidContentLength;
     }
 
-    auto n = ::sscanf(content_length_str.data(), "%d", &content_length_);
-    if (n != 1 || content_length_ <= 0 || content_length_ > kMaxContentLength) {
+    auto n = ::sscanf(content_length_str.data(), "%u", &content_length_);
+    if (n != 1 || content_length_ > kMaxContentLength) {
       return Status::kInvalidContentLength;
     }
+    DLOG_INFO << "Content length: " << content_length_;
   }
 
   assert(content_length_ > 0);
-  http_message_.AppendBody(data);
-  auto current_body_size = http_message_.Body().size();
-  const auto size = static_cast<size_t>(content_length_);
-  if (current_body_size > size) {
-    return Status::kTooMuchContent;
-  } else if (current_body_size == size) {
-    return Status::kDone;
-  } else {
-    DLOG_INFO << "Expected size = " << size
-              << ", current size = " << current_body_size;
-    return Status::kNeedsMore;
-  }
+  const auto current_body_size = http_message_.Body().size();
+  CHECK(current_body_size < content_length_);
+  auto content_length_to_append =
+      std::min(data.size(), content_length_ - current_body_size);
+  http_message_.AppendBody(data.subslice(0, content_length_to_append));
+  data.Advance(content_length_to_append);
+  return http_message_.Body().size() == content_length_ ? Status::kDone
+                                                        : Status::kParseData;
 }
 }

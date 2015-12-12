@@ -1,7 +1,7 @@
 /*
  * =============================================================================
  *
- *       Filename:  http_response_builder.h
+ *       Filename:  HTTPResponseBuilder.h
  *        Created:  05/29/15 10:11:03
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
@@ -10,12 +10,11 @@
  * =============================================================================
  */
 
-#ifndef __HTTP_RESPONSE_BUILDER_H__
-#define __HTTP_RESPONSE_BUILDER_H__
+#pragma once
 
 #include <alpha/slice.h>
 #include <alpha/tcp_connection.h>
-#include <alpha/http_message.h>
+#include <alpha/HTTPMessage.h>
 
 namespace alpha {
 class HTTPResponseBuilder {
@@ -35,5 +34,3 @@ class HTTPResponseBuilder {
   std::string body_;
 };
 }
-
-#endif /* ----- #ifndef __HTTP_RESPONSE_BUILDER_H__  ----- */

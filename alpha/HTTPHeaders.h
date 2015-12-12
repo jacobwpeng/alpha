@@ -1,7 +1,7 @@
 /*
  * ==============================================================================
  *
- *       Filename:  http_headers.h
+ *       Filename:  HTTPHeaders.h
  *        Created:  05/24/15 16:00:07
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
@@ -10,8 +10,7 @@
  * ==============================================================================
  */
 
-#ifndef __HTTP_HEADERS_H__
-#define __HTTP_HEADERS_H__
+#pragma once
 
 #include <vector>
 #include <algorithm>
@@ -45,5 +44,3 @@ void HTTPHeaders::Foreach(LAMBDA lambda) const {
   }
 }
 }
-
-#endif /* ----- #ifndef __HTTP_HEADERS_H__  ----- */

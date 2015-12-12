@@ -9,7 +9,7 @@
  *
  * ==============================================================================
  */
-#include "http_message.h"
+#include "HTTPMessage.h"
 #include <ctime>
 
 namespace alpha {

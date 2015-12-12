@@ -1,7 +1,7 @@
 /*
  * ==============================================================================
  *
- *       Filename:  http_message.h
+ *       Filename:  HTTPMessage.h
  *        Created:  05/24/15 15:55:15
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
@@ -10,14 +10,13 @@
  * ==============================================================================
  */
 
-#ifndef __HTTP_MESSAGE_H__
-#define __HTTP_MESSAGE_H__
+#pragma once
 
 #include <map>
 #include <alpha/time_util.h>
 #include <alpha/slice.h>
 #include <alpha/net_address.h>
-#include <alpha/http_headers.h>
+#include <alpha/HTTPHeaders.h>
 
 namespace alpha {
 class HTTPMessage {
@@ -81,5 +80,3 @@ class HTTPMessage {
   std::string body_;
 };
 }
-
-#endif /* ----- #ifndef __HTTP_MESSAGE_H__  ----- */
