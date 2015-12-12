@@ -86,6 +86,7 @@ Subprocess::Subprocess(const std::vector<std::string>& argv,
         [](const std::string& arg) { return const_cast<char*>(arg.data()); });
     args.push_back(nullptr);
     rc = execv(executable, args.data());
+    PLOG_ERROR << "execv";
     throw SubprocessSpawnError("execv failed", errno);
   } else {
     return_code_.SetRunning();
