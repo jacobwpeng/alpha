@@ -81,18 +81,18 @@ class LogDestination {
   static LogFilesPtr files_;
 };
 
-class LogMessage {
+class LogMessage final {
  public:
   LogMessage(const char* file, int line, LogLevel level,
              bool errno_message = false, const char* expr = nullptr);
   virtual ~LogMessage();
   alpha::LoggerStream& stream();
 
- protected:
+ private:
   void Flush();
   int preserved_errno() const;
+  void LogStackTrace(LoggerStream& stream);
 
- private:
   bool flushed_;
   int preserved_errno_;
   int header_size_;

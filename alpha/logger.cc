@@ -12,6 +12,8 @@
 
 #include "logger.h"
 
+#include <cxxabi.h>
+#include <execinfo.h>
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
@@ -21,6 +23,23 @@
 #include <functional>
 #include <alpha/logger_file.h>
 #include <alpha/compiler.h>
+#include <alpha/StackTrace.h>
+
+namespace detail {
+std::string DemangleCxxName(const char* start, const char* end,
+                            int* status = nullptr) {
+  std::string mangled_name(start, end);
+  int s;
+  if (status == nullptr) {
+    status = &s;
+  }
+  auto p = abi::__cxa_demangle(mangled_name.c_str(), nullptr, nullptr, status);
+  std::string result;
+  result = *status ? mangled_name : p;
+  free(p);
+  return result;
+}
+}
 
 namespace alpha {
 Logger::LogVoidify Logger::dummy_;
@@ -198,8 +217,9 @@ LogMessage::~LogMessage() {
     char message[256];
     char* m = strerror_r(preserved_errno(), message, sizeof(message));
     stream() << ": " << m;
-  } else if (unlikely(expr_ != nullptr)) {
-    stream() << "\n*** Check failure stack trace: ***";
+  } else if (level_ == kLogLevelFatal) {
+    stream() << "\n*** Check failure stack trace: ***\n";
+    LogStackTrace(stream());
   }
   Flush();
   errno = preserved_errno_;
@@ -211,6 +231,41 @@ LogMessage::~LogMessage() {
 alpha::LoggerStream& LogMessage::stream() { return stream_; }
 
 int LogMessage::preserved_errno() const { return preserved_errno_; }
+
+void LogMessage::LogStackTrace(LoggerStream& stream) {
+  static const size_t kMaxStackDepth = 64;
+  void* stacks[kMaxStackDepth];
+  auto depth = GetStackTrace(stacks, kMaxStackDepth, 0);
+  auto symbols = backtrace_symbols(stacks, depth);
+  if (symbols) {
+    for (auto i = 0; i < depth; ++i) {
+      std::string addr("(unknown)");
+      std::string function("(unknown)");
+      auto line = symbols[i];
+      auto left_bracket = strchr(line, '[');
+      if (left_bracket) {
+        ++left_bracket;
+        auto right_bracket = strchr(left_bracket, ']');
+        if (right_bracket) {
+          addr.assign(left_bracket, right_bracket);
+        }
+      }
+      auto left_parenthesis = strchr(line, '(');
+      if (left_parenthesis) {
+        ++left_parenthesis;
+        auto plus = strchr(left_parenthesis, '+');
+        if (plus) {
+          function = detail::DemangleCxxName(left_parenthesis, plus);
+        }
+      }
+      static const size_t kFormattedSize = 512;
+      char formatted[kFormattedSize];
+      snprintf(formatted, kFormattedSize, "    @%19s  %.400s", addr.c_str(),
+               function.c_str());
+      stream << formatted << '\n';
+    }
+  }
+}
 
 void LogMessage::Flush() {
   if (flushed_) {
