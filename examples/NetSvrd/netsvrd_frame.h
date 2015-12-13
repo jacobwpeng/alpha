@@ -10,6 +10,7 @@
  * =============================================================================
  */
 
+#include <cstring>
 #include <cstdint>
 #include <cstddef>
 #include <type_traits>
@@ -18,7 +19,7 @@
 #define __NETSVRD_FRAME_H__
 
 struct NetSvrdFrame {
-  static const uint64_t kMagic = 0;
+  static const uint32_t kMagic = 0;
   static const size_t kHeaderSize = 40;
   static const uint32_t kMaxPayloadSize = 60 * 1024;  // 60KiB
   uint32_t magic;
@@ -27,7 +28,9 @@ struct NetSvrdFrame {
   uint8_t payload[];
 
   void* operator new(size_t, uint32_t payload_size) {
-    return malloc(payload_size + NetSvrdFrame::kHeaderSize);
+    void* p = malloc(payload_size + NetSvrdFrame::kHeaderSize);
+    memset(p, 0x0, payload_size + NetSvrdFrame::kHeaderSize);
+    return p;
   }
   void operator delete(void* p) { free(p); }
 };

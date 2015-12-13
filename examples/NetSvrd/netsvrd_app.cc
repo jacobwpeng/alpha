@@ -18,6 +18,7 @@
 #include <alpha/random.h>
 #include "netsvrd_virtual_server.h"
 
+using namespace std::placeholders;
 NetSvrdApp::NetSvrdApp(alpha::EventLoop* loop)
     : loop_(loop), net_server_id_(alpha::Random::Rand64()) {}
 
@@ -59,5 +60,13 @@ int NetSvrdApp::Run() {
                 [&ok](NetSvrdVirtualServerPtr& server) {
     if (ok) ok = server->Run();
   });
+  loop_->set_cron_functor(std::bind(&NetSvrdApp::Cron, this));
   return ok ? loop_->Run(), 0 : -1;
+}
+
+int NetSvrdApp::Cron() {
+  for (auto& server : servers_) {
+    server->FlushWorkersOutput();
+  }
+  return 0;
 }

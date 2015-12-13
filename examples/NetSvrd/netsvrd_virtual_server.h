@@ -13,6 +13,7 @@
 #ifndef __NETSVRD_VIRTUAL_SERVER_H__
 #define __NETSVRD_VIRTUAL_SERVER_H__
 
+#include <map>
 #include <vector>
 #include <string>
 #include <alpha/compiler.h>
@@ -20,6 +21,7 @@
 #include <alpha/timer_manager.h>
 #include <alpha/Subprocess.h>
 #include "netsvrd_frame_codec.h"
+#include "netsvrd_worker.h"
 
 namespace alpha {
 class EventLoop;
@@ -62,18 +64,19 @@ class NetSvrdVirtualServer final {
 
   bool AddInterface(const std::string& addr);
   bool Run();
+  void FlushWorkersOutput();
 
  private:
-  using SubprocessPtr = std::unique_ptr<alpha::Subprocess>;
   using TcpServerPtr = std::unique_ptr<alpha::TcpServer>;
   static const uint32_t kCheckWorkerStatusInterval = 1000;  // 1000 ms
   void OnConnected(alpha::TcpConnectionPtr conn);
   void OnMessage(alpha::TcpConnectionPtr conn,
                  alpha::TcpConnectionBuffer* buffer);
+  void OnClose(alpha::TcpConnectionPtr conn);
   void OnFrame(uint64_t connection_id, std::unique_ptr<NetSvrdFrame>&& frame);
   void StartMonitorWorkers();
   void StopMonitorWorkers();
-  SubprocessPtr SpawnWorker(int worker_id);
+  NetSvrdWorkerPtr SpawnWorker(int worker_id);
   void PollWorkers();
   alpha::EventLoop* loop_;
   unsigned max_worker_num_;
@@ -83,7 +86,8 @@ class NetSvrdVirtualServer final {
   std::string bus_dir_;
   std::string worker_path_;
   std::vector<TcpServerPtr> tcp_servers_;
-  std::vector<SubprocessPtr> workers_;
+  std::vector<NetSvrdWorkerPtr> workers_;
+  std::map<uint64_t, alpha::TcpConnection*> connections_;
 };
 
 #endif /* ----- #ifndef __NETSVRD_VIRTUAL_SERVER_H__  ----- */

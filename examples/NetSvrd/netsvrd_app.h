@@ -29,6 +29,8 @@ class NetSvrdApp {
 
  private:
   using NetSvrdVirtualServerPtr = std::unique_ptr<NetSvrdVirtualServer>;
+  int Cron();
+
   alpha::EventLoop* loop_;
   uint64_t net_server_id_;
   std::vector<NetSvrdVirtualServerPtr> servers_;

@@ -18,6 +18,7 @@
 #include <alpha/tcp_server.h>
 #include "netsvrd_frame.h"
 
+using namespace std::placeholders;
 NetSvrdAddressParser::NetSvrdAddressParser(const std::string& addr)
     : valid_(false), server_type_(NetSvrdVirtualServerType::kProtocolUnknown) {
   valid_ = Parse(addr);
@@ -75,6 +76,12 @@ bool NetSvrdVirtualServer::AddInterface(const std::string& addr) {
   if (parser.server_type() == NetSvrdVirtualServerType::kProtocolTcp) {
     tcp_servers_.emplace_back(
         alpha::make_unique<alpha::TcpServer>(loop_, parser.address()));
+    auto& server = *tcp_servers_.rbegin();
+    server->SetOnNewConnection(
+        std::bind(&NetSvrdVirtualServer::OnConnected, this, _1));
+    server->SetOnRead(
+        std::bind(&NetSvrdVirtualServer::OnMessage, this, _1, _2));
+    server->SetOnClose(std::bind(&NetSvrdVirtualServer::OnClose, this, _1));
   }
   return true;
 }
@@ -92,17 +99,47 @@ bool NetSvrdVirtualServer::Run() {
   return true;
 }
 
+void NetSvrdVirtualServer::FlushWorkersOutput() {
+  char* data = nullptr;
+  int len = 0;
+  for (auto& worker : workers_) {
+    do {
+      data = worker->BusOut()->Read(&len);
+      if (data) {
+        DLOG_INFO << "Data len from worker: " << len;
+        auto internal_frame = reinterpret_cast<NetSvrdInternalFrame*>(data);
+        if (internal_frame->net_server_id != net_server_id_) {
+          LOG_WARNING << "Drop obsolete frame, old server id: "
+                      << internal_frame->net_server_id;
+          continue;
+        }
+        auto it = connections_.find(internal_frame->client_id);
+        if (it == connections_.end()) {
+          LOG_WARNING << "Invalid client id found";
+          continue;
+        }
+        bool ok = it->second->Write(alpha::Slice(data, len));
+        if (!ok) {
+          LOG_WARNING << "Write to client failed";
+          continue;
+        }
+      }
+    } while (data);
+  }
+}
+
 void NetSvrdVirtualServer::OnConnected(alpha::TcpConnectionPtr conn) {
-  using namespace std::placeholders;
   NetSvrdConnectionContext ctx;
   ctx.connection_id_ = next_connection_id_++;
   ctx.codec = std::make_shared<NetSvrdFrameCodec>();
   conn->SetContext(ctx);
+  auto p = connections_.emplace(ctx.connection_id_, conn.get());
+  CHECK(p.second);
 }
 
 void NetSvrdVirtualServer::OnMessage(alpha::TcpConnectionPtr conn,
                                      alpha::TcpConnectionBuffer* buffer) {
-  auto ctx = conn->GetContext<NetSvrdConnectionContext>();
+  auto ctx = conn->GetContextPtr<NetSvrdConnectionContext>();
   CHECK(ctx);
   auto frame = ctx->codec->OnMessage(conn, buffer);
   if (frame) {
@@ -110,13 +147,24 @@ void NetSvrdVirtualServer::OnMessage(alpha::TcpConnectionPtr conn,
   }
 }
 
+void NetSvrdVirtualServer::OnClose(alpha::TcpConnectionPtr conn) {
+  auto ctx = conn->GetContextPtr<NetSvrdConnectionContext>();
+  CHECK(ctx);
+  auto num = connections_.erase(ctx->connection_id_);
+  CHECK(num == 1);
+}
+
 void NetSvrdVirtualServer::OnFrame(uint64_t connection_id,
                                    std::unique_ptr<NetSvrdFrame>&& frame) {
+  DLOG_INFO << "Frame payload size: " << frame->payload_size;
   auto p = frame.get();
   auto internal_frame = reinterpret_cast<NetSvrdInternalFrame*>(p);
   internal_frame->client_id = connection_id;
   internal_frame->net_server_id = net_server_id_;
-  DLOG_INFO << "Frame payload size: " << frame->payload_size;
+  auto it = workers_.begin();
+  auto data = reinterpret_cast<const char*>(p);
+  auto size = frame->payload_size + NetSvrdFrame::kHeaderSize;
+  (*it)->BusIn()->Write(data, size);
 }
 
 void NetSvrdVirtualServer::StartMonitorWorkers() {
@@ -133,24 +181,38 @@ void NetSvrdVirtualServer::StopMonitorWorkers() {
   poll_workers_timer_id_ = 0;
 }
 
-NetSvrdVirtualServer::SubprocessPtr NetSvrdVirtualServer::SpawnWorker(
-    int worker_id) {
+NetSvrdWorkerPtr NetSvrdVirtualServer::SpawnWorker(int worker_id) {
   std::ostringstream oss;
   oss << bus_dir_ << '/' << "worker_" << worker_id << "_in.bus";
-  std::string bus_in = oss.str();
+  std::string bus_in_path = oss.str();
   oss.str("");
   oss << bus_dir_ << '/' << "worker_" << worker_id << "_out.bus";
-  std::string bus_out = oss.str();
+  std::string bus_out_path = oss.str();
+
+  auto bus_in = alpha::ProcessBus::RestoreOrCreate(bus_in_path, 1 << 20, false);
+  if (bus_in == nullptr) {
+    bus_in = alpha::ProcessBus::RestoreOrCreate(bus_in_path, 1 << 20, true);
+  }
+  CHECK(bus_in);
+  auto bus_out =
+      alpha::ProcessBus::RestoreOrCreate(bus_out_path, 1 << 20, false);
+  if (bus_out == nullptr) {
+    auto bus_out =
+        alpha::ProcessBus::RestoreOrCreate(bus_out_path, 1 << 20, true);
+  }
+  DLOG_INFO << worker_path_;
   std::vector<std::string> argv = {worker_path_, std::to_string(net_server_id_),
-                                   bus_in, bus_out};
-  return alpha::make_unique<alpha::Subprocess>(argv);
+                                   bus_in_path, bus_out_path};
+  return alpha::make_unique<NetSvrdWorker>(
+      alpha::make_unique<alpha::Subprocess>(argv), std::move(bus_in),
+      std::move(bus_out));
 }
 
 void NetSvrdVirtualServer::PollWorkers() {
   CHECK(workers_.size() == max_worker_num_);
   for (auto i = 0u; i < max_worker_num_; ++i) {
     auto& worker = workers_[i];
-    auto rc = worker->Poll();
+    auto rc = worker->Process()->Poll();
     if (rc.Running()) continue;
 
     LOG_WARNING << "Worker is " << rc.status();
