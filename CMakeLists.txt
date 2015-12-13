@@ -3,11 +3,15 @@ project(alpha CXX)
 
 include_directories(${PROJECT_SOURCE_DIR})
 add_compile_options(-std=c++11)
-add_compile_options(-Wall -Wextra -Werror)
+add_compile_options(-Wall)
+add_compile_options(-Wextra)
+add_compile_options(-Werror)
+add_compile_options(-ggdb)
 add_compile_options(-D_FILE_OFFSET_BITS=64)
-add_compile_options("$<$<CONFIG:DEBUG>:-ggdb>")
+#add_compile_options("$<$<CONFIG:DEBUG>:-ggdb>")
 add_compile_options("$<$<CONFIG:RELEASE>:-O3 -DNDEBUG>")
 add_compile_options(-Wno-unused-parameter)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
 
 include(CheckCXXCompilerFlag)
 
@@ -23,7 +27,7 @@ endif()
 
 option(STATIC_LINK_LIBSTDC++ "Static link to libstdc++" OFF)
 if (STATIC_LINK_LIBSTDC++)
-  set(CMAKE_EXE_LINKER_FLAGS "-static-libstdc++")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
 endif()
 
 add_subdirectory(alpha)
