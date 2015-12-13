@@ -135,7 +135,9 @@ HTTPMessageCodec::Status HTTPMessageCodec::AppendData(Slice& data) {
     DLOG_INFO << "Content length: " << content_length_;
   }
 
-  assert(content_length_ > 0);
+  if (content_length_ == 0) {
+    return Status::kDone;
+  }
   const auto current_body_size = http_message_.Body().size();
   CHECK(current_body_size < content_length_);
   auto content_length_to_append =
