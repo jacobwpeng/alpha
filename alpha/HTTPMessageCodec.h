@@ -47,6 +47,7 @@ class HTTPMessageCodec {
 
   Status Process(Slice& data);
   HTTPMessage& Done();
+  Status status() const { return status_; }
 
  private:
   Status ParseStartLine(Slice& data);

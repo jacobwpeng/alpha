@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __TCP_CONNECTION_H__
-#define __TCP_CONNECTION_H__
+#pragma once
 
 #include "slice.h"
 #include <memory>
@@ -63,7 +62,11 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
   void ClearContext() { ctx_ = Context(); }
   Context GetContext() const { return ctx_; }
   template <typename T>
-  T* GetContext() {
+  T GetContext() {
+    return boost::any_cast<T>(ctx_);
+  }
+  template <typename T>
+  T* GetContextPtr() {
     return boost::any_cast<T>(&ctx_);
   }
 
@@ -106,5 +109,3 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
   Context ctx_;
 };
 }
-
-#endif /* ----- #ifndef __TCP_CONNECTION_H__  ----- */

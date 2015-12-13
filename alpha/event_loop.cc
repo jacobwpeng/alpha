@@ -44,7 +44,7 @@ void EventLoop::Run() {
   int timeout = wait_time_;  // ms
   unsigned idle = 0;
 
-  int status;
+  int status = kIdle;
   while (likely(not quit_)) {
     alpha::TimeStamp now = poller_->Poll(timeout, &channels);
     //先处理信号

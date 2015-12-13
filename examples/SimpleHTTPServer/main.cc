@@ -13,10 +13,11 @@
 #include <alpha/logger.h>
 #include <alpha/net_address.h>
 #include <alpha/event_loop.h>
-#include <alpha/simple_http_server.h>
-#include <alpha/http_message.h>
+#include <alpha/SimpleHTTPServer.h>
+#include <alpha/HTTPMessage.h>
 
 int main(int argc, char* argv[]) {
+  alpha::Logger::set_logtostderr(true);
   alpha::Logger::Init(argv[0]);
   alpha::EventLoop loop;
   loop.TrapSignal(SIGINT, [&] { loop.Quit(); });
@@ -33,7 +34,7 @@ int main(int argc, char* argv[]) {
             [](const std::string& name,
                const std::string& val) { LOG_INFO << name << ": " << val; });
         if (!message.Body().empty()) {
-          LOG_INFO << "Body: " << message.Body();
+          LOG_INFO << "Body size: " << message.Body().size();
         }
 
         for (auto& p : message.Params()) {

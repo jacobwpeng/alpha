@@ -54,7 +54,7 @@ class EchoServer {
   }
 
   void UpdateTimer(alpha::TcpConnectionPtr& conn) {
-    auto timerid = conn->GetContext<alpha::TimerManager::TimerId>();
+    auto timerid = conn->GetContextPtr<alpha::TimerManager::TimerId>();
     if (timerid) {
       loop_->RemoveTimer(*timerid);
     }

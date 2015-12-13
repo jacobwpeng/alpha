@@ -54,17 +54,15 @@ void SimpleHTTPServer::DefaultRequestCallback(TcpConnectionPtr conn,
 
 void SimpleHTTPServer::OnMessage(TcpConnectionPtr conn,
                                  TcpConnectionBuffer* buffer) {
-  HTTPMessageCodec** p = conn->GetContext<HTTPMessageCodec*>();
-  assert(p && *p);
-  auto codec = *p;
+  auto codec = conn->GetContext<std::shared_ptr<HTTPMessageCodec>>();
   auto data = buffer->Read();
   auto data_size = data.size();
   auto status = codec->Process(data);
   int consumed = data_size - data.size();
   assert(consumed >= 0);
+  buffer->ConsumeBytes(consumed);
+  DLOG_INFO << "codec consume " << consumed << " bytes";
   if (status > 0) {
-    DLOG_INFO << "codec consume " << consumed << " bytes";
-    buffer->ConsumeBytes(consumed);
   } else if (status == HTTPMessageCodec::Status::kDone) {
     auto& http_message = codec->Done();
     http_message.SetClientAddress(conn->PeerAddr());
@@ -77,13 +75,9 @@ void SimpleHTTPServer::OnMessage(TcpConnectionPtr conn,
 }
 
 void SimpleHTTPServer::OnConnected(TcpConnectionPtr conn) {
-  HTTPMessageCodec* codec = new HTTPMessageCodec;
+  auto codec = std::make_shared<HTTPMessageCodec>();
   conn->SetContext(codec);
 }
 
-void SimpleHTTPServer::OnClose(TcpConnectionPtr conn) {
-  auto** p = conn->GetContext<HTTPMessageCodec*>();
-  assert(p && *p);
-  delete *p;
-}
+void SimpleHTTPServer::OnClose(TcpConnectionPtr conn) {}
 }
