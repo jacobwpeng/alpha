@@ -10,8 +10,7 @@
  * ==============================================================================
  */
 
-#ifndef __SLICE_H__
-#define __SLICE_H__
+#pragma once
 
 #include <cstddef>
 #include <cassert>
@@ -75,7 +74,6 @@ class Slice {
   size_t len_;
 };
 
+bool operator<(const Slice& lhs, const Slice& rhs);
 bool operator==(const Slice& lhs, const Slice& rhs);
 }
-
-#endif /* ----- #ifndef __SLICE_H__  ----- */
