@@ -55,6 +55,8 @@ class HTTPMessageCodec {
   Status OperationAfterParseHeader();
   Status AppendData(Slice& data);
   Status status_{Status::kParseStartLine};
+  void ParseHTTPMessagePayload(HTTPMessage* message,
+                               const std::string& boundary) const;
   uint32_t content_length_{std::numeric_limits<uint32_t>::max()};
   HTTPMessage http_message_;
 };

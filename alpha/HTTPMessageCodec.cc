@@ -48,6 +48,17 @@ HTTPMessageCodec::Status HTTPMessageCodec::Process(Slice& data) {
 
 HTTPMessage& HTTPMessageCodec::Done() {
   assert(status_ == Status::kDone);
+  auto content_type = http_message_.Headers().Get("Content-Type");
+  DLOG_INFO << alpha::Slice(content_type).ToString();
+  if (http_message_.Method() == "POST" &&
+      alpha::Slice(content_type).StartsWith("multipart/form-data;")) {
+    alpha::Slice key = "boundary=";
+    auto pos = content_type.find(key.data());
+    if (pos != std::string::npos) {
+      auto boundary = content_type.substr(pos + key.size());
+      ParseHTTPMessagePayload(&http_message_, boundary);
+    }
+  }
   return http_message_;
 }
 
@@ -146,5 +157,54 @@ HTTPMessageCodec::Status HTTPMessageCodec::AppendData(Slice& data) {
   data.Advance(content_length_to_append);
   return http_message_.Body().size() == content_length_ ? Status::kDone
                                                         : Status::kParseData;
+}
+
+void HTTPMessageCodec::ParseHTTPMessagePayload(
+    HTTPMessage* message, const std::string& boundary) const {
+  DLOG_INFO << "Boundary: " << boundary;
+  std::string boundary_sep = "--" + boundary;
+  std::string boundary_end = "--" + boundary + "--";
+  auto body = alpha::Slice(message->Body());
+  // boundary_sep
+  // Content-Info
+  // CRLF
+  // Payload
+  // boundary_sep
+  // Content-Info
+  // CRLF
+  // ...
+  // ...
+  // ...
+  // boundary_end
+  while (!body.empty()) {
+    body.Advance(boundary_sep.size() + CRLF.size());
+    auto pos = body.find(CRLF);
+    alpha::Slice payload_name;
+    while (pos) {
+      // Still in Content-Info
+      if (body.StartsWith("Content-Disposition")) {
+        // Parse name
+        //  auto name_start = alpha::Slice("name=\"");
+        //  auto name_start_pos = body.find(name_start);
+        //  CHECK(name_start_pos != alpha::Slice::npos);
+        //  CHECK(name_start_pos < pos);
+        //  payload_name = body.subslice(name_start_pos + name_start.size(),
+        //                               pos - 1 - name_start_pos);
+        //  DLOG_INFO << "Payload name: " << payload_name.ToString();
+      }
+      body.Advance(CRLF.size() + pos);
+      pos = body.find(CRLF);
+    }
+    // CHECK(!payload_name.empty());
+    body.Advance(CRLF.size());
+    // Now payload
+    auto payload_end = body.find(boundary_sep);
+    auto payload = body.subslice(0, payload_end - 2);
+    DLOG_INFO << "Payload size: " << payload.size();
+    message->AddPayload(payload);
+    if (body.find(boundary_end) == payload_end) {
+      break;
+    }
+  }
 }
 }

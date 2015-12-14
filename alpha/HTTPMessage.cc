@@ -11,6 +11,7 @@
  */
 #include "HTTPMessage.h"
 #include <ctime>
+#include <alpha/logger.h>
 
 namespace alpha {
 std::string HTTPMessage::FormatDate(alpha::TimeStamp time) {
@@ -66,6 +67,12 @@ void HTTPMessage::SetStatusString(alpha::Slice status_string) {
 
 void HTTPMessage::AppendBody(alpha::Slice data) {
   body_.append(data.data(), data.size());
+}
+
+void HTTPMessage::AddPayload(alpha::Slice payload) {
+  CHECK(payload.begin() > body_.data());
+  CHECK(payload.end() < body_.data() + body_.size());
+  payloads_.push_back(payload);
 }
 
 std::string HTTPMessage::ClientIp() const { return request().client_ip; }

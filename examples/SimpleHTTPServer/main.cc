@@ -15,6 +15,7 @@
 #include <alpha/event_loop.h>
 #include <alpha/SimpleHTTPServer.h>
 #include <alpha/HTTPMessage.h>
+#include <alpha/HTTPResponseBuilder.h>
 
 int main(int argc, char* argv[]) {
   alpha::Logger::set_logtostderr(true);
@@ -22,7 +23,7 @@ int main(int argc, char* argv[]) {
   alpha::EventLoop loop;
   loop.TrapSignal(SIGINT, [&] { loop.Quit(); });
   alpha::SimpleHTTPServer http_server(&loop,
-                                      alpha::NetAddress("127.0.0.1", 8080));
+                                      alpha::NetAddress("0.0.0.0", 8080));
   http_server.SetCallback(
       [](alpha::TcpConnectionPtr conn, const alpha::HTTPMessage& message) {
         LOG_INFO << "Client ip = " << message.ClientIp()
@@ -40,6 +41,12 @@ int main(int argc, char* argv[]) {
         for (auto& p : message.Params()) {
           LOG_INFO << p.first << ": " << p.second;
         }
+        const auto& payloads = message.payloads();
+        for (auto payload : payloads) {
+          DLOG_INFO << "Payload size: " << payload.size();
+        }
+        alpha::HTTPResponseBuilder builder(conn);
+        builder.status(201, "Created").SendWithEOM();
       });
   if (http_server.Run()) {
     loop.Run();

@@ -34,6 +34,7 @@ class HTTPMessage {
   void SetStatus(uint16_t status);
   void SetStatusString(alpha::Slice status_string);
   void AppendBody(alpha::Slice body);
+  void AddPayload(alpha::Slice payload);
 
   std::string ClientIp() const;
   uint16_t ClientPort() const;
@@ -44,6 +45,7 @@ class HTTPMessage {
   const std::string& StatusString() const;
   const std::string& Body() const;
   const std::map<std::string, std::string> Params() const;
+  const std::vector<alpha::Slice> payloads() const { return payloads_; }
 
  private:
   struct Request {
@@ -78,5 +80,6 @@ class HTTPMessage {
   mutable bool parsed_params_ = false;
   mutable std::map<std::string, std::string> query_params_;
   std::string body_;
+  std::vector<alpha::Slice> payloads_;
 };
 }

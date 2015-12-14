@@ -56,6 +56,7 @@ void SimpleHTTPServer::OnMessage(TcpConnectionPtr conn,
                                  TcpConnectionBuffer* buffer) {
   auto codec = conn->GetContext<std::shared_ptr<HTTPMessageCodec>>();
   auto data = buffer->Read();
+  // DLOG_INFO << '\n' << alpha::HexDump(data);
   auto data_size = data.size();
   auto status = codec->Process(data);
   int consumed = data_size - data.size();
@@ -79,5 +80,8 @@ void SimpleHTTPServer::OnConnected(TcpConnectionPtr conn) {
   conn->SetContext(codec);
 }
 
-void SimpleHTTPServer::OnClose(TcpConnectionPtr conn) {}
+void SimpleHTTPServer::OnClose(TcpConnectionPtr conn) {
+  auto data = conn->ReadBuffer()->Read();
+  DLOG_INFO << '\n' << alpha::HexDump(data);
+}
 }
