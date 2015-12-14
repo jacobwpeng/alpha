@@ -177,34 +177,48 @@ void HTTPMessageCodec::ParseHTTPMessagePayload(
   // ...
   // boundary_end
   while (!body.empty()) {
-    body.Advance(boundary_sep.size() + CRLF.size());
-    auto pos = body.find(CRLF);
-    alpha::Slice payload_name;
-    while (pos) {
-      // Still in Content-Info
-      if (body.StartsWith("Content-Disposition")) {
-        // Parse name
-        //  auto name_start = alpha::Slice("name=\"");
-        //  auto name_start_pos = body.find(name_start);
-        //  CHECK(name_start_pos != alpha::Slice::npos);
-        //  CHECK(name_start_pos < pos);
-        //  payload_name = body.subslice(name_start_pos + name_start.size(),
-        //                               pos - 1 - name_start_pos);
-        //  DLOG_INFO << "Payload name: " << payload_name.ToString();
-      }
-      body.Advance(CRLF.size() + pos);
-      pos = body.find(CRLF);
-    }
-    // CHECK(!payload_name.empty());
-    body.Advance(CRLF.size());
-    // Now payload
-    auto payload_end = body.find(boundary_sep);
-    auto payload = body.subslice(0, payload_end - 2);
-    DLOG_INFO << "Payload size: " << payload.size();
-    message->AddPayload(payload);
-    if (body.find(boundary_end) == payload_end) {
+    //auto pos = body.find(CRLF);
+    //alpha::Slice payload_name;
+    auto header_end = body.find(DoubleCRLF);
+    CHECK(header_end != alpha::Slice::npos);
+    body.Advance(header_end + DoubleCRLF.size());
+    auto next_boundary_start = body.find(boundary_sep);
+    CHECK(next_boundary_start >= CRLF.size());
+    auto payload_length = next_boundary_start - 2;
+    message->AddPayload(body.subslice(0, payload_length));
+    DLOG_INFO << "Payload length: " << payload_length;
+    body.Advance(next_boundary_start);
+    if (body.StartsWith(boundary_end)) {
       break;
     }
+    CHECK(body.StartsWith(boundary_sep));
+    body.Advance(boundary_sep.size() + CRLF.size());
+    //while (pos) {
+    //  // Still in Content-Info
+    //  if (body.StartsWith("Content-Disposition")) {
+    //    // Parse name
+    //    //  auto name_start = alpha::Slice("name=\"");
+    //    //  auto name_start_pos = body.find(name_start);
+    //    //  CHECK(name_start_pos != alpha::Slice::npos);
+    //    //  CHECK(name_start_pos < pos);
+    //    //  payload_name = body.subslice(name_start_pos + name_start.size(),
+    //    //                               pos - 1 - name_start_pos);
+    //    //  DLOG_INFO << "Payload name: " << payload_name.ToString();
+    //  }
+    //  body.Advance(CRLF.size() + pos);
+    //  pos = body.find(CRLF);
+    //}
+    // CHECK(!payload_name.empty());
+    //body.Advance(CRLF.size());
+    //// Now payload
+    //auto payload_end = body.find(boundary_sep);
+    //DLOG_INFO << payload_end;
+    //auto payload = body.subslice(0, payload_end - 2);
+    //DLOG_INFO << "Payload size: " << payload.size();
+    //message->AddPayload(payload);
+    //if (body.find(boundary_end) == payload_end) {
+    //  break;
+    //}
   }
 }
 }

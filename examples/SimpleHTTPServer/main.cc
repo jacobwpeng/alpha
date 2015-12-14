@@ -13,6 +13,7 @@
 #include <alpha/logger.h>
 #include <alpha/net_address.h>
 #include <alpha/event_loop.h>
+#include <alpha/format.h>
 #include <alpha/SimpleHTTPServer.h>
 #include <alpha/HTTPMessage.h>
 #include <alpha/HTTPResponseBuilder.h>
