@@ -142,9 +142,11 @@ void NetSvrdVirtualServer::OnMessage(alpha::TcpConnectionPtr conn,
                                      alpha::TcpConnectionBuffer* buffer) {
   auto ctx = conn->GetContextPtr<NetSvrdConnectionContext>();
   CHECK(ctx);
-  auto frame = ctx->codec->OnMessage(conn, buffer);
-  if (frame) {
-    OnFrame(ctx->connection_id_, std::move(frame));
+  while (buffer->Read().size() >= NetSvrdFrame::kHeaderSize) {
+    auto frame = ctx->codec->OnMessage(conn, buffer);
+    if (frame) {
+      OnFrame(ctx->connection_id_, std::move(frame));
+    }
   }
 }
 
@@ -199,8 +201,7 @@ NetSvrdWorkerPtr NetSvrdVirtualServer::SpawnWorker(int worker_id) {
   auto bus_out =
       alpha::ProcessBus::RestoreOrCreate(bus_out_path, 1 << 20, false);
   if (bus_out == nullptr) {
-    bus_out =
-        alpha::ProcessBus::RestoreOrCreate(bus_out_path, 1 << 20, true);
+    bus_out = alpha::ProcessBus::RestoreOrCreate(bus_out_path, 1 << 20, true);
   }
   CHECK(bus_out);
   DLOG_INFO << "Create worker , path: " << worker_path_;
