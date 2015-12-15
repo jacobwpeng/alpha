@@ -52,6 +52,7 @@ bool RingBuffer::Push(const char *buf, int len) {
   assert(buf != NULL);
   assert(len > 0);
 
+  if (len > kMaxBufferBodyLength) return false;
   if (len > space_left()) return false;
 
   this->Write(buf, len);
