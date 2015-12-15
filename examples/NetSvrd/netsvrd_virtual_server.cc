@@ -56,6 +56,7 @@ NetSvrdVirtualServer::NetSvrdVirtualServer(uint64_t net_server_id,
                                            unsigned max_worker_num)
     : loop_(loop),
       max_worker_num_(max_worker_num),
+      next_worker_index_(0),
       net_server_id_(net_server_id),
       next_connection_id_(1),
       poll_workers_timer_id_(0),
@@ -161,10 +162,11 @@ void NetSvrdVirtualServer::OnFrame(uint64_t connection_id,
   auto internal_frame = reinterpret_cast<NetSvrdInternalFrame*>(p);
   internal_frame->client_id = connection_id;
   internal_frame->net_server_id = net_server_id_;
-  auto it = workers_.begin();
+  auto worker = NextWorker();
+  CHECK(worker);
   auto data = reinterpret_cast<const char*>(p);
   auto size = frame->payload_size + NetSvrdFrame::kHeaderSize;
-  (*it)->BusIn()->Write(data, size);
+  worker->BusIn()->Write(data, size);
 }
 
 void NetSvrdVirtualServer::StartMonitorWorkers() {
@@ -197,10 +199,11 @@ NetSvrdWorkerPtr NetSvrdVirtualServer::SpawnWorker(int worker_id) {
   auto bus_out =
       alpha::ProcessBus::RestoreOrCreate(bus_out_path, 1 << 20, false);
   if (bus_out == nullptr) {
-    auto bus_out =
+    bus_out =
         alpha::ProcessBus::RestoreOrCreate(bus_out_path, 1 << 20, true);
   }
-  DLOG_INFO << worker_path_;
+  CHECK(bus_out);
+  DLOG_INFO << "Create worker , path: " << worker_path_;
   std::vector<std::string> argv = {worker_path_, std::to_string(net_server_id_),
                                    bus_in_path, bus_out_path};
   return alpha::make_unique<NetSvrdWorker>(
@@ -218,4 +221,14 @@ void NetSvrdVirtualServer::PollWorkers() {
     LOG_WARNING << "Worker is " << rc.status();
     worker = std::move(SpawnWorker(i));
   }
+}
+
+NetSvrdWorker* NetSvrdVirtualServer::NextWorker() {
+  CHECK(next_worker_index_ < workers_.size());
+  auto worker = workers_[next_worker_index_].get();
+  ++next_worker_index_;
+  if (next_worker_index_ == workers_.size()) {
+    next_worker_index_ = 0;
+  }
+  return worker;
 }

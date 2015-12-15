@@ -30,7 +30,7 @@ std::unique_ptr<NetSvrdFrame> NetSvrdFrameCodec::OnMessage(
     CHECK(ok);
     if (magic != NetSvrdFrame::kMagic) {
       LOG_WARNING << "Check magic failed, expected: " << NetSvrdFrame::kMagic
-                  << ", actual: " << frame_->magic;
+                  << ", actual: " << magic;
       conn->Close();
       return nullptr;
     }
@@ -40,7 +40,7 @@ std::unique_ptr<NetSvrdFrame> NetSvrdFrameCodec::OnMessage(
     if (payload_size > NetSvrdFrame::kMaxPayloadSize) {
       LOG_WARNING << "Payload is too large, max: "
                   << NetSvrdFrame::kMaxPayloadSize
-                  << ", actual: " << frame_->payload_size;
+                  << ", actual: " << payload_size;
       conn->Close();
       return nullptr;
     }
@@ -59,6 +59,7 @@ std::unique_ptr<NetSvrdFrame> NetSvrdFrameCodec::OnMessage(
 
   auto sz = std::min<size_t>(data.size(), frame_->payload_size);
   memcpy(frame_->payload + read_payload_size_, data.data(), sz);
+  buffer->ConsumeBytes(sz);
   read_payload_size_ += sz;
   if (read_payload_size_ == frame_->payload_size) {
     read_payload_size_ = 0;
