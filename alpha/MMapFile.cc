@@ -24,7 +24,7 @@
 
 namespace alpha {
 std::unique_ptr<MMapFile> MMapFile::Open(Slice path, size_t size, int flags) {
-  int open_flags = O_RDWR | O_CLOEXEC;
+  int open_flags = O_RDWR;
   const int kDefaultMode = 0644;
   int fd = ::open(path.data(), open_flags, kDefaultMode);
   if (fd == -1) {

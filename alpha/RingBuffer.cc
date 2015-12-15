@@ -140,7 +140,7 @@ char *RingBuffer::Read(int *plen) {
 
   const int buffer_len = NextBufferLength();
   assert(buffer_len > 0);
-  assert((size_t)buffer_len <= RingBuffer::kMaxBufferBodyLength);
+  assert(buffer_len <= RingBuffer::kMaxBufferBodyLength);
   *plen = buffer_len;
   char *buf = detail::local_buf;
   char *content = front + RingBuffer::kBufferHeaderLength;

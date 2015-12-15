@@ -29,7 +29,7 @@ class RingBuffer {
   DISABLE_COPY_ASSIGNMENT(RingBuffer);
 
  public:
-  static const size_t kMaxBufferBodyLength = 1 << 16;  // 64KB
+  static const int kMaxBufferBodyLength = 1 << 16;  // 64KB
 
  public:
   static std::unique_ptr<RingBuffer> RestoreFrom(void* start, size_t len);
