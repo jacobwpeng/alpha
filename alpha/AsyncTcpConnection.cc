@@ -55,9 +55,11 @@ std::string AsyncTcpConnection::Read(size_t bytes) {
       if (bytes <= result.size() + data.size()) {  // Read from buffer
         CHECK(result.size() < bytes || bytes == 0);
         auto sz = (bytes == 0 ? data.size() : bytes - result.size());
-        result = data.subslice(0, sz).ToString();
+        result += data.subslice(0, sz).ToString();
         buffer->ConsumeBytes(sz);
-        CHECK(result.size() == bytes || (bytes == 0 && !result.empty()));
+        CHECK(result.size() == bytes || (bytes == 0 && !result.empty()))
+            << "bytes: " << bytes << ", result.size(): " << result.size()
+            << ", sz: " << sz;
         return result;
       } else {
         result.append(data.data(), data.size());
