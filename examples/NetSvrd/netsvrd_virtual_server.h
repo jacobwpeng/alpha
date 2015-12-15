@@ -78,8 +78,10 @@ class NetSvrdVirtualServer final {
   void StopMonitorWorkers();
   NetSvrdWorkerPtr SpawnWorker(int worker_id);
   void PollWorkers();
+  NetSvrdWorker* NextWorker();
   alpha::EventLoop* loop_;
   unsigned max_worker_num_;
+  size_t next_worker_index_;
   uint64_t net_server_id_;
   uint64_t next_connection_id_;
   alpha::TimerManager::TimerId poll_workers_timer_id_;
