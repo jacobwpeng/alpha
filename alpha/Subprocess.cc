@@ -75,7 +75,6 @@ Subprocess::Subprocess(const std::vector<std::string>& argv,
   if (executable == nullptr) {
     executable = argv[0].data();
   }
-  DLOG_INFO << "Before fork";
   auto rc = fork();
   if (rc < 0) {
     throw SubprocessSpawnError("fork failed", errno);
