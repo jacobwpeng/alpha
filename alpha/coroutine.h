@@ -28,7 +28,7 @@ class Coroutine {
   virtual void Routine() = 0;
 
   void Yield();
-  void Resume();
+  virtual void Resume();
   Status status() const;
   bool IsRunning() const;
   bool IsDead() const;

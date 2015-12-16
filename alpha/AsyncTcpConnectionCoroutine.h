@@ -10,11 +10,9 @@
  * =============================================================================
  */
 
-#include "AsyncTcpConnection.h"
+#pragma once
 
-#ifndef __ASYNCTCPCONNECTIONCOROUTINE_H__
-#define __ASYNCTCPCONNECTIONCOROUTINE_H__
-
+#include "timer_manager.h"
 #include "coroutine.h"
 
 namespace alpha {
@@ -24,12 +22,17 @@ class AsyncTcpConnectionCoroutine final : public Coroutine {
   using CoroutineFunc =
       std::function<void(AsyncTcpClient*, AsyncTcpConnectionCoroutine*)>;
   AsyncTcpConnectionCoroutine(AsyncTcpClient* owner, const CoroutineFunc& func);
+  ~AsyncTcpConnectionCoroutine();
   virtual void Routine() override;
+  virtual void Resume() override;
+  void YieldWithTimeout(int timeout);
+  bool timeout() const { return timeout_; }
 
  private:
+  void MaybeCancelTimeoutTimer();
+  bool timeout_;
   AsyncTcpClient* owner_;
   CoroutineFunc func_;
+  TimerManager::TimerId timeout_timer_id_;
 };
 }
-
-#endif /* ----- #ifndef __ASYNCTCPCONNECTIONCOROUTINE_H__  ----- */

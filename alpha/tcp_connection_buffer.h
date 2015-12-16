@@ -29,6 +29,7 @@ class TcpConnectionBuffer {
 
   //写入(可能会扩容, 超限返回false)
   bool Append(const alpha::Slice& data);
+  bool Append(const void* data, size_t size);
   size_t SpaceBeforeFull() const;
 
   alpha::Slice Read() const;

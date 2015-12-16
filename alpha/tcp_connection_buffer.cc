@@ -38,12 +38,16 @@ void TcpConnectionBuffer::AddBytes(size_t len) {
 }
 
 bool TcpConnectionBuffer::Append(const alpha::Slice& data) {
-  if (unlikely(!EnsureSpace(data.size()))) {
+  return Append(data.data(), data.size());
+}
+
+bool TcpConnectionBuffer::Append(const void* data, size_t size) {
+  if (unlikely(!EnsureSpace(size))) {
     return false;
   }
-  assert(GetContiguousSpace() >= data.size());
-  ::memcpy(WriteBegin(), data.data(), data.size());
-  AddBytes(data.size());
+  assert(GetContiguousSpace() >= size);
+  ::memcpy(WriteBegin(), data, size);
+  AddBytes(size);
   return true;
 }
 

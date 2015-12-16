@@ -16,9 +16,19 @@
 #include <stdexcept>
 
 namespace alpha {
-class AsyncTcpConnectionException : public std::logic_error {
+class AsyncTcpConnectionException : public std::runtime_error {
  public:
   explicit AsyncTcpConnectionException(const char* what);
+};
+
+class AsyncTcpConnectionOperationTimeout : public AsyncTcpConnectionException {
+ public:
+  explicit AsyncTcpConnectionOperationTimeout();
+};
+
+class AsyncTcpConnectionClosed : public AsyncTcpConnectionException {
+ public:
+  explicit AsyncTcpConnectionClosed(const char* what);
 };
 }
 

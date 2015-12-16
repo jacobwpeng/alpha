@@ -16,12 +16,17 @@
 #include "AsyncTcpConnectionException.h"
 
 namespace alpha {
-AsyncTcpConnection::AsyncTcpConnection(TcpConnectionPtr& conn, Coroutine* co)
+AsyncTcpConnection::AsyncTcpConnection(TcpConnectionPtr& conn,
+                                       AsyncTcpConnectionCoroutine* co)
     : status_(Status::kIdle), conn_(conn), co_(co) {}
+
+void AsyncTcpConnection::Write(const void* data, size_t size) {
+  Write(alpha::Slice(reinterpret_cast<const char*>(data), size));
+}
 
 void AsyncTcpConnection::Write(alpha::Slice data) {
   if (closed()) {
-    throw AsyncTcpConnectionException("Write on closed connection");
+    throw AsyncTcpConnectionClosed("Write");
   }
 
   do {
@@ -35,16 +40,15 @@ void AsyncTcpConnection::Write(alpha::Slice data) {
     status_ = Status::kWaitingWriteDone;
     co_->Yield();
     if (closed()) {
-      throw AsyncTcpConnectionException(
-          "Conection closed when waiting write done");
+      throw AsyncTcpConnectionClosed("Write");
     }
   } while (1);
   status_ = Status::kIdle;
 }
 
-std::string AsyncTcpConnection::Read(size_t bytes) {
+std::string AsyncTcpConnection::Read(size_t bytes, int timeout) {
   if (closed()) {
-    throw AsyncTcpConnectionException("Read on closed connection");
+    throw AsyncTcpConnectionClosed("Read");
   }
 
   auto buffer = conn_->ReadBuffer();
@@ -67,7 +71,14 @@ std::string AsyncTcpConnection::Read(size_t bytes) {
       }
     }
     status_ = Status::kWaitingMessage;
-    co_->Yield();
+    if (timeout == kNoTimeout) {
+      co_->Yield();
+    } else {
+      co_->YieldWithTimeout(timeout);
+    }
+    if (co_->timeout()) {
+      throw alpha::AsyncTcpConnectionOperationTimeout();
+    }
     if (closed()) {
       return result;
     }
@@ -89,19 +100,21 @@ std::string AsyncTcpConnection::ReadCached(size_t bytes) {
   return result;
 }
 
+alpha::Slice AsyncTcpConnection::PeekCached() const {
+  return conn_->ReadBuffer()->Read();
+}
+
 void AsyncTcpConnection::Close() {
   if (!closed()) {
     conn_->Close();
     status_ = Status::kWaitingClose;
     co_->Yield();
   }
-  // if (!closed() && conn_->WriteBuffer()->Read()) {
-  //  status_ = Status::kWaitingWriteDone;
-  //  co_->Yield();
-  //}
 }
 
-bool AsyncTcpConnection::HasCachedData() const {
-  return conn_->ReadBuffer()->Read().size() != 0;
+bool AsyncTcpConnection::HasCachedData() const { return CachedDataSize() != 0; }
+
+size_t AsyncTcpConnection::CachedDataSize() const {
+  return conn_->ReadBuffer()->Read().size();
 }
 }

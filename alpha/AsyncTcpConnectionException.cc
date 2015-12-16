@@ -14,5 +14,12 @@
 
 namespace alpha {
 AsyncTcpConnectionException::AsyncTcpConnectionException(const char* what)
-    : std::logic_error(what) {}
+    : std::runtime_error(what) {}
+
+AsyncTcpConnectionOperationTimeout::AsyncTcpConnectionOperationTimeout()
+    : AsyncTcpConnectionException("timeout") {}
+
+AsyncTcpConnectionClosed::AsyncTcpConnectionClosed(const char* what)
+    : AsyncTcpConnectionException(
+          std::string("Operate on closed connection: ").append(what).c_str()) {}
 }

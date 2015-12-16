@@ -45,6 +45,7 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
   ~TcpConnection();
   DISABLE_COPY_ASSIGNMENT(TcpConnection);
 
+  bool Write(const void* data, size_t size);
   bool Write(const Slice& data);
   void Close();
 

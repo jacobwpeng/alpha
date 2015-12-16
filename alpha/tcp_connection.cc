@@ -37,15 +37,19 @@ TcpConnection::~TcpConnection() {
   ::close(fd_);
 }
 
-bool TcpConnection::Write(const alpha::Slice& data) {
-  if (unlikely(write_buffer_.Append(data) == false)) {
-    LOG_WARNING << "Write failed, data.size() = " << data.size()
+bool TcpConnection::Write(const void* data, size_t size) {
+  if (unlikely(write_buffer_.Append(data, size) == false)) {
+    LOG_WARNING << "Write failed, size = " << size
                 << ", local_addr_ = " << *local_addr_
                 << ", peer_addr_ = " << *peer_addr_;
     return false;
   }
   channel_->EnableWriting();
   return true;
+}
+
+bool TcpConnection::Write(const alpha::Slice& data) {
+  return Write(data.data(), data.size());
 }
 
 void TcpConnection::Close() {

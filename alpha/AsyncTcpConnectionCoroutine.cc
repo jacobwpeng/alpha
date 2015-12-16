@@ -17,12 +17,39 @@
 namespace alpha {
 AsyncTcpConnectionCoroutine::AsyncTcpConnectionCoroutine(
     AsyncTcpClient* owner, const CoroutineFunc& func)
-    : owner_(owner), func_(func) {}
+    : timeout_(false), owner_(owner), func_(func), timeout_timer_id_(0) {}
+
+AsyncTcpConnectionCoroutine::~AsyncTcpConnectionCoroutine() {
+  MaybeCancelTimeoutTimer();
+}
 
 void AsyncTcpConnectionCoroutine::Routine() {
   func_(owner_, this);
   auto co = this;
   auto owner = owner_;
   owner_->loop()->QueueInLoop([owner, co] { owner->RemoveCoroutine(co); });
+}
+
+void AsyncTcpConnectionCoroutine::Resume() {
+  MaybeCancelTimeoutTimer();
+  Coroutine::Resume();
+}
+
+void AsyncTcpConnectionCoroutine::YieldWithTimeout(int timeout) {
+  timeout_ = false;
+  timeout_timer_id_ = owner_->loop()->RunAfter(timeout, [this] {
+    if (this->IsSuspended()) {
+      this->timeout_ = true;
+      this->Resume();
+    }
+  });
+  Yield();
+}
+
+void AsyncTcpConnectionCoroutine::MaybeCancelTimeoutTimer() {
+  if (timeout_timer_id_) {
+    owner_->loop()->RemoveTimer(timeout_timer_id_);
+    timeout_timer_id_ = 0;
+  }
 }
 }

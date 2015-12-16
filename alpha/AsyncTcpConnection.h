@@ -10,12 +10,11 @@
  * =============================================================================
  */
 
-#ifndef __ASYNCTCPCONNECTION_H__
-#define __ASYNCTCPCONNECTION_H__
+#pragma once
 
 #include "slice.h"
-#include "coroutine.h"
 #include "tcp_connection.h"
+#include "AsyncTcpConnectionCoroutine.h"
 
 namespace alpha {
 class AsyncTcpConnection {
@@ -27,15 +26,19 @@ class AsyncTcpConnection {
     kWaitingWriteDone = 3,
     kWaitingClose = 4
   };
+  static const int kNoTimeout = -1;
 
-  AsyncTcpConnection(TcpConnectionPtr& conn, Coroutine* co);
+  AsyncTcpConnection(TcpConnectionPtr& conn, AsyncTcpConnectionCoroutine* co);
+  void Write(const void* data, size_t size);
   void Write(alpha::Slice data);
   // size_t Read(char* out, size_t bytes = 0);
-  std::string Read(size_t bytes = 0);
+  std::string Read(size_t bytes = 0, int timeout = kNoTimeout);
   std::string ReadCached(size_t bytes = 0);
+  alpha::Slice PeekCached() const;
   void Close();
   // Coroutine* co() { return co_; }
   bool HasCachedData() const;
+  size_t CachedDataSize() const;
   Status status() const { return status_; };
   bool closed() const { return status_ == Status::kClosed; };
 
@@ -46,8 +49,6 @@ class AsyncTcpConnection {
 
   Status status_;
   TcpConnectionPtr conn_;
-  Coroutine* co_;
+  AsyncTcpConnectionCoroutine* co_;
 };
 }
-
-#endif /* ----- #ifndef __ASYNCTCPCONNECTION_H__  ----- */
