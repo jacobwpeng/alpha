@@ -15,10 +15,13 @@
 #endif
 
 #include "RegionBasedHelper.h"
+#include <cassert>
 
 #define AllocatorType                                                        \
   RegionBasedAllocator<T, typename std::enable_if < std::is_pod<T>::value && \
                               !std::is_pointer<T>::value>::type >
+
+namespace alpha {
 
 template <typename T>
 const typename AllocatorType::NodeID AllocatorType::kInvalidNodeID = 0;
@@ -154,6 +157,7 @@ typename AllocatorType::NodeID* AllocatorType::NodeIDToNodeIDPtr(NodeID index) {
   assert(index != kInvalidNodeID);
   assert(index <= max_node_id_);
   return reinterpret_cast<NodeID*>(start_ + index);
+}
 }
 
 #undef AllocatorType

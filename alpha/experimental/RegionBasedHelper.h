@@ -10,9 +10,9 @@
  * =============================================================================
  */
 
-#ifndef __ALPHA_REGION_BASED_HELPER_H__
-#define __ALPHA_REGION_BASED_HELPER_H__
+#pragma once
 
+namespace alpha {
 static const uint8_t kAlignmentRequired = 16;
 static const uint8_t kAlignmentMask = kAlignmentRequired - 1;
 static_assert(kAlignmentRequired != 0 &&
@@ -32,5 +32,4 @@ inline char* Align(char* p) {
 inline bool CheckAligned(void* p) {
   return (reinterpret_cast<uintptr_t>(p) & kAlignmentMask) == 0;
 }
-
-#endif /* ----- #ifndef __ALPHA_REGION_BASED_HELPER_H__  ----- */
+}

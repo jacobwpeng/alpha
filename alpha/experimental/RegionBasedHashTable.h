@@ -16,6 +16,8 @@
 #include "RegionBasedVector.h"
 #include "RegionBasedAllocator.h"
 
+namespace alpha {
+
 using NodeID = uint32_t;
 template <typename Key, typename T, typename Hash, typename Pred,
           typename KeyOfValue, class Enable = void>
@@ -143,6 +145,7 @@ class RegionBasedHashTable<
   std::unique_ptr<VectorType> buckets_;
   std::unique_ptr<AllocatorType> alloc_;
 };
+}
 
 #include "RegionBasedHashTable-inl.h"
 

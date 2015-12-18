@@ -19,6 +19,8 @@
             typename KeyOfValue>
 #define HashTableIteratorType HashTableIterator<Key, T, Hash, Pred, KeyOfValue>
 
+namespace alpha {
+
 HashTableIteratorTypeDeclaration HashTableIteratorType::HashTableIterator()
     : ht_(nullptr), node_(nullptr) {}
 HashTableIteratorTypeDeclaration HashTableIteratorType::HashTableIterator(
@@ -405,6 +407,7 @@ HashTableTypeDeclaration typename HashTableType::iterator HashTableType::find(
 
 HashTableTypeDeclaration HashTableType::RegionBasedHashTable()
     : header_(nullptr) {}
+}
 
 #undef HashTableTypeDeclaration
 #undef HashTableType

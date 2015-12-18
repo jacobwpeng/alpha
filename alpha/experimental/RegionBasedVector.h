@@ -16,6 +16,8 @@
 #include <memory>
 #include <type_traits>
 
+namespace alpha {
+
 template <typename T, class Enable = void>
 class RegionBasedVector;
 
@@ -71,6 +73,7 @@ class RegionBasedVector<
   size_t capacity_;
   DestroyFunc destroy_func_;
 };
+}
 
 #include "RegionBasedVector-inl.h"
 

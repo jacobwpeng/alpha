@@ -15,10 +15,13 @@
 #endif
 
 #include "RegionBasedHelper.h"
+#include <algorithm>
 
 #define VectorType                                                        \
   RegionBasedVector<T, typename std::enable_if < std::is_pod<T>::value && \
                            !std::is_pointer<T>::value>::type >
+
+namespace alpha {
 template <typename T>
 std::unique_ptr<VectorType> VectorType::Create(char* data, size_t size,
                                                Header* header) {
@@ -223,5 +226,6 @@ typename VectorType::const_iterator VectorType::begin() const {
 template <typename T>
 typename VectorType::const_iterator VectorType::end() const {
   return start_ + header_->current;
+}
 }
 #undef VectorType

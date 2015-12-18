@@ -16,6 +16,8 @@
 #include <memory>
 #include <type_traits>
 
+namespace alpha {
+
 template <typename T, class Enable = void>
 class RegionBasedAllocator;
 
@@ -55,6 +57,7 @@ class RegionBasedAllocator<
   T* start_;
   NodeID max_node_id_;
 };
+}
 
 #include "RegionBasedAllocator-inl.h"
 
