@@ -52,14 +52,15 @@ operator++(int) {
   return tmp;
 }
 HashTableIteratorTypeDeclaration typename HashTableIteratorType::_Base::
-    reference HashTableIteratorType::
-    operator*() const {
+    reference
+HashTableIteratorType::
+operator*() const {
   return node_->val;
 }
 
 HashTableIteratorTypeDeclaration typename HashTableIteratorType::_Base::pointer
-    HashTableIteratorType::
-    operator->() const {
+HashTableIteratorType::
+operator->() const {
   return &(operator*());
 }
 
@@ -118,14 +119,15 @@ operator++(int) {
   return tmp;
 }
 HashTableIteratorTypeDeclaration typename HashTableIteratorType::_Base::
-    reference HashTableIteratorType::
-    operator*() const {
+    reference
+HashTableIteratorType::
+operator*() const {
   return node_->val;
 }
 
 HashTableIteratorTypeDeclaration typename HashTableIteratorType::_Base::pointer
-    HashTableIteratorType::
-    operator->() const {
+HashTableIteratorType::
+operator->() const {
   return &(operator*());
 }
 
@@ -142,10 +144,10 @@ HashTableIteratorTypeDeclaration bool HashTableIteratorType::operator!=(
 #undef HashTableIteratorType
 #undef HashTableIteratorTypeDeclaration
 
-#define HashTableType                                                     \
-  RegionBasedHashTable<Key, T, Hash, Pred, KeyOfValue,                    \
-                       typename std::enable_if < std::is_pod<T>::value && \
-                           !std::is_pointer<T>::value>::type >
+#define HashTableType                                    \
+  RegionBasedHashTable < Key, T, Hash, Pred, KeyOfValue, \
+      typename std::enable_if < std::is_pod<T>::value && \
+          !std::is_pointer<T>::value > ::type >
 #define HashTableTypeDeclaration                                    \
   template <typename Key, typename T, typename Hash, typename Pred, \
             typename KeyOfValue>
@@ -173,9 +175,9 @@ HashTableType::Create(char* data, size_t size) {
   // max load factor is 2
   // (max_size / 2) * sizeof(NodeID) + (max_size) * sizeof(_HashTableNode) =
   // size;
-  auto bucket_num =
-      std::max(kPrimeList[0],
-               (2 * size) / (sizeof(NodeID) + 2 * sizeof(_HashTableNode)));
+  auto bucket_num = std::max<size_t>(
+      kPrimeList[0],
+      (2 * size) / (sizeof(NodeID) + 2 * sizeof(_HashTableNode)));
   for (auto i = 0u; i < kNumPrimes; ++i) {
     if (bucket_num <= kPrimeList[i]) {
       bucket_num = kPrimeList[i];
