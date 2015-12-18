@@ -64,7 +64,17 @@ void SimpleHTTPServer::OnMessage(TcpConnectionPtr conn,
   buffer->ConsumeBytes(consumed);
   DLOG_INFO << "codec consume " << consumed << " bytes";
   if (status > 0) {
+    // nasty way to handle multipart/form-data
+    if (!codec->data_to_peer().empty()) {
+      conn->Write(codec->data_to_peer());
+      codec->clear_data_to_peer();
+    }
   } else if (status == HTTPMessageCodec::Status::kDone) {
+    // nasty way to handle multipart/form-data
+    if (!codec->data_to_peer().empty()) {
+      conn->Write(codec->data_to_peer());
+      codec->clear_data_to_peer();
+    }
     auto& http_message = codec->Done();
     http_message.SetClientAddress(conn->PeerAddr());
     callback_(conn, http_message);
@@ -80,8 +90,5 @@ void SimpleHTTPServer::OnConnected(TcpConnectionPtr conn) {
   conn->SetContext(codec);
 }
 
-void SimpleHTTPServer::OnClose(TcpConnectionPtr conn) {
-  auto data = conn->ReadBuffer()->Read();
-  DLOG_INFO << '\n' << alpha::HexDump(data);
-}
+void SimpleHTTPServer::OnClose(TcpConnectionPtr conn) {}
 }

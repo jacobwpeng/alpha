@@ -28,7 +28,6 @@ class HTTPMessageCodec {
    */
   enum Status {
     kDone = 0,
-
     kInvalidMethod = -100,
     kInvalidStartLine = -101,
     kInvalidHTTPVersion = -102,
@@ -36,7 +35,6 @@ class HTTPMessageCodec {
     kDuplicatedHead = -104,
     kInvalidContentLength = -105,
     kTooMuchContent = -106,
-
     kParseStartLine = 100,
     kParseHeader = 101,
     kParseEmptyLine = 102,
@@ -48,6 +46,8 @@ class HTTPMessageCodec {
   Status Process(Slice& data);
   HTTPMessage& Done();
   Status status() const { return status_; }
+  std::string data_to_peer() const { return data_to_peer_; }
+  void clear_data_to_peer() { data_to_peer_.clear(); }
 
  private:
   Status ParseStartLine(Slice& data);
@@ -58,6 +58,7 @@ class HTTPMessageCodec {
   void ParseHTTPMessagePayload(HTTPMessage* message,
                                const std::string& boundary) const;
   uint32_t content_length_{std::numeric_limits<uint32_t>::max()};
+  std::string data_to_peer_;
   HTTPMessage http_message_;
 };
 }

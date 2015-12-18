@@ -119,6 +119,10 @@ HTTPMessageCodec::Status HTTPMessageCodec::ParseHeader(Slice& data) {
     auto val = line.subslice(key.size() + 2);
     http_message_.Headers().Add(key, val);
     data.Advance(line.size() + CRLF.size());
+    if (http_message_.Method() == "POST" && key == "Content-Type" &&
+        alpha::Slice(val).StartsWith("multipart/form-data;")) {
+      data_to_peer_ = "100 Continue" + CRLF.ToString();
+    }
     pos = data.find(CRLF);
   }
   return Status::kParseHeader;
@@ -132,7 +136,7 @@ HTTPMessageCodec::Status HTTPMessageCodec::OperationAfterParseHeader() {
 HTTPMessageCodec::Status HTTPMessageCodec::AppendData(Slice& data) {
   if (content_length_ == std::numeric_limits<uint32_t>::max()) {
     const size_t kMaxContentLengthDigitNum = 12;
-    const uint32_t kMaxContentLength = 1 << 20;
+    const uint32_t kMaxContentLength = 10 << 20;
     assert(http_message_.Headers().Exists("Content-Length"));
     auto content_length_str = http_message_.Headers().Get("Content-Length");
     if (content_length_str.size() >= kMaxContentLengthDigitNum) {
@@ -177,8 +181,8 @@ void HTTPMessageCodec::ParseHTTPMessagePayload(
   // ...
   // boundary_end
   while (!body.empty()) {
-    //auto pos = body.find(CRLF);
-    //alpha::Slice payload_name;
+    // auto pos = body.find(CRLF);
+    // alpha::Slice payload_name;
     auto header_end = body.find(DoubleCRLF);
     CHECK(header_end != alpha::Slice::npos);
     body.Advance(header_end + DoubleCRLF.size());
@@ -193,7 +197,7 @@ void HTTPMessageCodec::ParseHTTPMessagePayload(
     }
     CHECK(body.StartsWith(boundary_sep));
     body.Advance(boundary_sep.size() + CRLF.size());
-    //while (pos) {
+    // while (pos) {
     //  // Still in Content-Info
     //  if (body.StartsWith("Content-Disposition")) {
     //    // Parse name
@@ -209,14 +213,14 @@ void HTTPMessageCodec::ParseHTTPMessagePayload(
     //  pos = body.find(CRLF);
     //}
     // CHECK(!payload_name.empty());
-    //body.Advance(CRLF.size());
+    // body.Advance(CRLF.size());
     //// Now payload
-    //auto payload_end = body.find(boundary_sep);
-    //DLOG_INFO << payload_end;
-    //auto payload = body.subslice(0, payload_end - 2);
-    //DLOG_INFO << "Payload size: " << payload.size();
-    //message->AddPayload(payload);
-    //if (body.find(boundary_end) == payload_end) {
+    // auto payload_end = body.find(boundary_sep);
+    // DLOG_INFO << payload_end;
+    // auto payload = body.subslice(0, payload_end - 2);
+    // DLOG_INFO << "Payload size: " << payload.size();
+    // message->AddPayload(payload);
+    // if (body.find(boundary_end) == payload_end) {
     //  break;
     //}
   }
