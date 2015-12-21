@@ -13,6 +13,7 @@
 #ifndef __TIME_UTIL_H__
 #define __TIME_UTIL_H__
 
+#include <ctime>
 #include <cstdint>
 
 namespace alpha {
@@ -26,6 +27,7 @@ static const uint32_t kSecondsPerDay = kSecondsPerHour * kHoursPerDay;
 
 TimeStamp Now();
 TimeStamp NowInSeconds();
+TimeStamp from_time_t(time_t t);
 
 bool InSameHour(TimeStamp lhs, TimeStamp rhs);
 }
