@@ -46,8 +46,9 @@ void ReadFileOption(const boost::property_tree::ptree& pt, std::string* path,
 bool ServerConf::InSignUpTime() const {
   time_t now = time(NULL);
   time_t base = CurrentSeasonBaseTime();
-  return now >= base + signup_start_offset_ &&
-         now < base + signup_finish_offset_;
+  time_t start = base + signup_start_offset_;
+  time_t finish = base + signup_finish_offset_;
+  return now >= start && now < finish;
 }
 
 bool ServerConf::InRewardTime(bool season_finished) const {
@@ -56,7 +57,8 @@ bool ServerConf::InRewardTime(bool season_finished) const {
   } else {
     time_t now = time(NULL);
     time_t base = CurrentSeasonBaseTime();
-    return now < base + reward_time_finish_offset_;
+    time_t finish = base + reward_time_finish_offset_;
+    return now < finish;
   }
 }
 
