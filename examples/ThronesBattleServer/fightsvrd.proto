@@ -1,0 +1,40 @@
+package FightServerProtocol;
+
+enum ErrorCode {
+  kOk = 0;
+  kErrorFetchingChallengerUserInfo = 10000;
+  kErrorFetchingDefenderUserInfo = 10001;
+  kErrorFight = 10002;
+}
+
+message FightProperties {
+  optional bool no_fight_content = 1;
+  optional bool reload_userinfo_from_db = 2 [default = true];
+}
+
+message FightPair {
+  optional uint32 challenger = 1;
+  optional uint32 defender = 2;
+  optional FightProperties fight_properties = 3; // 覆盖Task中的FightProperties
+}
+
+message FightPairResult {
+  optional sint32 error = 1;
+  optional uint32 challenger = 2;
+  optional uint32 defender = 3;
+  optional uint32 winner = 4;
+  optional bytes challenger_view_fight_content = 5;
+  optional bytes defender_view_fight_content = 6;
+}
+
+message Task {
+  optional uint64 context = 1;
+  optional uint32 fight_type = 2;
+  optional FightProperties fight_properties = 3;
+  repeated FightPair fight_pair = 4;
+}
+
+message TaskResult {
+  optional uint64 context = 1;
+  repeated FightPairResult fight_pair_result = 2;
+}
