@@ -30,7 +30,6 @@ HashTableIteratorTypeDeclaration HashTableIteratorType& HashTableIteratorType::
 operator++() {
   auto bucket_index = ht_->bucket(KeyOfValue()(node_->val));
   auto next = node_->next;
-  auto index = bucket_index + 1;
   if (next != _HashTable::AllocatorType::kInvalidNodeID) {
     node_ = ht_->alloc_->Get(next);
     return *this;
