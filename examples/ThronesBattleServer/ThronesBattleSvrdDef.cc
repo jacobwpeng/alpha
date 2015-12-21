@@ -40,9 +40,10 @@ void CampMatchups::Reset() {
   }
 }
 
-void CampMatchups::SetBattleResult(CampID camp,
+void CampMatchups::SetBattleResult(CampID camp, bool win,
                                    uint32_t final_live_warriors_num) {
   auto matchup_data = FindMatchupData(current_battle_round_, camp);
+  matchup_data->win = win;
   matchup_data->final_live_warriors_num = final_live_warriors_num;
   matchup_data->set = true;
 }
@@ -63,20 +64,16 @@ bool CampMatchups::RoundFinished(uint16_t battle_round) const {
                      [](const MatchupData& d) { return d.set; });
 }
 
-uint16_t CampMatchups::CurrentRound() const {
-  return current_battle_round_;
-  // if (current_battle_round_ == kMaxRoundID) return current_battle_round_;
-  // return current_battle_round_ + 1;
-}
+uint16_t CampMatchups::CurrentRound() const { return current_battle_round_; }
 
 std::string CampMatchups::GetGameLog(CampID camp,
                                      uint16_t max_battle_round) const {
   CHECK(max_battle_round <= current_battle_round_);
   std::string game_log;
-  for (uint16_t round = 0; round < max_battle_round; ++round) {
+  for (uint16_t round = 1; round <= max_battle_round; ++round) {
     auto matchup_data = FindMatchupData(round, camp);
     CHECK(matchup_data && matchup_data->set);
-    game_log += matchup_data->win() ? '1' : '0';
+    game_log += matchup_data->win ? '1' : '0';
   }
   return game_log;
 }
@@ -91,7 +88,7 @@ void CampMatchups::ForeachMatchup(uint16_t battle_round, MatchupFunc func) {
 }
 
 void CampMatchups::UnfinishedBattle(uint16_t battle_round, MatchupFunc func) {
-  CHECK(battle_round != 0 && battle_round < kMaxRoundID);
+  CHECK(battle_round != 0 && battle_round <= kMaxRoundID);
   auto index = battle_round - 1;
   for (auto i = 0; i < kCampIDMax - 1; i += 2) {
     auto& matchup_data = matchups_data_[index][i];
@@ -125,11 +122,11 @@ bool CampMatchups::StartNextRound() {
     auto begin = std::begin(matchups_data_[current_battle_round_]);
     auto end = std::next(begin, kCampIDMax / 4);
     std::stable_partition(begin, end,
-                          [](const MatchupData& d) { return d.win(); });
+                          [](const MatchupData& d) { return d.win; });
     begin = end;
     end = std::end(matchups_data_[current_battle_round_]);
     std::stable_partition(begin, end,
-                          [](const MatchupData& d) { return d.win(); });
+                          [](const MatchupData& d) { return d.win; });
     // Clear copied last round data
     std::for_each(std::begin(matchups_data_[current_battle_round_]),
                   std::end(matchups_data_[current_battle_round_]),
@@ -146,7 +143,7 @@ bool CampMatchups::StartNextRound() {
     using TupleType = std::tuple<std::string, int, CampID>;
     std::set<TupleType, std::greater<TupleType> > s;
     for (auto i = 0; i < kCampIDMax; ++i) {
-      auto camp = matchups_data_[2][i].camp;
+      auto camp = matchups_data_[1][i].camp;
       auto game_log = GetGameLog(camp, current_battle_round_);
       s.insert(TupleType(game_log, kCampIDMax - i, camp));
     }
@@ -166,12 +163,14 @@ bool CampMatchups::StartNextRound() {
 
 CampMatchups::MatchupData* CampMatchups::FindMatchupData(uint16_t battle_round,
                                                          CampID camp) {
-  CHECK(battle_round != 0 && battle_round <= kMaxRoundID);
-  auto it =
-      std::find_if(std::begin(matchups_data_[battle_round - 1]),
-                   std::end(matchups_data_[battle_round - 1]),
-                   [&camp](const MatchupData& d) { return d.camp == camp; });
-  CHECK(it != std::end(matchups_data_[battle_round - 1]));
+  DLOG_INFO << "battle round: " << battle_round << ", camp: " << camp;
+  CHECK(battle_round != 0 && battle_round <= kMaxRoundID)
+      << "Invalid battle round: " << battle_round;
+  auto index = battle_round - 1;
+  auto it = std::find_if(
+      std::begin(matchups_data_[index]), std::end(matchups_data_[index]),
+      [&camp](const MatchupData& d) { return d.camp == camp; });
+  CHECK(it != std::end(matchups_data_[index]));
   return &*it;
 }
 
@@ -311,6 +310,14 @@ bool BattleData::SeasonNotStarted() const {
 
 uint16_t BattleData::CurrentRound() const {
   return battle_data_saved_->battle_round;
+}
+
+bool BattleData::CurrentRoundFinished() const {
+  bool finished = true;
+  ForeachZone([&finished](const Zone& zone) {
+    finished = finished && zone.matchups()->CurrentRoundFinished();
+  });
+  return finished;
 }
 
 Reward Reward::Create(uint32_t battle_point) {

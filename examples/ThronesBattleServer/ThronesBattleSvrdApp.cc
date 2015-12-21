@@ -177,6 +177,34 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
             << ", the other camp living: "
             << the_other_camp->LivingWarriors().size();
 
+  auto check_when_battle_done = [this] {
+    if (battle_data_->CurrentRoundFinished()) {
+      auto current_round = battle_data_->CurrentRound();
+      LOG_INFO << "Round " << current_round << " finished";
+      if (current_round == kMaxRoundID) {
+        LOG_INFO << "Season finished";
+        battle_data_->SetSeasonFinished();
+        AddTimerForChangeSeason();
+      } else {
+        battle_data_->SetCurrentRound(current_round + 1);
+        AddTimerForBattleRound();
+      }
+    }
+  };
+
+  if (one_camp->LivingWarriors().empty() &&
+      the_other_camp->LivingWarriors().empty()) {
+    // Both camp are empty
+    CampID camp_win = alpha::Random::Rand32() % 2 == 0 ? one : the_other;
+    DLOG_INFO << "No warrior found on both sides, one: " << one
+              << ", the_other: " << the_other
+              << ", random winner: " << camp_win;
+    zone->matchups()->SetBattleResult(one, camp_win == one, 0);
+    zone->matchups()->SetBattleResult(the_other, camp_win == the_other, 0);
+    check_when_battle_done();
+    return;
+  }
+
   auto warrior_fight_result_callback = [this](
       const FightServerProtocol::TaskResult& result) {
     for (const auto& fight_result : result.fight_pair_result()) {
@@ -213,9 +241,13 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
             << ", the other camp living: "
             << the_other_camp->LivingWarriors().size();
 
-  zone->matchups()->SetBattleResult(one, one_camp->LivingWarriors().size());
-  zone->matchups()->SetBattleResult(the_other,
+  CampID camp_win = one_camp->LivingWarriors().empty() ? the_other : one;
+
+  zone->matchups()->SetBattleResult(one, camp_win == one,
+                                    one_camp->LivingWarriors().size());
+  zone->matchups()->SetBattleResult(the_other, camp_win == the_other,
                                     the_other_camp->LivingWarriors().size());
+  check_when_battle_done();
 }
 
 void ServerApp::MarkWarriorDead(UinType uin) {
@@ -227,6 +259,7 @@ void ServerApp::MarkWarriorDead(UinType uin) {
 }
 
 void ServerApp::AddTimerForChangeSeason() {
+  CHECK(battle_data_->SeasonFinished());
   alpha::TimeStamp at = alpha::from_time_t(conf_->NextSeasonBaseTime());
   DLOG_INFO << "Will change season at " << at;
   loop_.RunAt(at, [this] {
@@ -234,6 +267,7 @@ void ServerApp::AddTimerForChangeSeason() {
     if (done) {
       DLOG_INFO << "Season changed, last: " << battle_data_->LastSeason()
                 << "current: " << battle_data_->CurrentSeason();
+      AddTimerForDropLastSeasonData();
     } else {
       LOG_WARNING << "Change season failed";
     }
@@ -248,6 +282,10 @@ void ServerApp::AddTimerForDropLastSeasonData() {
   loop_.RunAt(at, [this] {
     battle_data_->DropLastSeasonData();
     DLOG_INFO << "Last season data dropped";
+    auto current_round = battle_data_->CurrentRound();
+    CHECK(current_round == 0);
+    battle_data_->SetCurrentRound(1);
+    DLOG_INFO << "Set current round 1";
     AddTimerForBattleRound();
   });
 }
@@ -255,17 +293,6 @@ void ServerApp::AddTimerForDropLastSeasonData() {
 void ServerApp::AddTimerForBattleRound() {
   CHECK(!battle_data_->SeasonFinished());
   auto current_round = battle_data_->CurrentRound();
-  if (current_round == 0) {
-    battle_data_->ForeachZone([current_round](Zone& zone) {
-      auto zone_current_round = zone.matchups()->CurrentRound();
-      CHECK(current_round == zone_current_round);
-      bool ok = zone.matchups()->StartNextRound();
-      CHECK(ok);
-    });
-    ++current_round;
-    battle_data_->SetCurrentRound(current_round);
-    DLOG_INFO << "Battle started";
-  }
   alpha::TimeStamp at =
       alpha::from_time_t(conf_->BattleRoundStartTime(current_round));
   DLOG_INFO << "Will start round " << current_round << " at " << at;
@@ -273,8 +300,22 @@ void ServerApp::AddTimerForBattleRound() {
 }
 
 void ServerApp::RunBattle() {
+  CHECK(!battle_data_->SeasonFinished());
   auto current_round = battle_data_->CurrentRound();
   CHECK(current_round != 0);
+  battle_data_->ForeachZone([current_round](Zone& zone) {
+    auto zone_current_round = zone.matchups()->CurrentRound();
+    CHECK(zone_current_round == current_round ||
+          zone_current_round == current_round - 1)
+        << "Invalid zone current round: " << zone_current_round
+        << ", current round: " << current_round;
+    if (zone_current_round == current_round - 1) {
+      bool ok = zone.matchups()->StartNextRound();
+      CHECK(ok);
+      DLOG_INFO << "Set zone(" << zone.id() << ") to round "
+                << zone.matchups()->CurrentRound();
+    }
+  });
 
   // Get all unfinished battle of current round
   using BattleTaskType = std::tuple<Zone*, CampID, CampID>;

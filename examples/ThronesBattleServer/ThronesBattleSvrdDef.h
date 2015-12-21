@@ -84,14 +84,14 @@ class CampMatchups {
   std::string GetGameLog(CampID camp, uint16_t max_battle_round) const;
 
   void Reset();
-  void SetBattleResult(CampID camp, uint32_t final_live_warriors_num);
+  void SetBattleResult(CampID camp, bool win, uint32_t final_live_warriors_num);
   void ForeachMatchup(uint16_t battle_round, MatchupFunc func);
   void UnfinishedBattle(uint16_t battle_round, MatchupFunc func);
   bool StartNextRound();
 
  private:
   struct MatchupData {
-    bool win() const { return final_live_warriors_num != 0; }
+    bool win;
     bool set;
     CampID camp;
     uint32_t final_live_warriors_num;
@@ -166,6 +166,11 @@ class BattleData final {
     std::for_each(std::begin(zones_), std::end(zones_), lambda);
   };
 
+  template <typename LAMBDA>
+  void ForeachZone(LAMBDA lambda) const {
+    std::for_each(std::begin(zones_), std::end(zones_), lambda);
+  };
+
   bool ChangeSeason();
   void DropLastSeasonData();
   void SetCurrentRound(uint16_t battle_round);
@@ -176,6 +181,7 @@ class BattleData final {
   uint16_t CurrentRound() const;
   uint32_t LastSeason() const { return battle_data_saved_->last_battle_season; }
   uint32_t CurrentSeason() const { return battle_data_saved_->battle_season; }
+  bool CurrentRoundFinished() const;
 
  private:
   BattleDataSaved* battle_data_saved_;
