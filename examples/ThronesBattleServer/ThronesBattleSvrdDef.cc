@@ -118,20 +118,17 @@ bool CampMatchups::StartNextRound() {
     // Camps are devided into 2 groups, in each group winners of last round
     // fight each other
     std::copy(std::begin(matchups_data_[0]), std::end(matchups_data_[0]),
-              matchups_data_[current_battle_round_]);
-    auto begin = std::begin(matchups_data_[current_battle_round_]);
-    auto end = std::next(begin, kCampIDMax / 4);
-    std::stable_partition(begin, end,
-                          [](const MatchupData& d) { return d.win; });
-    begin = end;
-    end = std::end(matchups_data_[current_battle_round_]);
-    std::stable_partition(begin, end,
-                          [](const MatchupData& d) { return d.win; });
-    // Clear copied last round data
+              matchups_data_[1]);
+    auto begin = std::begin(matchups_data_[1]);
+    auto end = std::next(begin, 4);
+    auto cmp = [](const MatchupData& d) { return d.win; };
+    std::stable_partition(begin, end, cmp);
+    std::stable_partition(end, std::end(matchups_data_[1]), cmp);
     std::for_each(std::begin(matchups_data_[current_battle_round_]),
                   std::end(matchups_data_[current_battle_round_]),
                   [](MatchupData& d) {
       d.set = false;
+      d.win = false;
       d.final_live_warriors_num = 0;
     });
   } else if (current_battle_round_ == 2) {
@@ -144,10 +141,10 @@ bool CampMatchups::StartNextRound() {
     std::set<TupleType, std::greater<TupleType> > s;
     for (auto i = 0; i < kCampIDMax; ++i) {
       auto camp = matchups_data_[1][i].camp;
-      auto game_log = GetGameLog(camp, current_battle_round_);
+      auto game_log = GetGameLog(camp, 2);
       s.insert(TupleType(game_log, kCampIDMax - i, camp));
     }
-    std::transform(s.begin(), s.end(), matchups_data_[current_battle_round_],
+    std::transform(s.begin(), s.end(), matchups_data_[2],
                    [](const TupleType& p) {
       MatchupData d;
       d.camp = std::get<2>(p);
