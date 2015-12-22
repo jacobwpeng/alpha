@@ -30,6 +30,17 @@ struct PODPair {
   Second second;
 };
 
+template <typename F, typename S>
+std::ostream& operator<<(std::ostream& os, const PODPair<F, S>& p) {
+  os << "(" << p.first << ", " << p.second << ")";
+  return os;
+}
+
+template <typename First, typename Second>
+PODPair<First, Second> make_pod_pair(const First& first, const Second& second) {
+  return {.first = first, .second = second};
+}
+
 template <class Key, class T, class Hash = std::hash<Key>,
           class Pred = std::equal_to<Key>>
 using RegionBasedHashMap = RegionBasedHashTable<

@@ -17,9 +17,9 @@
 #include "RegionBasedHelper.h"
 #include <cassert>
 
-#define AllocatorType                                                        \
-  RegionBasedAllocator<T, typename std::enable_if < std::is_pod<T>::value && \
-                              !std::is_pointer<T>::value>::type >
+#define AllocatorType                                                          \
+  RegionBasedAllocator < T, typename std::enable_if < std::is_pod<T>::value && \
+                                !std::is_pointer<T>::value > ::type >
 
 namespace alpha {
 
@@ -156,7 +156,7 @@ typename AllocatorType::NodeID* AllocatorType::NodeIDToNodeIDPtr(NodeID index) {
   static_assert(sizeof(T) >= sizeof(NodeID), "sizeof(T) < sizeof(NodeID)");
   assert(index != kInvalidNodeID);
   assert(index <= max_node_id_);
-  return reinterpret_cast<NodeID*>(start_ + index);
+  return reinterpret_cast<NodeID*>(Get(index));
 }
 }
 

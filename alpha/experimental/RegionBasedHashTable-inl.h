@@ -349,17 +349,11 @@ HashTableType::cend() const {
 HashTableTypeDeclaration std::pair<typename HashTableType::iterator, bool>
 HashTableType::insert(const value_type& obj) {
   auto key = KeyOfValue()(obj);
+  auto it = find(key);
+  if (it != end()) return std::make_pair(it, false);
+
   auto bucket_index = bucket(key);
-  auto id = (*buckets_)[bucket_index];
-  while (id != AllocatorType::kInvalidNodeID) {
-    auto node = alloc_->Get(id);
-    if (key_equal()(KeyOfValue()(node->val), key)) {
-      return std::make_pair(iterator(this, node), false);
-    } else {
-      id = node->next;
-    }
-  }
-  id = alloc_->Allocate();
+  auto id = alloc_->Allocate();
   auto node = alloc_->Get(id);
   node->val = obj;
   node->next = (*buckets_)[bucket_index];
