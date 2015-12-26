@@ -39,12 +39,9 @@ std::shared_ptr<AsyncTcpConnection> AsyncTcpClient::ConnectTo(
   MapConnecting(addr, info);
   co->Yield();
   auto it = FindConnecting(addr);
-  if (it->second.async_conn) {
-    return it->second.async_conn;
-  } else {
-    RemoveConnectting(it);
-    return nullptr;
-  }
+  auto conn = it->second.async_conn;
+  RemoveConnectting(it);
+  return conn;
 }
 
 void AsyncTcpClient::OnConnected(TcpConnectionPtr conn) {
