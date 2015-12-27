@@ -38,6 +38,7 @@ void AsyncTcpConnectionCoroutine::Resume() {
 void AsyncTcpConnectionCoroutine::YieldWithTimeout(int timeout) {
   timeout_ = false;
   timeout_timer_id_ = owner_->loop()->RunAfter(timeout, [this] {
+    timeout_timer_id_ = 0;
     if (this->IsSuspended()) {
       this->timeout_ = true;
       this->Resume();
