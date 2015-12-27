@@ -73,7 +73,7 @@ class NetSvrdVirtualServer final {
   void OnMessage(alpha::TcpConnectionPtr conn,
                  alpha::TcpConnectionBuffer* buffer);
   void OnClose(alpha::TcpConnectionPtr conn);
-  void OnFrame(uint64_t connection_id, std::unique_ptr<NetSvrdFrame>&& frame);
+  void OnFrame(uint64_t connection_id, NetSvrdFrame::UniquePtr&& frame);
   void StartMonitorWorkers();
   void StopMonitorWorkers();
   NetSvrdWorkerPtr SpawnWorker(int worker_id);

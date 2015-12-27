@@ -42,7 +42,8 @@ bool NetSvrdAddressParser::Parse(const std::string& addr) {
   server_type_ = NetSvrdVirtualServerType::kProtocolTcp;
   try {
     server_address_ = alpha::NetAddress(parts[1], stoul(parts[2]));
-  } catch (std::exception& e) {
+  }
+  catch (std::exception& e) {
     LOG_ERROR << "Convert " << parts[2] << " to integer failed, " << e.what();
     return false;
   }
@@ -158,7 +159,7 @@ void NetSvrdVirtualServer::OnClose(alpha::TcpConnectionPtr conn) {
 }
 
 void NetSvrdVirtualServer::OnFrame(uint64_t connection_id,
-                                   std::unique_ptr<NetSvrdFrame>&& frame) {
+                                   NetSvrdFrame::UniquePtr&& frame) {
   DLOG_INFO << "Frame payload size: " << frame->payload_size;
   auto p = frame.get();
   auto internal_frame = reinterpret_cast<NetSvrdInternalFrame*>(p);
@@ -166,9 +167,8 @@ void NetSvrdVirtualServer::OnFrame(uint64_t connection_id,
   internal_frame->net_server_id = net_server_id_;
   auto worker = NextWorker();
   CHECK(worker);
-  auto data = reinterpret_cast<const char*>(p);
-  auto size = frame->payload_size + NetSvrdFrame::kHeaderSize;
-  worker->BusIn()->Write(data, size);
+  worker->BusIn()->Write(reinterpret_cast<const char*>(frame->data()),
+                         frame->size());
 }
 
 void NetSvrdVirtualServer::StartMonitorWorkers() {
@@ -206,7 +206,7 @@ NetSvrdWorkerPtr NetSvrdVirtualServer::SpawnWorker(int worker_id) {
   CHECK(bus_out);
   DLOG_INFO << "Create worker , path: " << worker_path_;
   std::vector<std::string> argv = {worker_path_, std::to_string(net_server_id_),
-                                   bus_in_path, bus_out_path};
+                                   bus_in_path,  bus_out_path};
   return alpha::make_unique<NetSvrdWorker>(
       alpha::make_unique<alpha::Subprocess>(argv), std::move(bus_in),
       std::move(bus_out));

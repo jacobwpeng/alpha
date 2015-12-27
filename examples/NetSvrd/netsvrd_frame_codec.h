@@ -21,12 +21,12 @@
 class NetSvrdFrameCodec final {
  public:
   NetSvrdFrameCodec();
-  std::unique_ptr<NetSvrdFrame> OnMessage(alpha::TcpConnectionPtr conn,
-                                          alpha::TcpConnectionBuffer* buffer);
+  NetSvrdFrame::UniquePtr OnMessage(alpha::TcpConnectionPtr conn,
+                                    alpha::TcpConnectionBuffer* buffer);
 
  private:
   uint32_t read_payload_size_;
-  std::unique_ptr<NetSvrdFrame> frame_;
+  NetSvrdFrame::UniquePtr frame_;
 };
 
 #endif /* ----- #ifndef __NETSVRD_FRAME_CODEC_H__  ----- */
