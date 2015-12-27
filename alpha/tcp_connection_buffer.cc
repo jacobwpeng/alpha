@@ -61,7 +61,7 @@ alpha::Slice TcpConnectionBuffer::Read() const {
                       write_index_ - read_index_);
 }
 
-size_t TcpConnectionBuffer::ReadAndClear(char* buf, size_t len) {
+size_t TcpConnectionBuffer::ReadAndClear(void* buf, size_t len) {
   alpha::Slice data = Read();
   size_t n = std::min(len, data.size());
   ::memcpy(buf, data.data(), n);

@@ -37,7 +37,7 @@ class UdpServer {
   ~UdpServer();
   DISABLE_COPY_ASSIGNMENT(UdpServer);
 
-  bool Start(const NetAddress& addr, const MessageCallback& cb);
+  bool Run(const NetAddress& addr, const MessageCallback& cb);
 
  private:
   EventLoop* loop_;

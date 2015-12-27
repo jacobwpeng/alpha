@@ -23,7 +23,7 @@ UdpServer::UdpServer(EventLoop* loop) : loop_(loop) {}
 
 UdpServer::~UdpServer() {}
 
-bool UdpServer::Start(const NetAddress& addr, const MessageCallback& cb) {
+bool UdpServer::Run(const NetAddress& addr, const MessageCallback& cb) {
   listener_.reset(new UdpListener(loop_));
   listener_->set_message_callback(cb);
   return listener_->Run(addr);

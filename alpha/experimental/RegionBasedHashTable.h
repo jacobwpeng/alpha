@@ -119,6 +119,8 @@ class RegionBasedHashTable<
   // local_iterator end(size_type n);
 
   std::pair<iterator, bool> insert(const value_type& obj);
+  // 外层使用模板using, 没法写这个operator=
+  // value_type& operator=(const key_type& key);
   iterator erase(const_iterator position);
   size_type erase(const key_type& k);
   void clear();
