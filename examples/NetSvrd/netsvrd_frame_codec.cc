@@ -44,7 +44,8 @@ NetSvrdFrame::UniquePtr NetSvrdFrameCodec::OnMessage(
     return NetSvrdFrame::NullUniquePtr();
   }
 
-  auto sz = std::min<size_t>(data.size(), frame_->payload_size);
+  auto expect = frame_->payload_size - read_payload_size_;
+  auto sz = std::min<size_t>(data.size(), expect);
   memcpy(frame_->payload + read_payload_size_, data.data(), sz);
   buffer->ConsumeBytes(sz);
   read_payload_size_ += sz;
