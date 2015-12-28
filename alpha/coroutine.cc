@@ -18,7 +18,15 @@ namespace alpha {
 thread_local Coroutine* current = nullptr;
 thread_local char shared_stack[Coroutine::kMaxStackSize];
 
-Coroutine::Coroutine() : status_(Status::kReady), real_stack_size_(0) {}
+std::atomic_int Coroutine::next_coroutine_id_(0);
+
+Coroutine::Coroutine()
+    : status_(Status::kReady),
+      real_stack_size_(0),
+      id_(next_coroutine_id_.fetch_add(1)) {
+  DLOG_INFO << "Coroutine stack range: " << (void*)shared_stack << " - "
+            << (void*)(shared_stack + Coroutine::kMaxStackSize);
+}
 
 Coroutine::~Coroutine() {}
 
@@ -95,8 +103,7 @@ void Coroutine::RestoreStack() {
 }
 
 void Coroutine::InternalRoutine(uint32_t hi, uint32_t lo) {
-  uint64_t p =
-      (static_cast<uint64_t>(hi) << 32) | static_cast<uint64_t>(lo);
+  uint64_t p = (static_cast<uint64_t>(hi) << 32) | static_cast<uint64_t>(lo);
   uintptr_t ptr = static_cast<uintptr_t>(p);
   auto co = reinterpret_cast<Coroutine*>(ptr);
   co->Routine();
