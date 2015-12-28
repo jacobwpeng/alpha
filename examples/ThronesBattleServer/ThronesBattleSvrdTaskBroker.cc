@@ -19,37 +19,42 @@ namespace ThronesBattle {
 static const int kMaxIdleTime = 3000;  // ms
 TaskBroker::TaskBroker(alpha::AsyncTcpClient* client,
                        alpha::AsyncTcpConnectionCoroutine* co,
-                       const UinList& one_camp_warriors,
-                       const UinList& another_camp_warriors,
-                       const TaskCallback& cb)
+                       const alpha::NetAddress& fight_server_addr,
+                       uint16_t zone, uint16_t camp, const TaskCallback& cb)
     : client_(client),
       co_(co),
+      fight_server_addr_(fight_server_addr),
+      zone_(zone),
+      camp_(camp),
       next_task_id_(1),
-      one_camp_warriors_(one_camp_warriors),
-      another_camp_warriors_(another_camp_warriors),
-      cb_(cb) {
-  CHECK(!one_camp_warriors.empty());
-  CHECK(one_camp_warriors.size() == another_camp_warriors.size());
+      cb_(cb) {}
+
+TaskBroker::~TaskBroker() {
+  if (conn_) {
+    conn_->Close();
+  }
 }
 
 void TaskBroker::Wait() {
   ReconnectToRemote();
-  auto index = 0u;
+  CHECK(one_camp_warriors_.size() == the_other_camp_warriors_.size());
+  size_t index = 0;
   while (1) {
     try {
       SendNonAckedTask();
       for (; index < one_camp_warriors_.size(); ++index) {
         FightServerProtocol::Task task;
         auto challenger = one_camp_warriors_[index];
-        auto defender = another_camp_warriors_[index];
+        auto defender = the_other_camp_warriors_[index];
         auto fight_pair = task.add_fight_pair();
         fight_pair->set_challenger(challenger);
         fight_pair->set_defender(defender);
         AddTask(task);
       }
       WaitAllTasks();
-      break;
-    } catch (alpha::AsyncTcpConnectionException& e) {
+      if (non_acked_tasks_.empty()) break;
+    }
+    catch (alpha::AsyncTcpConnectionException& e) {
       LOG_WARNING << "TaskBroker::Wait failed, " << e.what();
       ReconnectToRemote();
     }
@@ -57,13 +62,19 @@ void TaskBroker::Wait() {
 }
 
 void TaskBroker::SendNonAckedTask(size_t max) {
+  if (non_acked_tasks_.empty()) {
+    return;
+  }
+  if (max == std::numeric_limits<size_t>::max()) {
+    LOG_INFO << "Send all non acked task(s), current: "
+             << non_acked_tasks_.size();
+  } else {
+    LOG_INFO << "Send at most " << max << " non acked task(s)";
+  }
   size_t sent = 0;
-  for (const auto& p : non_acked_tasks_) {
-    if (sent < max) {
-      SendTaskToRemote(p.second);
-    } else {
-      break;
-    }
+  for (auto it = non_acked_tasks_.begin();
+       it != non_acked_tasks_.end() && sent < max; ++sent, ++it) {
+    SendTaskToRemote(it->second);
   }
 }
 
@@ -86,11 +97,12 @@ void TaskBroker::AddTask(FightServerProtocol::Task& task) {
 
 void TaskBroker::SendTaskToRemote(const FightServerProtocol::Task& task) {
   auto payload_size = task.ByteSize();
-  std::unique_ptr<NetSvrdFrame> frame(new (payload_size) NetSvrdFrame);
+  auto frame = NetSvrdFrame::CreateUnique(payload_size);
   bool ok = task.SerializeToArray(frame->payload, frame->payload_size);
   CHECK(ok);
   conn_->Write(frame->data(), frame->size());
-  DLOG_INFO << "Send task, id: " << task.context();
+  DLOG_INFO << "(" << zone_ << ", " << camp_ << "), "
+            << "Send task, id: " << task.context();
 }
 
 bool TaskBroker::HandleReplyFrame(const NetSvrdFrame* frame) {
@@ -109,22 +121,28 @@ bool TaskBroker::HandleReplyFrame(const NetSvrdFrame* frame) {
   }
   auto num = non_acked_tasks_.erase(task_id);
   if (num == 0) {
-    LOG_INFO << "Maybe multiple reply for this task, task_id: " << task_id;
+    DLOG_INFO << "(" << zone_ << ", " << camp_ << "), "
+              << "Maybe multiple reply for this task, task_id: " << task_id;
     return false;
   }
+  DLOG_INFO << "Handled one reply frame, task_id: " << task_id;
   // Call this only once
   cb_(result);
   return true;
 }
 
 void TaskBroker::HandleCachedReplyData() {
-  const NetSvrdFrame* frame = nullptr;
   do {
     auto cached_data = conn_->PeekCached();
-    frame = NetSvrdFrame::TryCast(cached_data.data(), cached_data.size());
-    if (frame == nullptr) {
+    auto header =
+        NetSvrdFrame::CastHeaderOnly(cached_data.data(), cached_data.size());
+    if (header == nullptr) {
       break;
     }
+    if (cached_data.size() < header->size()) {
+      break;
+    }
+    auto frame = reinterpret_cast<const NetSvrdFrame*>(cached_data.data());
     HandleReplyFrame(frame);
     // Maybe use DropCached instead
     auto data = conn_->ReadCached(frame->size());
@@ -160,23 +178,24 @@ size_t TaskBroker::HandleIncomingData(int idle_time, bool all) {
   size_t received = 0;
   do {
     auto data = conn_->Read(NetSvrdFrame::kHeaderSize, idle_time);
-    auto frame = reinterpret_cast<const NetSvrdFrame*>(data.data());
-    if (frame->magic != NetSvrdFrame::kMagic) {
-      LOG_WARNING << "Invalid frame magic, expect: " << NetSvrdFrame::kMagic
-                  << ", actual: " << frame->magic;
+    auto header = NetSvrdFrame::CastHeaderOnly(data.data(), data.size());
+    if (header == nullptr) {
+      LOG_WARNING << "Cast NetSvrdFrame header failed";
+      // TODO: 关闭连接
       return received;
     }
-    auto payload = conn_->Read(frame->payload_size, idle_time);
-    if (payload.size() != frame->payload_size) {
+    auto payload = conn_->Read(header->payload_size, idle_time);
+    if (payload.size() != header->payload_size) {
       LOG_WARNING << "Connection closed by peer, abort this connection";
       return received;
     }
     data.append(payload);
-    frame = NetSvrdFrame::TryCast(data.data(), data.size());
-    CHECK(frame);
+    auto frame = reinterpret_cast<const NetSvrdFrame*>(data.data());
     bool ok = HandleReplyFrame(frame);
     if (ok) received += 1;
-    if (non_acked_tasks_.empty()) break;
+    if (non_acked_tasks_.empty()) {
+      break;
+    }
   } while (all);
   return received;
 }
@@ -187,7 +206,8 @@ void TaskBroker::ReconnectToRemote() {
     conn_ = nullptr;
   }
   do {
-    conn_ = client_->ConnectTo(alpha::NetAddress("10.6.224.83", 443), co_);
+    LOG_INFO << "Connect to " << fight_server_addr_;
+    conn_ = client_->ConnectTo(fight_server_addr_, co_);
     if (conn_ == nullptr) {
       LOG_WARNING << "Failed connect to remote";
       // Yield some time

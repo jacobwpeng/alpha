@@ -80,6 +80,19 @@ time_t ServerConf::NextSeasonBaseTime() const {
   return CurrentSeasonBaseTime() + 7 * 24 * 3600;
 }
 
+const ZoneConf* ServerConf::GetZoneConf(const Zone* zone) {
+  return GetZoneConf(zone->id());
+}
+
+const ZoneConf* ServerConf::GetZoneConf(uint16_t zone_id) {
+  auto it = std::find_if(zones_.begin(), zones_.end(),
+                         [zone_id](const ZoneConf& zone_conf) {
+    return zone_conf.zone_id() == zone_id;
+  });
+  CHECK(it != zones_.end());
+  return &*it;
+}
+
 time_t ServerConf::CurrentSeasonBaseTime() const {
   boost::gregorian::greg_weekday friday(boost::gregorian::Friday);
   boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
@@ -104,6 +117,7 @@ std::unique_ptr<ServerConf> ServerConf::Create(const char* file) {
 }
 
 bool ServerConf::InitFromFile(const char* file) {
+  fight_server_addr_ = alpha::NetAddress("10.6.224.83", 50000);
   CurrentSeasonBaseTime();
   using namespace boost::property_tree;
   ptree pt;
@@ -150,6 +164,7 @@ bool ServerConf::InitFromFile(const char* file) {
           continue;
         }
       }
+      zones_.push_back(zone);
     }
     return true;
   }

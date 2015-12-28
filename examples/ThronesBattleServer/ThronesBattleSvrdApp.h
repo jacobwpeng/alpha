@@ -16,9 +16,39 @@
 #include <alpha/event_loop.h>
 #include <alpha/MMapFile.h>
 #include <alpha/AsyncTcpClient.h>
+#include <alpha/udp_server.h>
 #include <alpha/experimental/RegionBasedHashMap.h>
 #include "ThronesBattleSvrdDef.h"
+#include "ThronesBattleSvrd.pb.h"
+#include "ThronesBattleSvrdMessageDispatcher.h"
 
+// 使用到的PB结构的前置声明
+namespace FightServerProtocol {
+class TaskResult;
+}
+namespace ThronesBattleServerProtocol {
+class Goods;
+class Reward;
+class General;
+class CampInfo;
+class RoundMatchups;
+class Matchups;
+class LuckyWarriors;
+class RequestWrapper;
+class ResponseWrapper;
+class SignUpRequest;
+class SignUpResponse;
+class QueryBattleStatusRequest;
+class QueryBattleStatusResponse;
+class PickLuckyWarriorsRequest;
+class PickLuckyWarriorsResponse;
+class QueryLuckyWarriorRewardRequest;
+class QueryLuckyWarriorRewardResponse;
+class QueryGeneralInChiefRequest;
+class QueryGeneralInChiefResponse;
+}
+
+using namespace ThronesBattleServerProtocol;
 namespace ThronesBattle {
 class ServerConf;
 class ServerApp final {
@@ -32,18 +62,44 @@ class ServerApp final {
   using WarriorMap = alpha::RegionBasedHashMap<UinType, Warrior>;
   using RewardMap = alpha::RegionBasedHashMap<UinType, Reward>;
   int InitNormalMode();
-  int InitRemoveryMode();
+  int InitRecoveryMode();
   void TrapSignals();
   void RoundBattleRoutine(alpha::AsyncTcpClient* client,
                           alpha::AsyncTcpConnectionCoroutine* co, Zone* zone,
                           CampID one, CampID the_other);
-  void MarkWarriorDead(UinType uin);
+  void AddRoundReward(Zone* zone, Camp* camp);
+
+  void ProcessFightTaskResult(const FightServerProtocol::TaskResult& result);
+  void ProcessSurvivedWarrior(UinType winner, UinType loser);
+  void ProcessDeadWarrior(UinType loser, UinType winner,
+                          const std::string& fight_content);
+  void ProcessRoundSurvivedWarrior(UinType winner);
+
+  void DoWhenSeasonChanged();
+  void DoWhenSeasonFinished();
+  void DoWhenRoundFinished();
+  void DoWhenTwoCampsMatchDone(Zone* zone, Camp* one, Camp* the_other,
+                               Camp* winner_camp);
 
   void AddTimerForChangeSeason();
-  void AddTimerForDropLastSeasonData();
   void AddTimerForBattleRound();
+  void InitBeforeNewSeasonBattle();
   void RunBattle();
   bool RecoveryMode() const;
+
+  // Handlers for CGI UDP requests
+  ssize_t HandleUDPMessage(alpha::Slice data, char* out);
+  int HandleSignUp(UinType uin, const SignUpRequest* req, SignUpResponse* resp);
+  int HandleQueryBattleStatus(UinType uin, const QueryBattleStatusRequest* req,
+                              QueryBattleStatusResponse* resp);
+  int HandlePickLuckyWarriors(UinType uin, const PickLuckyWarriorsRequest* req,
+                              PickLuckyWarriorsResponse* resp);
+  int HandleQueryLuckyWarriorReward(UinType uin,
+                                    const QueryLuckyWarriorRewardRequest* req,
+                                    QueryLuckyWarriorRewardResponse* resp);
+  int HandleQueryGeneralInChief(UinType uin,
+                                const QueryGeneralInChiefRequest* req,
+                                QueryGeneralInChiefResponse* resp);
   alpha::EventLoop loop_;
   std::unique_ptr<ServerConf> conf_;
   std::unique_ptr<alpha::MMapFile> battle_data_underlying_file_;
@@ -54,5 +110,7 @@ class ServerApp final {
   std::unique_ptr<RewardMap> rewards_;
 
   alpha::AsyncTcpClient async_tcp_client_;
+  MessageDispatcher message_dispatcher_;
+  alpha::UdpServer udp_server_;
 };
 }

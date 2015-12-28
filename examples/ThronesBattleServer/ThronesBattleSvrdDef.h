@@ -26,11 +26,30 @@ static const uint16_t kMinZoneID = 1;
 static const uint16_t kMaxZoneID = 4;
 static const uint16_t kCurrentZoneNum = 4;
 static const uint16_t kMaxZoneNum = 10;
+static const uint16_t kUnlimitedZoneID = 4;
 static const uint16_t kMaxRoundID = 3;
-
+static const uint16_t kMaxLuckyWarroirPerCamp = 5;
 static_assert(kCurrentZoneNum == (kMaxZoneID - kMinZoneID + 1),
               "Invalid zone num");
-enum class CampID : uint16_t {
+
+enum Error : int32_t {
+  kOk = 0,
+  kServerInternalError = -10000,
+  kMissingRequiredField = -10001,
+  kInvalidArgument = -10002,
+  kAllZoneAreFull = -10003,
+  kNotInSignUpTime = -10004,
+  kAlreadySignedUp = -10005,
+  kNoSpaceForWarrior = -10006,
+  kSeasonNotFinished = -10007,
+  kNotCampLeader = -10008,
+  kPickedLuckyWarriros = -10009,
+  kNotInPickLuckyWarriorsTime = -10010,
+  kNotSignedUp = -10011,
+  kNotLuckyWarrior = -10012,
+};
+
+enum CampID : uint16_t {
   kMin = 1,
   kDongZhuo = 1,
   kYuanShao = 2,
@@ -43,35 +62,68 @@ enum class CampID : uint16_t {
   kMax = 8
 };
 static const uint16_t kCampIDMax = static_cast<uint16_t>(CampID::kMax);
-bool ValidCampID(CampID camp);
+bool ValidCampID(uint16_t camp);
 bool ValidZoneID(uint16_t zone_id);
 
 using UinType = uint32_t;
+using UinList = std::vector<UinType>;
+using UinSet = std::set<UinType>;
 struct General {
-  UinType uin;
   CampID camp;
+  UinType uin;
+  uint32_t season;
 };
 
 class GeneralInChiefList {
  public:
-  void AddGeneralInChief(UinType uin, CampID camp);
-  std::vector<General> Get(unsigned zone, unsigned start, unsigned num) const;
+  void AddGeneralInChief(CampID camp, UinType uin, uint32_t season);
+  std::vector<General> Get(unsigned start, unsigned num) const;
+  void Clear();
 
  private:
   static const unsigned kMaxGeneralNum = 1000;
   uint16_t next_index_;
-  General generals[kMaxZoneNum][kMaxGeneralNum];
+  General generals_[kMaxGeneralNum];
 };
 
 class LuckyWarriorList {
  public:
-  void AddLuckyWarrior(unsigned zone, CampID camp, UinType uin);
-  std::vector<UinType> Get(unsigned zone, unsigned camp) const;
+  void AddLuckyWarrior(CampID camp, UinType uin);
+  std::vector<UinType> Get(uint16_t camp_id) const;
+  bool HasWarrior(UinType uin) const;
   void Clear();
 
  private:
-  static const uint16_t kMaxLuckyWarroirPerCamp = 5;
-  UinType lucky_warriros_[kMaxZoneNum][kCampIDMax][kMaxLuckyWarroirPerCamp];
+  UinType lucky_warriors_[kCampIDMax][kMaxLuckyWarroirPerCamp];
+};
+
+struct CampLeader {
+  bool empty() const { return uin == 0; }
+  uint8_t picked_lucky_warriors;
+  UinType uin;
+  uint32_t killing_num;
+};
+
+class CampLeaderList {
+ public:
+  CampLeader GetLeader(CampID camp_id);
+  void SetPickedLuckyWarriors(CampID camp_id);
+  void Clear();
+  void Notify(CampID camp_id, UinType uin, uint32_t killing_num);
+
+ private:
+  CampLeader* GetLeaderPtr(CampID camp_id);
+  CampLeader leaders_[kCampIDMax];
+};
+
+struct MatchupData {
+  void Clear();
+  void ClearExceptCamp();
+  void UpdateBattleInfo(bool win, uint32_t final_living_warriors_num);
+  uint8_t win;
+  uint8_t set;
+  CampID camp;
+  uint32_t final_living_warriors_num;
 };
 
 class CampMatchups {
@@ -82,59 +134,77 @@ class CampMatchups {
   bool RoundFinished(uint16_t battle_round) const;
   uint16_t CurrentRound() const;
   std::string GetGameLog(CampID camp, uint16_t max_battle_round) const;
+  uint32_t GetFinalLivingWarriorsNum(uint16_t battle_round, CampID camp) const;
 
+  MatchupData* MatchupDataForRound(uint16_t battle_round);
   void Reset();
-  void SetBattleResult(CampID camp, bool win, uint32_t final_live_warriors_num);
+  void SetBattleResult(CampID camp, bool win,
+                       uint32_t final_living_warriors_num);
   void ForeachMatchup(uint16_t battle_round, MatchupFunc func);
   void UnfinishedBattle(uint16_t battle_round, MatchupFunc func);
   bool StartNextRound();
 
+  MatchupData* RoundMatchupsDataBegin(uint16_t battle_round);
+  MatchupData* RoundMatchupsDataEnd(uint16_t battle_round);
+  const MatchupData* RoundMatchupsDataBegin(uint16_t battle_round) const;
+  const MatchupData* RoundMatchupsDataEnd(uint16_t battle_round) const;
+
  private:
-  struct MatchupData {
-    bool win;
-    bool set;
-    CampID camp;
-    uint32_t final_live_warriors_num;
-  };
   MatchupData* FindMatchupData(uint16_t battle_round, CampID camp);
   const MatchupData* FindMatchupData(uint16_t battle_round, CampID camp) const;
   uint16_t current_battle_round_;
   MatchupData matchups_data_[kMaxRoundID][kCampIDMax];
 };
 
-class Camp {
+class Camp final {
  public:
   Camp(CampID id);
   CampID id() const { return id_; }
+  void ClearSeasonData();
   void AddWarrior(UinType uin, bool dead = false);
-  void SetWarriorDead(UinType uin);
-  std::vector<UinType> LivingWarriors() const;
+  void MarkWarriorDead(UinType uin);
+  void ResetLivingWarriors();
+
+  const UinSet& living_warriors() const { return living_warriors_; }
+  bool NoLivingWarriors() const;
+  size_t LivingWarriorsNum() const;
+  size_t WarriorsNum() const;
+  const UinSet& Warriors() const { return warriors_; }
+  template <typename LAMBDA>
+  void ForeachWarrior(LAMBDA lambda) const {
+    std::for_each(warriors_.begin(), warriors_.end(), lambda);
+  }
 
  private:
   CampID id_;
   UinType chief_commander_;
-  std::set<UinType> live_warriors_;
-  std::set<UinType> warriors_;
+  UinSet living_warriors_;
+  UinSet warriors_;
 };
 
 bool operator<(const Camp& lhs, const Camp& rhs);
 
 class Zone final {
  public:
-  Zone(uint16_t id, CampMatchups* matchups, CampMatchups* last_season_matchups);
+  Zone(uint16_t id, CampMatchups* matchups, CampLeaderList* leaders,
+       LuckyWarriorList* lucky_warriors, GeneralInChiefList* generals);
   uint16_t id() const { return id_; }
-  Camp* GetCamp(CampID camp_id);
+  Camp* GetCamp(uint16_t camp_id);
   CampMatchups* matchups() { return matchups_; }
-  CampMatchups* last_season_matchups() { return last_season_matchups_; }
   const CampMatchups* matchups() const { return matchups_; }
-  const CampMatchups* last_season_matchups() const {
-    return last_season_matchups_;
-  }
+  CampLeaderList* leaders() { return leaders_; }
+  const CampLeaderList* leaders() const { return leaders_; }
+  LuckyWarriorList* lucky_warriors() { return lucky_warriors_; }
+  const LuckyWarriorList* lucky_warriors() const { return lucky_warriors_; }
+  GeneralInChiefList* generals() { return generals_; }
+  const GeneralInChiefList* generals() const { return generals_; }
 
  private:
   uint16_t id_;
   CampMatchups* matchups_;
-  CampMatchups* last_season_matchups_;
+  CampLeaderList* leaders_;
+  LuckyWarriorList* lucky_warriors_;
+  GeneralInChiefList* generals_;
   std::vector<Camp> camps_;
 };
 
@@ -143,15 +213,15 @@ struct BattleDataSaved {
   static BattleDataSaved* Restore(void* p, size_t sz);
 
   static const uint32_t kMagic = 0xf8219e4d;
-  bool last_season_data_dropped;
-  bool season_finished_;
+  uint8_t last_season_data_dropped;
+  uint8_t season_finished;
+  uint8_t initial_season;
   uint16_t battle_round;
-  uint32_t last_battle_season;
   uint32_t battle_season;
   uint32_t magic;
-  GeneralInChiefList General_in_chief_list;
-  LuckyWarriorList lucky_warriors;
-  CampMatchups last_season_matchups[kMaxZoneNum];
+  GeneralInChiefList generals[kMaxZoneNum];
+  LuckyWarriorList lucky_warriors[kMaxZoneNum];
+  CampLeaderList camp_leaders[kMaxZoneNum];
   CampMatchups matchups[kMaxZoneNum];
 };
 
@@ -172,14 +242,14 @@ class BattleData final {
   };
 
   bool ChangeSeason();
-  void DropLastSeasonData();
+  void ResetSeasonData();
   void SetCurrentRound(uint16_t battle_round);
   void SetSeasonFinished();
 
   bool SeasonFinished() const;
   bool SeasonNotStarted() const;
   uint16_t CurrentRound() const;
-  uint32_t LastSeason() const { return battle_data_saved_->last_battle_season; }
+  uint16_t FinishedRound() const;
   uint32_t CurrentSeason() const { return battle_data_saved_->battle_season; }
   bool CurrentRoundFinished() const;
 
@@ -189,49 +259,66 @@ class BattleData final {
 };
 
 struct Goods {
-  uint32_t goods_id;
-  uint32_t goods_num;
+  uint32_t id;
+  uint32_t num;
 };
 
-struct Reward {
+class Warrior final {
+ public:
+  static Warrior Create(UinType uin, uint16_t zone_id, CampID camp_id);
+  UinType uin() const { return uin_; }
+  bool dead() const { return dead_; }
+  uint16_t zone_id() const { return zone_id_; }
+  CampID camp_id() const { return camp_id_; }
+  uint32_t killing_num() const { return killing_num_; }
+  UinType last_killed_warrior() const { return last_killed_warrior_; }
+
+  void set_dead(bool dead) { dead_ = dead; }
+  void add_killing_num() { ++killing_num_; }
+  void set_last_killed_warrior(UinType uin) { last_killed_warrior_ = uin; }
+  void ResetRoundData();
+
+ private:
+  uint8_t dead_;
+  uint16_t zone_id_;
+  CampID camp_id_;
+  uint16_t last_draw_reward_round_;
+  uint32_t killing_num_;
+  UinType last_killed_warrior_;
+  UinType uin_;
+};
+
+// TODO: 改成一个class
+struct Reward final {
   static const int kMaxGoodsRewardKind = 5;
   static Reward Create(uint32_t battle_point);
 
   void Clear();
+  Reward& Merge(const Reward& other);
   bool AddGoods(uint32_t goods_id, uint32_t goods_num);
   bool Empty() const;
+  int goods_size() const { return next_goods_reward_index; }
 
   uint16_t next_goods_reward_index;
   uint32_t battle_point;
   Goods goods_reward[kMaxGoodsRewardKind];
 };
 
-class Warrior {
+class ZoneConf final {
  public:
-  UinType uin() const { return uin_; }
-  bool dead() const { return dead_; }
-  uint16_t zone_id() const { return zone_id_; }
-  CampID camp_id() const { return camp_id_; }
-
- private:
-  bool dead_;
-  uint16_t zone_id_;
-  CampID camp_id_;
-  uint16_t last_draw_reward_round;
-  uint32_t killed_;
-  UinType uin_;
-};
-
-class ZoneConf {
- public:
-  ZoneConf(uint16_t id, unsigned max_camp_warriors_num, unsigned max_level,
+  ZoneConf(uint16_t zone_id, unsigned max_camp_warriors_num, unsigned max_level,
            const std::string& name);
 
+  uint16_t zone_id() const { return zone_id_; }
+  unsigned max_camp_warriors_num() const { return max_camp_warriors_num_; }
+  unsigned max_level() const { return max_level_; }
   void AddRoundReward(const std::string& game_log, const Reward& reward);
   void AddRankReward(unsigned max_rank, const Reward& reward);
 
+  Reward GetRoundReward(const std::string& game_log) const;
+
  private:
-  uint16_t id_;
+  uint16_t zone_id_;
   unsigned max_camp_warriors_num_;
   unsigned max_level_;
   std::string name_;

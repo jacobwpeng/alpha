@@ -34,6 +34,11 @@ class ServerConf final {
   time_t BattleRoundStartTime(uint16_t round) const;
   time_t NextDropLastSeasonDataTime(bool season_finished) const;
   time_t NextSeasonBaseTime() const;
+  Reward lucky_warrior_reward() const { return lucky_warrior_reward_; }
+  alpha::NetAddress fight_server_addr() const { return fight_server_addr_; }
+
+  const ZoneConf* GetZoneConf(const Zone* zone);
+  const ZoneConf* GetZoneConf(uint16_t zone_id);
 
  private:
   ServerConf() = default;
@@ -48,12 +53,13 @@ class ServerConf final {
   uint32_t battle_data_file_size_;
   uint32_t warriors_data_file_size_;
   uint32_t rewards_data_file_size_;
+  alpha::NetAddress fight_server_addr_;
   alpha::NetAddress backup_server_addr_;
   Reward lucky_warrior_reward_;
   unsigned round_start_time_offsets_[kMaxRoundID];
   std::string battle_data_file_;
   std::string warriors_data_file_;
   std::string rewards_data_file_;
-  std::vector<Zone> zones_;
+  std::vector<ZoneConf> zones_;
 };
 }

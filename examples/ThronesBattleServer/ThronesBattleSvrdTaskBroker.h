@@ -18,17 +18,25 @@
 #include <alpha/AsyncTcpClient.h>
 #include "fightsvrd.pb.h"
 #include "netsvrd_frame.h"
+#include "ThronesBattleSvrdDef.h"
 
 namespace ThronesBattle {
-using UinList = std::vector<uint32_t>;
 class TaskBroker final {
  public:
   using TaskCallback =
       std::function<void(const FightServerProtocol::TaskResult&)>;
   TaskBroker(alpha::AsyncTcpClient* client,
              alpha::AsyncTcpConnectionCoroutine* co,
-             const UinList& one_camp_warriors,
-             const UinList& another_camp_warriors, const TaskCallback& cb);
+             const alpha::NetAddress& fight_server_addr, uint16_t zone,
+             uint16_t camp, const TaskCallback& cb);
+  ~TaskBroker();
+
+  void SetOneCampWarriorRange(const UinList& uins) {
+    one_camp_warriors_ = uins;
+  }
+  void SetTheOtherCampWarriorRange(const UinList& uins) {
+    the_other_camp_warriors_ = uins;
+  }
   void Wait();
 
  private:
@@ -48,9 +56,12 @@ class TaskBroker final {
   alpha::AsyncTcpClient* client_;
   alpha::AsyncTcpConnectionCoroutine* co_;
   std::shared_ptr<alpha::AsyncTcpConnection> conn_;
+  alpha::NetAddress fight_server_addr_;
+  uint16_t zone_;
+  uint16_t camp_;
   TaskID next_task_id_;
   UinList one_camp_warriors_;
-  UinList another_camp_warriors_;
+  UinList the_other_camp_warriors_;
   TaskCallback cb_;
   std::map<TaskID, FightServerProtocol::Task> non_acked_tasks_;
 };
