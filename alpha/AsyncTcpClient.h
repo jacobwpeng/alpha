@@ -30,7 +30,6 @@ class AsyncTcpClient {
 
  private:
   struct ConnectionInfo {
-    TcpConnectionPtr conn;
     std::shared_ptr<AsyncTcpConnection> async_conn;
     AsyncTcpConnectionCoroutine* co;
   };
@@ -45,7 +44,7 @@ class AsyncTcpClient {
 
   void MapConnecting(const NetAddress& addr, const ConnectionInfo& info);
   ConnectingArray::iterator FindConnecting(const NetAddress& addr);
-  void RemoveConnectting(ConnectingArray::iterator it);
+  void RemoveConnecting(ConnectingArray::iterator it);
   void MapConnected(TcpConnection* conn, const ConnectionInfo& info);
   ConnectionInfo* FindConnected(TcpConnection* conn);
   void RemoveConnected(TcpConnection* conn);

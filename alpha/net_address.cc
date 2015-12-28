@@ -45,20 +45,15 @@ NetAddress::NetAddress(const alpha::Slice& ip, int port)
 NetAddress::NetAddress(const sockaddr_in& sa) {
   char buf[INET_ADDRSTRLEN];
   const char* dst = ::inet_ntop(AF_INET, &(sa.sin_addr), buf, sizeof(buf));
-  if (unlikely(dst == nullptr)) {
-    // PCHECK
-    PLOG_ERROR << "inet_ntop failed";
-    assert(false);
-  }
-
+  PCHECK(dst) << "inet_ntop failed";
   port_ = ntohs(sa.sin_port);
   ip_ = buf;
 }
 
 std::string NetAddress::FullAddress() const {
-  if (addr_.empty()) {
-    // 255.255.255.255:65535
-    char buf[22];
+  // 255.255.255.255:65535
+  if (unlikely(addr_.empty())) {
+    char buf[30];
     snprintf(buf, sizeof(buf), "%s:%d", ip_.c_str(), port_);
     addr_ = buf;
   }

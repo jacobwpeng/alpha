@@ -53,6 +53,7 @@ void TcpClient::OnConnected(int fd) {
   assert(connections_.find(fd) == connections_.end());
   TcpConnection::State state = TcpConnection::State::kConnected;
   TcpConnectionPtr conn = std::make_shared<TcpConnection>(loop_, fd, state);
+  DLOG_INFO << "Create connection, fd: " << fd;
 
   using namespace std::placeholders;
   conn->SetOnClose(std::bind(&TcpClient::OnClose, this, _1));
@@ -66,7 +67,8 @@ void TcpClient::OnClose(int fd) {
   TcpConnectionPtr conn = it->second;
   connections_.erase(it);
 
-  DLOG_INFO << "Connection to " << it->second->PeerAddr() << " is closed";
+  DLOG_INFO << "Connection to " << it->second->PeerAddr()
+            << " is closed, fd: " << fd;
   if (close_callback_) {
     close_callback_(conn);
   }
@@ -77,7 +79,6 @@ void TcpClient::OnConnectError(const NetAddress& addr) {
   if (connect_error_callback_) {
     connect_error_callback_(addr);
   }
-  DLOG_INFO << "MaybeReconnect, addr = " << addr;
   MaybeReconnect(addr);
 }
 
@@ -93,8 +94,6 @@ void TcpClient::MaybeReconnect(const NetAddress& addr) {
     } else {
       it->second = timer_id;
     }
-  } else {
-    DLOG_INFO << "Giveup reconnect to addr";
   }
 }
 

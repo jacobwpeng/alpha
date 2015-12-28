@@ -41,10 +41,11 @@ void Channel::Update() { loop_->UpdateChannel(this); }
 
 void Channel::HandleEvents() {
   handling_events_ = true;
+  DLOG_INFO << "fd: " << fd_ << ", " << ReadableEvents();
   if (revents_ & (EPOLLERR | EPOLLHUP)) {
-    if (ecb_)
+    if (ecb_) {
       ecb_();
-    else {
+    } else {
       LOG_WARNING << "Got error for fd = " << fd_;
     }
   }

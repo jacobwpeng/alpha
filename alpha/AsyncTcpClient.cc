@@ -40,7 +40,7 @@ std::shared_ptr<AsyncTcpConnection> AsyncTcpClient::ConnectTo(
   co->Yield();
   auto it = FindConnecting(addr);
   auto conn = it->second.async_conn;
-  RemoveConnectting(it);
+  RemoveConnecting(it);
   return conn;
 }
 
@@ -49,24 +49,28 @@ void AsyncTcpClient::OnConnected(TcpConnectionPtr conn) {
   conn->SetOnWriteDone(std::bind(&AsyncTcpClient::OnWriteDone, this, _1));
   auto it = FindConnecting(conn->PeerAddr());
   auto info = &it->second;
-  info->async_conn = std::make_shared<AsyncTcpConnection>(conn, info->co);
+  auto co = info->co;
+  info->async_conn = std::make_shared<AsyncTcpConnection>(conn, co);
   MapConnected(conn.get(), *info);
-  info->co->Resume();
+  co->Resume();
 }
 
 void AsyncTcpClient::OnConnectError(const NetAddress& addr) {
   auto it = FindConnecting(addr);
   auto info = &it->second;
-  info->co->Resume();
+  auto co = info->co;
+  co->Resume();
 }
 
 void AsyncTcpClient::OnClosed(TcpConnectionPtr conn) {
   auto info = FindConnected(conn.get());
   CHECK(info->async_conn);
-  auto status = info->async_conn->status();
+  auto old_connection_status = info->async_conn->status();
   info->async_conn->set_status(AsyncTcpConnection::Status::kClosed);
-  DLOG_INFO << "Coroutine::status -> " << info->co->status();
-  if (info->co->IsSuspended() && status != AsyncTcpConnection::Status::kIdle) {
+  CHECK(info->co->status() <= Coroutine::Status::kDead)
+      << "Invalid status: " << info->co->status() << ", info->co: " << info->co;
+  if (info->co->IsSuspended() &&
+      old_connection_status != AsyncTcpConnection::Status::kIdle) {
     info->co->Resume();
   }
   RemoveConnected(conn.get());
@@ -106,7 +110,7 @@ AsyncTcpClient::ConnectingArray::iterator AsyncTcpClient::FindConnecting(
   return it;
 }
 
-void AsyncTcpClient::RemoveConnectting(ConnectingArray::iterator it) {
+void AsyncTcpClient::RemoveConnecting(ConnectingArray::iterator it) {
   CHECK(!connecting_.empty());
   CHECK(it != connecting_.end());
   connecting_.erase(it);

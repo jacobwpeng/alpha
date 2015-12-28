@@ -38,7 +38,7 @@ class TcpConnector {
   void ConnectTo(const NetAddress& addr);
 
  private:
-  void OnConnected(int fd);
+  void OnConnected(int fd, const NetAddress& addr);
   void OnError(int fd, const NetAddress& addr);
   bool RemoveConnectingFd(int fd);
   bool AddConnectingFd(int fd, const NetAddress& addr);
