@@ -110,6 +110,7 @@ void NetSvrdFrame::Destroy(NetSvrdFrame* frame) {
   NetSvrdInternalFrame* internal_frame =
       reinterpret_cast<NetSvrdInternalFrame*>(frame);
   assert(internal_frame->magic == kMagic);
+  (void)internal_frame;
   char* p = reinterpret_cast<char*>(frame);
   delete[] p;
 }
