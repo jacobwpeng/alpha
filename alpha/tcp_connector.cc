@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <cassert>
+#include <sstream>
 
 #include "compiler.h"
 #include "logger.h"
@@ -27,7 +28,7 @@
 #include "socket_ops.h"
 
 static void DelayChannelDestroy(std::shared_ptr<alpha::Channel> channel) {
-  (void) channel;
+  (void)channel;
 }
 
 namespace alpha {
@@ -55,26 +56,32 @@ void TcpConnector::ConnectTo(const alpha::NetAddress& addr) {
     if (errno == EINPROGRESS) {
       DLOG_INFO << "connect inprogress to " << addr;
       bool ok = AddConnectingFd(fd, addr);
-      assert(ok);
-      (void)ok;
+      CHECK(ok);
     } else {
       ::close(fd);
-      PLOG_WARNING << "connect to " << addr << ", failed";
+      PLOG_WARNING << "connect to " << addr << " failed immediately";
       if (error_callback_) {
         error_callback_(addr);
       }
     }
   } else {
-    DLOG_INFO << "connected to " << addr;
+    DLOG_INFO << "connected to " << addr << " immediately, fd: " << fd;
     connected_callback_(fd);
   }
 }
 
-void TcpConnector::OnConnected(int fd) {
+void TcpConnector::OnConnected(int fd, const NetAddress& addr) {
   bool ok = RemoveConnectingFd(fd);
-  assert(ok);
-  (void)ok;
-  connected_callback_(fd);
+  CHECK(ok);
+  int err = SocketOps::GetAndClearError(fd);
+  if (err) {
+    DLOG_INFO << "Writable when connect error";
+    ::close(fd);
+    if (error_callback_) error_callback_(addr);
+  } else {
+    DLOG_INFO << "connected to " << addr << ", fd: " << fd;
+    connected_callback_(fd);
+  }
 }
 
 void TcpConnector::OnError(int fd, const alpha::NetAddress& addr) {
@@ -86,9 +93,9 @@ void TcpConnector::OnError(int fd, const alpha::NetAddress& addr) {
   char* msg = ::strerror_r(err, buf, sizeof(buf));
   if (err == ECONNREFUSED) {
     // 不把这个当做是异常
-    LOG_INFO << msg << ", addr = " << addr;
+    LOG_INFO << msg << ", addr = " << addr << ", fd: " << fd;
   } else {
-    LOG_WARNING << msg << ", addr = " << addr;
+    LOG_WARNING << msg << ", addr = " << addr << ", fd: " << fd;
   }
   ::close(fd);
   if (error_callback_) {
@@ -102,7 +109,6 @@ bool TcpConnector::RemoveConnectingFd(int fd) {
     return false;
   }
   std::shared_ptr<Channel> channel(std::move(it->second));
-  channel->set_write_callback(nullptr);
   channel->Remove();
   loop_->QueueInLoop(std::bind(DelayChannelDestroy, channel));
   connecting_fds_.erase(it);
@@ -116,10 +122,12 @@ bool TcpConnector::AddConnectingFd(int fd, const NetAddress& addr) {
   }
   std::unique_ptr<Channel> channel(new Channel(loop_, fd));
   using namespace std::placeholders;
-  DLOG_INFO << "Create channel for Connect fd, channel = " << channel.get();
+  DLOG_INFO << "Create channel for Connect to " << addr << ", fd: " << fd
+            << ", channel: " << channel.get();
   channel->set_error_callback(
       std::bind(&TcpConnector::OnError, this, fd, addr));
-  channel->set_write_callback(std::bind(&TcpConnector::OnConnected, this, fd));
+  channel->set_write_callback(
+      std::bind(&TcpConnector::OnConnected, this, fd, addr));
   channel->EnableWriting();
   connecting_fds_.emplace(fd, std::move(channel));
   return true;
