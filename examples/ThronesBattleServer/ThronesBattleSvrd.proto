@@ -1,0 +1,107 @@
+package ThronesBattleServerProtocol;
+
+message Goods {
+  optional uint32 id = 1;
+  optional uint32 num = 2;
+};
+
+message Reward {
+  optional uint32 battle_point = 1;
+  repeated Goods goods = 2;
+}
+
+message General {
+  optional uint32 season = 1;
+  optional uint32 uin = 2;
+  optional uint32 camp = 3;
+}
+
+message CampInfo {
+  optional uint32 id = 1;
+  optional uint32 warriors = 2;
+  optional uint32 living_warriors = 3;
+  optional uint32 leader = 4;
+  optional uint32 leader_killing_num = 5;
+  optional bool picked_lucky_warriors = 6;
+}
+
+message RoundMatchups {
+  optional uint32 one_camp = 1;
+  optional uint32 the_other_camp = 2;
+}
+
+message Matchups {
+  optional uint32 zone = 1;
+  optional uint32 round = 2;
+  repeated RoundMatchups round_matchups = 3;
+};
+
+message LuckyWarriors {
+  optional uint32 camp = 1;
+  repeated uint32 lucky_warrior = 2;
+}
+
+message RequestWrapper {
+  optional uint32 ctx = 1;
+  optional uint32 uin = 2;
+  optional bytes payload_name = 3;
+  optional bytes payload = 4;
+}
+
+message ResponseWrapper {
+  optional uint32 ctx = 1;
+  optional uint32 uin = 2;
+  optional sint32 rc = 3;
+  optional bytes payload_name = 4;
+  optional bytes payload = 5;
+}
+
+message SignUpRequest {
+  optional uint32 level = 1;
+}
+
+message SignUpResponse {
+  optional uint32 zone = 1;
+  optional uint32 camp = 2;
+}
+
+message QueryBattleStatusRequest {
+  optional uint32 level = 1;
+  optional uint32 zone = 2;
+  optional uint32 round = 3;
+};
+
+message QueryBattleStatusResponse {
+  optional uint32 season = 1;
+  optional uint32 signed_up_zone = 2;
+  optional uint32 signed_up_camp = 3;
+  repeated CampInfo camp = 4;
+  optional Matchups matchups = 5;
+  optional uint32 lucky_warriors_season = 6;
+  repeated LuckyWarriors lucky_warriors = 7;
+};
+
+message PickLuckyWarriorsRequest {
+}
+
+message PickLuckyWarriorsResponse {
+  optional uint32 zone = 1;
+  optional LuckyWarriors lucky_warriors = 2;
+}
+
+message QueryLuckyWarriorRewardRequest {
+}
+
+message QueryLuckyWarriorRewardResponse {
+  optional Reward reward = 1;
+}
+
+message QueryGeneralInChiefRequest {
+  optional uint32 zone = 1;
+  optional uint32 start = 2;
+  optional uint32 num = 3;
+}
+
+message QueryGeneralInChiefResponse {
+  repeated General general = 1;
+}
