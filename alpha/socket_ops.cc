@@ -55,7 +55,7 @@ int GetAndClearError(int fd) {
   socklen_t len = sizeof(err);
   if (unlikely(::getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) == -1)) {
     PLOG_WARNING << "getsockopt fd = " << fd;
-    return 0;
+    return errno;
   } else {
     return err;
   }
