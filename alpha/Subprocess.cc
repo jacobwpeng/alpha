@@ -17,7 +17,7 @@
 #include "logger.h"
 
 namespace alpha {
-SubprocessReturnCode::State SubprocessReturnCode::state() const {
+ProcessReturnCode::State ProcessReturnCode::state() const {
   if (raw_status_ == kRawStatusNotStarted) return State::kNotStarted;
   if (raw_status_ == kRawStatusRunning) return State::kRunning;
   if (WIFEXITED(raw_status_)) return State::kExited;
@@ -26,7 +26,7 @@ SubprocessReturnCode::State SubprocessReturnCode::state() const {
   return State::kNotStarted;
 }
 
-std::string SubprocessReturnCode::status() const {
+std::string ProcessReturnCode::status() const {
   switch (state()) {
     case State::kRunning:
       return "running";
@@ -42,34 +42,55 @@ std::string SubprocessReturnCode::status() const {
   }
 }
 
-bool SubprocessReturnCode::NotStarted() const {
+bool ProcessReturnCode::NotStarted() const {
   return state() == State::kNotStarted;
 }
 
-bool SubprocessReturnCode::Running() const {
-  return state() == State::kRunning;
-}
+bool ProcessReturnCode::Running() const { return state() == State::kRunning; }
 
-bool SubprocessReturnCode::TerminatedNormally() const {
+bool ProcessReturnCode::TerminatedNormally() const {
   return state() == State::kExited;
 }
 
-int SubprocessReturnCode::ExitCode() const {
+int ProcessReturnCode::ExitCode() const {
   CHECK(TerminatedNormally());
   return WEXITSTATUS(raw_status_);
 }
 
-bool SubprocessReturnCode::KilledBySignal() const {
+bool ProcessReturnCode::KilledBySignal() const {
   return state() == State::kKilledBySignal;
 }
 
-int SubprocessReturnCode::SignalReceived() const {
+int ProcessReturnCode::SignalReceived() const {
   CHECK(KilledBySignal());
   return WTERMSIG(raw_status_);
 }
 
+Subprocess::Options::Options() = default;
+
+Subprocess::Options& Subprocess::Options::fd(int fd, int action) {
+  fd_actions_[fd] = action;
+  return *this;
+}
+
+Subprocess::Options& Subprocess::Options::CloseOtherFds() {
+  close_other_fds_ = true;
+  return *this;
+}
+
+Subprocess::Options& Subprocess::Options::operator|=(
+    const Subprocess::Options& other) {
+  if (this == &other) return *this;
+  close_other_fds_ |= other.close_other_fds_;
+  for (const auto& p : other.fd_actions_) {
+    fd_actions_[p.first] = p.second;
+  }
+  return *this;
+}
+
 Subprocess::Subprocess(const std::vector<std::string>& argv,
-                       const char* executable)
+                       const char* executable,
+                       const Subprocess::Options& options)
     : pid_(0) {
   CHECK(!argv.empty()) << "no argv";
   if (executable == nullptr) {
@@ -79,6 +100,18 @@ Subprocess::Subprocess(const std::vector<std::string>& argv,
   if (rc < 0) {
     throw SubprocessSpawnError("fork failed", errno);
   } else if (rc == 0) {
+    for (const auto& p : options.fd_actions_) {
+      if (p.second == Options::kActionClose) {
+        ::close(p.second);
+      }
+    }
+    if (options.close_other_fds_) {
+      for (int fd = getdtablesize() - 1; fd >= 3; --fd) {
+        if (options.fd_actions_.count(fd) == 0) {
+          ::close(fd);
+        }
+      }
+    }
     std::vector<char*> args;
     std::transform(
         std::begin(argv), std::end(argv), std::back_inserter(args),
@@ -93,7 +126,7 @@ Subprocess::Subprocess(const std::vector<std::string>& argv,
   }
 }
 
-SubprocessReturnCode Subprocess::Wait() {
+ProcessReturnCode Subprocess::Wait() {
   CHECK(return_code_.Running());
   int raw_status;
   int found = 0;
@@ -101,11 +134,11 @@ SubprocessReturnCode Subprocess::Wait() {
     found = waitpid(pid_, &raw_status, 0);
   } while (found == -1 && errno == EINTR);
   PCHECK(found == pid_) << "waitpid failed";
-  return_code_ = SubprocessReturnCode(raw_status);
+  return_code_ = ProcessReturnCode(raw_status);
   return return_code_;
 }
 
-SubprocessReturnCode Subprocess::Poll() {
+ProcessReturnCode Subprocess::Poll() {
   CHECK(return_code_.Running());
   int raw_status;
   int found = 0;
@@ -114,7 +147,7 @@ SubprocessReturnCode Subprocess::Poll() {
   } while (found == -1 && errno == EINTR);
   PCHECK(found != -1) << "waitpid(" << pid_ << ", &raw_status, WNOHANG)";
   if (found != 0) {
-    return_code_ = SubprocessReturnCode(raw_status);
+    return_code_ = ProcessReturnCode(raw_status);
   }
   return return_code_;
 }

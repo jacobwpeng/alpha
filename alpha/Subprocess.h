@@ -10,13 +10,14 @@
  * =============================================================================
  */
 
-#ifndef __ALPHA_SUBPROCESS_H__
-#define __ALPHA_SUBPROCESS_H__
+#pragma once
 
 #include <unistd.h>
+#include <map>
 #include <vector>
 #include <string>
-#include "slice.h"
+#include <boost/operators.hpp>
+#include <alpha/slice.h>
 
 namespace alpha {
 class SubprocessError : public std::exception {
@@ -38,7 +39,7 @@ class SubprocessSpawnError final : public SubprocessError {
   int error_;
 };
 
-class SubprocessReturnCode {
+class ProcessReturnCode {
  public:
   enum class State : uint8_t {
     kNotStarted = 0,
@@ -46,8 +47,8 @@ class SubprocessReturnCode {
     kExited = 2,
     kKilledBySignal = 3
   };
-  SubprocessReturnCode() : raw_status_(kRawStatusNotStarted) {}
-  SubprocessReturnCode(int raw_status) : raw_status_(raw_status) {}
+  ProcessReturnCode() : raw_status_(kRawStatusNotStarted) {}
+  ProcessReturnCode(int raw_status) : raw_status_(raw_status) {}
 
   void SetRunning() { raw_status_ = kRawStatusRunning; }
 
@@ -68,17 +69,31 @@ class SubprocessReturnCode {
 
 class Subprocess {
  public:
-  Subprocess(const std::vector<std::string>& argv,
-             const char* executable = nullptr);
+  class Options : boost::orable<Options> {
+   private:
+    friend class Subprocess;
 
-  SubprocessReturnCode Wait();
-  SubprocessReturnCode Poll();
+   public:
+    static const int kActionClose = -1;
+    Options();
+    Options& fd(int fd, int action);
+    Options& CloseOtherFds();
+    Options& operator|=(const Options& other);
+
+   private:
+    bool close_other_fds_{false};
+    std::map<int, int> fd_actions_;
+  };
+  Subprocess(const std::vector<std::string>& argv,
+             const char* executable = nullptr,
+             const Options& options = Options());
+
+  ProcessReturnCode Wait();
+  ProcessReturnCode Poll();
   pid_t pid() const { return pid_; }
 
  private:
   pid_t pid_;
-  SubprocessReturnCode return_code_;
+  ProcessReturnCode return_code_;
 };
 }
-
-#endif /* ----- #ifndef __ALPHA_SUBPROCESS_H__  ----- */
