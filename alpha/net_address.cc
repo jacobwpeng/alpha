@@ -42,13 +42,7 @@ NetAddress::NetAddress() : port_(0) {}
 NetAddress::NetAddress(const alpha::Slice& ip, int port)
     : ip_(ip.ToString()), port_(port) {}
 
-NetAddress::NetAddress(const sockaddr_in& sa) {
-  char buf[INET_ADDRSTRLEN];
-  const char* dst = ::inet_ntop(AF_INET, &(sa.sin_addr), buf, sizeof(buf));
-  PCHECK(dst) << "inet_ntop failed";
-  port_ = ntohs(sa.sin_port);
-  ip_ = buf;
-}
+NetAddress::NetAddress(const sockaddr_in& sa) { CHECK(FromSockAddr(sa)); }
 
 std::string NetAddress::FullAddress() const {
   // 255.255.255.255:65535
@@ -60,16 +54,28 @@ std::string NetAddress::FullAddress() const {
   return addr_;
 }
 
+bool NetAddress::FromSockAddr(const sockaddr_in& sa) {
+  char buf[INET_ADDRSTRLEN];
+  const char* dst = ::inet_ntop(AF_INET, &(sa.sin_addr), buf, sizeof(buf));
+  if (dst == nullptr) {
+    return false;
+  }
+  port_ = ntohs(sa.sin_port);
+  ip_ = buf;
+  addr_.clear();
+  return true;
+}
+
 sockaddr_in NetAddress::ToSockAddr() const {
   sockaddr_in sa;
   memset(&sa, 0x0, sizeof(sa));
 
   sa.sin_family = AF_INET;
   sa.sin_port = htons(port_);
-  int ret = ::inet_pton(AF_INET, ip_.c_str(), &sa.sin_addr);
+  int ret = ::inet_pton(AF_INET, ip_.c_str(), &(sa.sin_addr));
   if (unlikely(ret != 1)) {
-    PLOG_ERROR << "inet_pton failed, ret = " << ret
-               << ", addr = " << FullAddress();
+    LOG_ERROR << "inet_pton failed, ret = " << ret
+              << ", addr = " << FullAddress();
     assert(false);
   }
 

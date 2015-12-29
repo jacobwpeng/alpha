@@ -31,6 +31,7 @@ class NetAddress {
   int port() const { return port_; }
   std::string FullAddress() const;
 
+  bool FromSockAddr(const sockaddr_in& sa);
   sockaddr_in ToSockAddr() const;
 
   /* Get local/peer addr from connected sockfd */
