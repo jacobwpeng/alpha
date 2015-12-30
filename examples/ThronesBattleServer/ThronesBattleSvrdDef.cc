@@ -181,6 +181,23 @@ uint32_t CampMatchups::GetFinalLivingWarriorsNum(uint16_t battle_round,
   return d->final_living_warriors_num;
 }
 
+uint16_t CampMatchups::FinalRank(CampID camp) const {
+  if (CurrentRound() < kMaxRoundID) {
+    return 0;
+  }
+  auto d = FindMatchupData(kMaxRoundID, camp);
+  if (!d->set) {
+    return 0;
+  }
+  for (auto i = 0; i < kCampIDMax; ++i) {
+    if (&matchups_data_[kMaxRoundID - 1][i] == d) {
+      return i + 1;
+    }
+  }
+  CHECK(false) << "Cannot find proper matchups data";
+  return 0;
+}
+
 void CampMatchups::ForeachMatchup(uint16_t battle_round, MatchupFunc func) {
   CHECK(battle_round != 0 && battle_round < kMaxRoundID);
   CHECK(RoundFinished(battle_round));

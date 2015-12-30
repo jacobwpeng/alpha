@@ -16,7 +16,8 @@
 #include <alpha/event_loop.h>
 #include <alpha/MMapFile.h>
 #include <alpha/AsyncTcpClient.h>
-#include <alpha/udp_server.h>
+#include <alpha/UDPSocket.h>
+#include <alpha/UDPServer.h>
 #include <alpha/experimental/RegionBasedHashMap.h>
 #include "ThronesBattleSvrdDef.h"
 #include "ThronesBattleSvrd.pb.h"
@@ -88,7 +89,8 @@ class ServerApp final {
   bool RecoveryMode() const;
 
   // Handlers for CGI UDP requests
-  ssize_t HandleUDPMessage(alpha::Slice data, char* out);
+  void HandleUDPMessage(alpha::UDPSocket* socket, alpha::IOBuffer* buf,
+                        size_t buf_len, const alpha::NetAddress& peer);
   int HandleSignUp(UinType uin, const SignUpRequest* req, SignUpResponse* resp);
   int HandleQueryBattleStatus(UinType uin, const QueryBattleStatusRequest* req,
                               QueryBattleStatusResponse* resp);
@@ -111,6 +113,7 @@ class ServerApp final {
 
   alpha::AsyncTcpClient async_tcp_client_;
   MessageDispatcher message_dispatcher_;
-  alpha::UdpServer udp_server_;
+  alpha::UDPServer udp_server_;
+  alpha::UDPSocket feeds_socket_;
 };
 }

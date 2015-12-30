@@ -20,6 +20,7 @@
 #include "ThronesBattleSvrdConf.h"
 #include "ThronesBattleSvrdTaskBroker.h"
 #include "ThronesBattleSvrd.pb.h"
+#include "ThronesBattleSvrdFeedsUtil.h"
 #include "fightsvrd.pb.h"
 
 namespace ThronesBattle {
@@ -124,6 +125,17 @@ int ServerApp::InitNormalMode() {
            << ", current size: " << rewards_->size();
   if (rewards_->max_size() < warriors_->max_size()) {
     LOG_ERROR << "RewardMap's capacity should large than WarriorMap's capacity";
+    return EXIT_FAILURE;
+  }
+
+  auto err = feeds_socket_.Open();
+  if (err) {
+    PLOG_ERROR << "Open feeds socket failed, err: " << err;
+    return EXIT_FAILURE;
+  }
+  err = feeds_socket_.Connect(alpha::NetAddress("10.6.224.83", 50001));
+  if (err) {
+    PLOG_ERROR << "Feeds socket connect failed, err: " << err;
     return EXIT_FAILURE;
   }
 
@@ -234,24 +246,6 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
     broker.SetOneCampWarriorRange(one_camp_choosen_warriors);
     broker.SetTheOtherCampWarriorRange(the_other_camp_choosen_warriors);
     broker.Wait();
-    // alpha::Random::Shuffle(one_living_warriors.begin(),
-    //                       one_living_warriors.end());
-    // alpha::Random::Shuffle(the_other_living_warriors.begin(),
-    //                       the_other_living_warriors.end());
-    // one_living_warriors.resize(battle_warrior_size);
-    // the_other_living_warriors.resize(battle_warrior_size);
-    // TaskBroker broker(client, co, conf_->fight_server_addr(), zone->id(),
-    // one,
-    //                  one_living_warriors, the_other_living_warriors,
-    //                  warrior_fight_result_callback);
-    // DLOG_INFO << "Create TaskBroker for zone: " << zone->id()
-    //          << ", one: " << one << ", the_other: " << the_other;
-    // broker.Wait();
-    // LOG_INFO << "Zone: " << zone->id() << ", one: " << one
-    //         << ", the_other: " << the_other << ", match: " << match
-    //         << ", one camp living: " << one_camp->LivingWarriorsNum()
-    //         << ", the other camp living: "
-    //         << the_other_camp->LivingWarriorsNum();
   }
 
   auto winner_camp = one_camp->NoLivingWarriors() ? the_other_camp : one_camp;
@@ -320,11 +314,19 @@ void ServerApp::ProcessRoundSurvivedWarrior(UinType uin) {
   // 从Camp中取出的uin, 直接CHECK
   CHECK(it != warriors_->end()) << "Cannot find warrior, uin: " << uin;
   auto& warrior = it->second;
+  auto zone = battle_data_->GetZone(warrior.zone_id());
   bool bye = warrior.last_killed_warrior() == 0;
   if (bye) {
     // 写轮空feeds
+    AddFightMessage(&feeds_socket_, kThronesBattleBye, uin, 0,
+                    battle_data_->CurrentSeason(),
+                    zone->matchups()->CurrentRound());
   } else {
     // 写本轮胜利feeds
+    AddFightMessage(
+        &feeds_socket_, kThronesBattleWin, uin, warrior.last_killed_warrior(),
+        battle_data_->CurrentSeason(), zone->matchups()->CurrentRound(),
+        warrior.last_killed_warrior(), warrior.killing_num());
   }
 }
 
@@ -355,7 +357,7 @@ void ServerApp::DoWhenRoundFinished() {
 void ServerApp::DoWhenTwoCampsMatchDone(Zone* zone, Camp* one, Camp* the_other,
                                         Camp* winner_camp) {
   CHECK(winner_camp == one || winner_camp == the_other);
-  LOG_INFO << "Battle done, Zone: " << zone->id() << "one: " << one->id()
+  LOG_INFO << "Battle done, Zone: " << zone->id() << " one: " << one->id()
            << ", the_other: " << the_other->id()
            << ", winner camp: " << winner_camp->id();
 
@@ -374,6 +376,25 @@ void ServerApp::DoWhenTwoCampsMatchDone(Zone* zone, Camp* one, Camp* the_other,
     ProcessRoundSurvivedWarrior(uin);
   }
 
+  // 如果打完了最后一轮，根据名次写feeds
+  unsigned one_rank = zone->matchups()->FinalRank(one->id());
+  if (one_rank != 0) {
+    CHECK(one_rank <= kCampIDMax);
+    for (const auto& uin : one->Warriors()) {
+      AddFightMessage(&feeds_socket_, kThronesBattleCampRank[one_rank - 1], uin,
+                      0, battle_data_->CurrentSeason(), zone->id(), one_rank);
+    }
+  }
+  unsigned the_other_rank = zone->matchups()->FinalRank(the_other->id());
+  if (the_other_rank != 0) {
+    CHECK(the_other_rank <= kCampIDMax);
+    for (const auto& uin : the_other->Warriors()) {
+      AddFightMessage(
+          &feeds_socket_, kThronesBattleCampRank[the_other_rank - 1], uin, 0,
+          battle_data_->CurrentSeason(), zone->id(), the_other_rank);
+    }
+  }
+
   // 判断当前所有赛区本轮所有比赛是否已经打完
   if (battle_data_->CurrentRoundFinished()) {
     DoWhenRoundFinished();
@@ -389,6 +410,10 @@ void ServerApp::ProcessDeadWarrior(UinType loser, UinType winner,
   it->second.set_dead(true);
   camp->MarkWarriorDead(loser);
   // 写战败的feeds
+  AddFightEvent(&feeds_socket_, kThronesBattleLose, loser, winner,
+                fight_content, battle_data_->CurrentSeason(),
+                zone->matchups()->CurrentRound(), winner,
+                it->second.killing_num());
 }
 
 void ServerApp::AddTimerForChangeSeason() {
@@ -509,22 +534,24 @@ int ServerApp::Run() {
   /* Trap signals */
   TrapSignals();
   using namespace std::placeholders;
-  bool ok =
-      udp_server_.Run(alpha::NetAddress("0.0.0.0", 51000),
-                      std::bind(&ServerApp::HandleUDPMessage, this, _1, _2));
+  udp_server_.SetMessageCallback(
+      std::bind(&ServerApp::HandleUDPMessage, this, _1, _2, _3, _4));
+  bool ok = udp_server_.Run(alpha::NetAddress("0.0.0.0", 51000));
   if (!ok) return EXIT_FAILURE;
   loop_.Run();
   return EXIT_SUCCESS;
 }
 
-ssize_t ServerApp::HandleUDPMessage(alpha::Slice data, char* out) {
-  DLOG_INFO << "Receive UDP message, size: " << data.size();
+void ServerApp::HandleUDPMessage(alpha::UDPSocket* socket, alpha::IOBuffer* buf,
+                                 size_t buf_len,
+                                 const alpha::NetAddress& peer) {
+  DLOG_INFO << "Receive UDP message, size: " << buf_len;
   ThronesBattleServerProtocol::RequestWrapper request_wrapper;
-  bool ok = request_wrapper.ParseFromArray(data.data(), data.size());
+  bool ok = request_wrapper.ParseFromArray(buf->data(), buf_len);
   if (unlikely(!ok)) {
     LOG_WARNING << "Cannot parse RequestWrapper from message\n"
-                << alpha::HexDump(data);
-    return -1;
+                << alpha::HexDump(alpha::Slice(buf->data(), buf_len));
+    return;
   }
   DLOG_INFO << "Receive request, ctx: " << request_wrapper.ctx()
             << ", uin: " << request_wrapper.uin()
@@ -536,21 +563,21 @@ ssize_t ServerApp::HandleUDPMessage(alpha::Slice data, char* out) {
   if (unlikely(descriptor == nullptr)) {
     LOG_WARNING << "Cannot find message type, name: "
                 << request_wrapper.payload_name();
-    return -2;
+    return;
   }
   auto prototype =
       MessageFactory::generated_factory()->GetPrototype(descriptor);
   if (unlikely(prototype == nullptr)) {
     LOG_WARNING << "Cannot get prototype for message, name: "
                 << request_wrapper.payload_name();
-    return -3;
+    return;
   }
   std::unique_ptr<Message> message(prototype->New());
   ok = message->ParseFromString(request_wrapper.payload());
   if (unlikely(!ok)) {
     LOG_WARNING << "Cannot parse from payload\n"
                 << alpha::HexDump(request_wrapper.payload());
-    return -4;
+    return;
   }
 
   ResponseWrapper response_wrapper;
@@ -559,14 +586,19 @@ ssize_t ServerApp::HandleUDPMessage(alpha::Slice data, char* out) {
   auto rc = message_dispatcher_.Dispatch(request_wrapper.uin(), message.get(),
                                          &response_wrapper);
   response_wrapper.set_rc(rc);
-  // auto result = message_dispatcher_.Dispatch(message.get(), out);
   DLOG_INFO << "Dispatch returns " << rc;
-  ok = response_wrapper.SerializeToArray(out, response_wrapper.ByteSize());
+  alpha::IOBufferWithSize out(response_wrapper.ByteSize());
+  ok = response_wrapper.SerializeToArray(out.data(), out.size());
   if (unlikely(!ok)) {
-    LOG_WARNING << "Serailize response wrapper failed";
-    return -5;
+    LOG_ERROR << "ResponseWrapper::SerializeToArray failed";
+    return;
   }
-  return response_wrapper.ByteSize();
+  rc = socket->SendTo(&out, out.size(), peer);
+  if (rc < 0) {
+    PLOG_WARNING << "UDPSocket::SendTo failed";
+  } else {
+    DLOG_INFO << "Send udp message to " << peer << ", size: " << out.size();
+  }
 }
 
 int ServerApp::HandleSignUp(UinType uin, const SignUpRequest* req,

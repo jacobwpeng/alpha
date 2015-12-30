@@ -135,6 +135,8 @@ class CampMatchups {
   uint16_t CurrentRound() const;
   std::string GetGameLog(CampID camp, uint16_t max_battle_round) const;
   uint32_t GetFinalLivingWarriorsNum(uint16_t battle_round, CampID camp) const;
+  // 如果最后一轮的次序确定，则返回对应次序，否则返回0
+  uint16_t FinalRank(CampID camp) const;
 
   MatchupData* MatchupDataForRound(uint16_t battle_round);
   void Reset();

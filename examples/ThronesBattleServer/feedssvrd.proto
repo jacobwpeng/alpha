@@ -1,0 +1,20 @@
+package FeedsServerProtocol;
+
+message FightMessageTask {
+  optional uint32 src_uin = 1;
+  optional uint32 dst_uin = 2;
+  optional bytes params = 3;
+}
+
+message FightEventTask {
+  optional uint32 src_uin = 1;
+  optional uint32 dst_uin = 2;
+  optional uint32 event_type = 3;
+  optional bytes replay_content = 4;
+  optional bytes params = 5;
+};
+
+message Task {
+  optional uint32 msg_type = 1;
+  optional bytes payload = 2;
+}
