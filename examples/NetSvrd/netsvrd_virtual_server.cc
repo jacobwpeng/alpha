@@ -16,6 +16,8 @@
 #include <alpha/logger.h>
 #include <alpha/event_loop.h>
 #include <alpha/tcp_server.h>
+#include <alpha/IOBuffer.h>
+#include <alpha/UDPServer.h>
 #include "netsvrd_frame.h"
 
 using namespace std::placeholders;
@@ -31,15 +33,17 @@ bool NetSvrdAddressParser::Parse(const std::string& addr) {
     LOG_ERROR << "Invalid addr: " << addr;
     return false;
   }
-  if (parts[0] != "tcp") {
-    LOG_ERROR << "Unknown protocol: " << parts[0] << ", Only tcp is supported";
+  if (parts[0] == "tcp") {
+    server_type_ = NetSvrdVirtualServerType::kProtocolTCP;
+  } else if (parts[0] == "udp") {
+    server_type_ = NetSvrdVirtualServerType::kProtocolUDP;
+  } else {
+    LOG_ERROR << "Unknown protocol: " << parts[0] << ", support tcp/udp only";
     return false;
   }
   if (parts[1] == "*") {
     parts[1] = "0.0.0.0";
   }
-
-  server_type_ = NetSvrdVirtualServerType::kProtocolTcp;
   try {
     server_address_ = alpha::NetAddress(parts[1], stoul(parts[2]));
   }
@@ -75,7 +79,7 @@ bool NetSvrdVirtualServer::AddInterface(const std::string& addr) {
     return false;
   }
 
-  if (parser.server_type() == NetSvrdVirtualServerType::kProtocolTcp) {
+  if (parser.server_type() == NetSvrdVirtualServerType::kProtocolTCP) {
     tcp_servers_.emplace_back(
         alpha::make_unique<alpha::TcpServer>(loop_, parser.address()));
     auto& server = *tcp_servers_.rbegin();
@@ -84,16 +88,26 @@ bool NetSvrdVirtualServer::AddInterface(const std::string& addr) {
     server->SetOnRead(
         std::bind(&NetSvrdVirtualServer::OnMessage, this, _1, _2));
     server->SetOnClose(std::bind(&NetSvrdVirtualServer::OnClose, this, _1));
+  } else if (parser.server_type() == NetSvrdVirtualServerType::kProtocolUDP) {
+    auto p = udp_servers_.emplace(parser.address(),
+                                  alpha::make_unique<alpha::UDPServer>(loop_));
+    CHECK(p.second);
+    auto& server = p.first->second;
+    server->SetMessageCallback(
+        std::bind(&NetSvrdVirtualServer::OnUDPMessage, this, _1, _2, _3, _4));
   }
   return true;
 }
 
 bool NetSvrdVirtualServer::Run() {
-  for (auto it = std::begin(tcp_servers_); it != std::end(tcp_servers_); ++it) {
-    if (!(*it)->Run()) {
-      return false;
-    }
+  for (auto& server : tcp_servers_) {
+    if (!server->Run()) return false;
   }
+
+  for (auto& p : udp_servers_) {
+    if (!p.second->Run(p.first)) return false;
+  }
+
   for (auto i = 0u; i < max_worker_num_; ++i) {
     workers_.emplace_back(SpawnWorker(i));
   }
@@ -158,6 +172,28 @@ void NetSvrdVirtualServer::OnClose(alpha::TcpConnectionPtr conn) {
   CHECK(num == 1);
 }
 
+void NetSvrdVirtualServer::OnUDPMessage(alpha::UDPSocket* socket,
+                                        alpha::IOBuffer* buf, size_t buf_len,
+                                        const alpha::NetAddress& address) {
+  static int udp_messages_num = 0;
+  ++udp_messages_num;
+  DLOG_INFO << "udp_messages_num: " << udp_messages_num;
+  auto header = NetSvrdFrame::CastHeaderOnly(buf->data(), buf_len);
+  if (header == nullptr) {
+    LOG_ERROR << "Receive invalid UDP message from " << address;
+    return;
+  }
+  if (header->size() != buf_len) {
+    LOG_ERROR << "UDP message size mismatch";
+    return;
+  }
+  // TODO: OnFrame with local frame
+  auto frame = NetSvrdFrame::CreateUnique(header->payload_size);
+  memcpy(frame->payload, buf->data() + NetSvrdFrame::kHeaderSize,
+         header->payload_size);
+  OnFrame(0, std::move(frame));
+}
+
 void NetSvrdVirtualServer::OnFrame(uint64_t connection_id,
                                    NetSvrdFrame::UniquePtr&& frame) {
   DLOG_INFO << "Frame payload size: " << frame->payload_size;
@@ -207,9 +243,11 @@ NetSvrdWorkerPtr NetSvrdVirtualServer::SpawnWorker(int worker_id) {
   DLOG_INFO << "Create worker , path: " << worker_path_;
   std::vector<std::string> argv = {worker_path_, std::to_string(net_server_id_),
                                    bus_in_path,  bus_out_path};
+  alpha::Subprocess::Options options;
+  options.CloseOtherFds();
   return alpha::make_unique<NetSvrdWorker>(
-      alpha::make_unique<alpha::Subprocess>(argv), std::move(bus_in),
-      std::move(bus_out));
+      alpha::make_unique<alpha::Subprocess>(argv, nullptr, options),
+      std::move(bus_in), std::move(bus_out));
 }
 
 void NetSvrdVirtualServer::PollWorkers() {

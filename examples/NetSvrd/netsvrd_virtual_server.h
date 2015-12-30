@@ -24,13 +24,17 @@
 #include "netsvrd_worker.h"
 
 namespace alpha {
+class IOBuffer;
 class EventLoop;
 class TcpServer;
+class UDPServer;
+class UDPSocket;
 }
 
 enum class NetSvrdVirtualServerType : uint8_t {
   kProtocolUnknown = 0,
-  kProtocolTcp = 1
+  kProtocolTCP = 1,
+  kProtocolUDP = 2,
 };
 
 struct NetSvrdFrame;
@@ -68,11 +72,14 @@ class NetSvrdVirtualServer final {
 
  private:
   using TcpServerPtr = std::unique_ptr<alpha::TcpServer>;
+  using UDPServerPtr = std::unique_ptr<alpha::UDPServer>;
   static const uint32_t kCheckWorkerStatusInterval = 1000;  // 1000 ms
   void OnConnected(alpha::TcpConnectionPtr conn);
   void OnMessage(alpha::TcpConnectionPtr conn,
                  alpha::TcpConnectionBuffer* buffer);
   void OnClose(alpha::TcpConnectionPtr conn);
+  void OnUDPMessage(alpha::UDPSocket* socket, alpha::IOBuffer* buf,
+                    size_t buf_len, const alpha::NetAddress& address);
   void OnFrame(uint64_t connection_id, NetSvrdFrame::UniquePtr&& frame);
   void StartMonitorWorkers();
   void StopMonitorWorkers();
@@ -88,6 +95,7 @@ class NetSvrdVirtualServer final {
   std::string bus_dir_;
   std::string worker_path_;
   std::vector<TcpServerPtr> tcp_servers_;
+  std::map<alpha::NetAddress, UDPServerPtr> udp_servers_;
   std::vector<NetSvrdWorkerPtr> workers_;
   std::map<uint64_t, alpha::TcpConnection*> connections_;
 };
