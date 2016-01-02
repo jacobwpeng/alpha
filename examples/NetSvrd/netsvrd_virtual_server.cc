@@ -46,8 +46,7 @@ bool NetSvrdAddressParser::Parse(const std::string& addr) {
   }
   try {
     server_address_ = alpha::NetAddress(parts[1], stoul(parts[2]));
-  }
-  catch (std::exception& e) {
+  } catch (std::exception& e) {
     LOG_ERROR << "Convert " << parts[2] << " to integer failed, " << e.what();
     return false;
   }
@@ -129,9 +128,14 @@ void NetSvrdVirtualServer::FlushWorkersOutput() {
                       << internal_frame->net_server_id;
           continue;
         }
-        auto it = connections_.find(internal_frame->client_id);
+        auto client_id = internal_frame->client_id;
+        if (client_id >= next_connection_id_) {
+          LOG_WARNING << "Invalid client id found, id: " << client_id;
+          continue;
+        }
+        auto it = connections_.find(client_id);
         if (it == connections_.end()) {
-          LOG_WARNING << "Invalid client id found";
+          LOG_INFO << "Frame to closed connection, id: " << client_id;
           continue;
         }
         bool ok = it->second->Write(alpha::Slice(data, len));
@@ -151,6 +155,8 @@ void NetSvrdVirtualServer::OnConnected(alpha::TcpConnectionPtr conn) {
   conn->SetContext(ctx);
   auto p = connections_.emplace(ctx.connection_id_, conn.get());
   CHECK(p.second);
+  LOG_INFO << "New connection from " << conn->PeerAddr()
+           << ", id: " << ctx.connection_id_;
 }
 
 void NetSvrdVirtualServer::OnMessage(alpha::TcpConnectionPtr conn,
@@ -170,6 +176,7 @@ void NetSvrdVirtualServer::OnClose(alpha::TcpConnectionPtr conn) {
   CHECK(ctx);
   auto num = connections_.erase(ctx->connection_id_);
   CHECK(num == 1);
+  LOG_INFO << "Connection closed, id: " << _ctx->connection_id_;
 }
 
 void NetSvrdVirtualServer::OnUDPMessage(alpha::UDPSocket* socket,
@@ -242,7 +249,7 @@ NetSvrdWorkerPtr NetSvrdVirtualServer::SpawnWorker(int worker_id) {
   CHECK(bus_out);
   DLOG_INFO << "Create worker , path: " << worker_path_;
   std::vector<std::string> argv = {worker_path_, std::to_string(net_server_id_),
-                                   bus_in_path,  bus_out_path};
+                                   bus_in_path, bus_out_path};
   alpha::Subprocess::Options options;
   options.CloseOtherFds();
   return alpha::make_unique<NetSvrdWorker>(
