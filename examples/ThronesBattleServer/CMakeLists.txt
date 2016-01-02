@@ -10,9 +10,6 @@ list(APPEND THRONES_BATTLE_SVRD_SRCS
   "ThronesBattleSvrdMain.cc"
 )
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ext)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/proto)
-
 set(THRONES_BATTLE_PROTO_LIB "ThronesBattleProto")
 add_subdirectory(proto)
 

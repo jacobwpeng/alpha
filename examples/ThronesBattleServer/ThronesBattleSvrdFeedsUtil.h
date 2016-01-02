@@ -15,8 +15,8 @@
 #include <alpha/logger.h>
 #include <alpha/UDPSocket.h>
 #include "ThronesBattleSvrdDef.h"
-#include "feedssvrd.pb.h"
-#include "netsvrd_frame.h"
+#include "proto/feedssvrd.pb.h"
+#include "ext/netsvrd_frame.h"
 
 namespace ThronesBattle {
 static const unsigned kThronesBattleLose = 450;

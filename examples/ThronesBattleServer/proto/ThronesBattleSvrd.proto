@@ -100,6 +100,7 @@ message QueryBattleStatusResponse {
   optional uint32 show_round = 10;
   optional bool in_sign_up_time = 11;
   optional uint32 current_season_champion_camp = 12;
+  optional uint32 max_show_round = 13;
 };
 
 message PickLuckyWarriorsRequest {

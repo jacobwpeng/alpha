@@ -24,9 +24,9 @@
 #include <alpha/AsyncTcpConnectionCoroutine.h>
 #include "ThronesBattleSvrdConf.h"
 #include "ThronesBattleSvrdTaskBroker.h"
-#include "ThronesBattleSvrd.pb.h"
 #include "ThronesBattleSvrdFeedsUtil.h"
-#include "fightsvrd.pb.h"
+#include "proto/ThronesBattleSvrd.pb.h"
+#include "proto/fightsvrd.pb.h"
 
 using namespace std::placeholders;
 namespace ThronesBattle {
@@ -443,8 +443,7 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
              << ", suffix: " << suffix;
     backup_suffix_index = 1 - backup_suffix_index;
     last_backup_time_ = alpha::Now();
-  }
-  catch (alpha::AsyncTcpConnectionException& e) {
+  } catch (alpha::AsyncTcpConnectionException& e) {
     LOG_WARNING << "Backup failed, " << e.what();
   }
 }
@@ -970,7 +969,7 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
     auto camp_proto = resp->add_camp();
     auto camp = zone->GetCamp(i + 1);
     // 如果本届已经开战，那么查询的轮应该小于等于当前轮
-    if (!battle_data_->SeasonNotStarted() &&
+    if (battle_data_->SeasonStarted() &&
         battle_round > battle_data_->CurrentRound()) {
       return Error::kInvalidArgument;
     }
@@ -1025,8 +1024,8 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
       return Error::kRoundNotStarted;
     }
     matchups_proto->set_zone(zone->id());
-    auto cb = [matchups_proto](const MatchupData* one,
-                               const MatchupData* the_other) {
+    auto cb =
+        [matchups_proto](const MatchupData* one, const MatchupData* the_other) {
       auto round_matchups = matchups_proto->add_round_matchups();
       round_matchups->set_one_camp(one->camp);
       round_matchups->set_the_other_camp(the_other->camp);
@@ -1058,6 +1057,11 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
   resp->set_show_zone(zone_id);
   resp->set_show_round(battle_round);
   resp->set_in_sign_up_time(conf_->InSignUpTime());
+  if (battle_data_->SeasonStarted()) {
+    resp->set_max_show_round(battle_data_->CurrentRound());
+  } else {
+    resp->set_max_show_round(kMaxRoundID);
+  }
   if (!battle_data_->InitialSeason() && battle_data_->SeasonFinished()) {
     for (int i = 0; i < kCampIDMax; ++i) {
       CampID camp_id = (CampID)(i + 1);
@@ -1155,7 +1159,7 @@ int ServerApp::HandleQueryRoundRewardRequest(UinType uin,
     return Error::kNoRoundReward;
   }
   // 第一轮开打了,但是还没打完
-  if (!battle_data_->SeasonNotStarted() && battle_data_->CurrentRound() == 1 &&
+  if (battle_data_->SeasonStarted() && battle_data_->CurrentRound() == 1 &&
       !battle_data_->CurrentRoundFinished()) {
     return Error::kNoRoundReward;
   }

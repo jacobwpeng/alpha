@@ -16,9 +16,9 @@
 #include <vector>
 #include <functional>
 #include <alpha/AsyncTcpClient.h>
-#include "fightsvrd.pb.h"
-#include "netsvrd_frame.h"
 #include "ThronesBattleSvrdDef.h"
+#include "proto/fightsvrd.pb.h"
+#include "ext/netsvrd_frame.h"
 
 namespace ThronesBattle {
 class TaskBroker final {

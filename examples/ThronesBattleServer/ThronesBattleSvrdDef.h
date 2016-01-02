@@ -257,6 +257,7 @@ class BattleData final {
 
   bool InitialSeason() const;
   bool SeasonFinished() const;
+  bool SeasonStarted() const;
   bool SeasonNotStarted() const;
   uint16_t CurrentRound() const;
   uint16_t FinishedRound() const;

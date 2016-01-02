@@ -20,7 +20,6 @@
 #include <alpha/UDPServer.h>
 #include <alpha/experimental/RegionBasedHashMap.h>
 #include "ThronesBattleSvrdDef.h"
-#include "ThronesBattleSvrd.pb.h"
 #include "ThronesBattleSvrdMessageDispatcher.h"
 #include "ThronesBattleSvrdRankVector.h"
 

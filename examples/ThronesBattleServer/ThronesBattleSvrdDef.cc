@@ -324,14 +324,14 @@ MatchupData* CampMatchups::RoundMatchupsDataEnd(uint16_t battle_round) {
   return std::end(matchups_data_[battle_round - 1]);
 }
 
-const MatchupData* CampMatchups::RoundMatchupsDataBegin(uint16_t battle_round)
-    const {
+const MatchupData* CampMatchups::RoundMatchupsDataBegin(
+    uint16_t battle_round) const {
   CHECK(battle_round != 0 && battle_round <= kMaxRoundID);
   return std::begin(matchups_data_[battle_round - 1]);
 }
 
-const MatchupData* CampMatchups::RoundMatchupsDataEnd(uint16_t battle_round)
-    const {
+const MatchupData* CampMatchups::RoundMatchupsDataEnd(
+    uint16_t battle_round) const {
   CHECK(battle_round != 0 && battle_round <= kMaxRoundID);
   return std::end(matchups_data_[battle_round - 1]);
 }
@@ -486,9 +486,11 @@ bool BattleData::SeasonFinished() const {
   return battle_data_saved_->season_finished;
 }
 
-bool BattleData::SeasonNotStarted() const {
-  return battle_data_saved_->battle_round == 0;
+bool BattleData::SeasonStarted() const {
+  return battle_data_saved_->battle_round != 0;
 }
+
+bool BattleData::SeasonNotStarted() const { return !SeasonStarted(); }
 
 uint16_t BattleData::CurrentRound() const {
   return battle_data_saved_->battle_round;

@@ -19,8 +19,8 @@
 #include <google/protobuf/message.h>
 #include <alpha/compiler.h>
 #include <alpha/logger.h>
-#include "ThronesBattleSvrd.pb.h"
 #include "ThronesBattleSvrdDef.h"
+#include "proto/ThronesBattleSvrd.pb.h"
 
 namespace ThronesBattle {
 template <typename T>
