@@ -1,0 +1,10 @@
+package MysticSalesmanServerProtocol;
+
+message QueryUserGroup {
+  optional uint32 uin = 1;
+};
+
+message QueryUserGroupReply {
+  optional uint32 uin = 1;
+  optional uint32 user_group = 2;
+};
