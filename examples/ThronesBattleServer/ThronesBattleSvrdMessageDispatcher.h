@@ -64,6 +64,7 @@ class ConcreteMessageCallback : public MessageCallback {
     auto m = dynamic_cast<const RequestType*>(req);
     ResponseType resp;
     auto rc = cb_(uin, m, &resp);
+    DLOG_INFO_IF(rc == 0) << "Response: \n" << resp.DebugString();
     response_wrapper->set_payload_name(resp.GetTypeName());
     auto ok = resp.SerializeToString(response_wrapper->mutable_payload());
     if (!ok) {

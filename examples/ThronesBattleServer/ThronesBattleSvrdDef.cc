@@ -74,6 +74,13 @@ bool LuckyWarriorList::HasWarrior(UinType uin) const {
   return false;
 }
 
+bool LuckyWarriorList::PickedLuckyWarriors(CampID camp_id) const {
+  // 所有Uin都为0，视为没有挑选
+  return !std::all_of(std::begin(lucky_warriors_[camp_id - 1]),
+                      std::end(lucky_warriors_[camp_id - 1]),
+                      [](UinType uin) { return uin == 0; });
+}
+
 void LuckyWarriorList::Clear() {
   memset(lucky_warriors_, 0x0, sizeof(lucky_warriors_));
 }
@@ -91,14 +98,15 @@ void CampLeaderList::SetPickedLuckyWarriors(CampID camp_id) {
 void CampLeaderList::Clear() { memset(leaders_, 0x0, sizeof(leaders_)); }
 
 void CampLeaderList::Notify(CampID camp_id, UinType uin, uint32_t killing_num) {
-  auto& leader = leaders_[camp_id];
-  if (leader.empty() || leader.killing_num < killing_num) {
-    leader.uin = uin;
-    leader.killing_num = killing_num;
+  auto leader = GetLeaderPtr(camp_id);
+  if (leader->empty() || leader->killing_num < killing_num) {
+    leader->uin = uin;
+    leader->killing_num = killing_num;
   }
 }
 
 CampLeader* CampLeaderList::GetLeaderPtr(CampID camp_id) {
+  CHECK(ValidCampID(camp_id));
   return &leaders_[camp_id - 1];
 }
 
@@ -154,6 +162,7 @@ bool CampMatchups::CurrentRoundFinished() const {
 }
 
 bool CampMatchups::RoundFinished(uint16_t battle_round) const {
+  if (battle_round == 0) return true;
   CHECK(battle_round != 0 && battle_round <= kMaxRoundID);
   return std::all_of(RoundMatchupsDataBegin(battle_round),
                      RoundMatchupsDataEnd(battle_round),
@@ -161,6 +170,16 @@ bool CampMatchups::RoundFinished(uint16_t battle_round) const {
 }
 
 uint16_t CampMatchups::CurrentRound() const { return current_battle_round_; }
+
+uint16_t CampMatchups::FinishedRound() const {
+  if (CurrentRound() == 0) {
+    return 0;
+  } else if (CurrentRoundFinished()) {
+    return CurrentRound();
+  } else {
+    return CurrentRound() - 1;
+  }
+}
 
 std::string CampMatchups::GetGameLog(CampID camp,
                                      uint16_t max_battle_round) const {
@@ -191,7 +210,13 @@ uint16_t CampMatchups::FinalRank(CampID camp) const {
   }
   for (auto i = 0; i < kCampIDMax; ++i) {
     if (&matchups_data_[kMaxRoundID - 1][i] == d) {
-      return i + 1;
+      auto self_index = i;
+      auto opponent_camp_index = (i % 2 == 0 ? i + 1 : i - 1);
+      if (d->win) {
+        return std::min(self_index, opponent_camp_index) + 1;
+      } else {
+        return std::max(self_index, opponent_camp_index) + 1;
+      }
     }
   }
   CHECK(false) << "Cannot find proper matchups data";
@@ -199,11 +224,12 @@ uint16_t CampMatchups::FinalRank(CampID camp) const {
 }
 
 void CampMatchups::ForeachMatchup(uint16_t battle_round, MatchupFunc func) {
-  CHECK(battle_round != 0 && battle_round < kMaxRoundID);
-  CHECK(RoundFinished(battle_round));
+  CHECK(battle_round != 0 && battle_round <= kMaxRoundID);
+  CHECK(CurrentRound() >= battle_round);
+  // CHECK(RoundFinished(battle_round));
   auto round_matchups_data = MatchupDataForRound(battle_round);
   for (auto i = 0; i < kCampIDMax - 1; i += 2) {
-    func(round_matchups_data[i].camp, round_matchups_data[i + 1].camp);
+    func(&round_matchups_data[i], &round_matchups_data[i + 1]);
   }
 }
 
@@ -213,7 +239,7 @@ void CampMatchups::UnfinishedBattle(uint16_t battle_round, MatchupFunc func) {
   for (auto i = 0; i < kCampIDMax - 1; i += 2) {
     auto& matchup_data = round_matchups_data[i];
     if (!matchup_data.set) {
-      func(matchup_data.camp, round_matchups_data[i + 1].camp);
+      func(&matchup_data, &round_matchups_data[i + 1]);
     }
   }
 }
@@ -452,6 +478,10 @@ void BattleData::SetSeasonFinished() {
   battle_data_saved_->season_finished = true;
 }
 
+bool BattleData::InitialSeason() const {
+  return battle_data_saved_->initial_season;
+}
+
 bool BattleData::SeasonFinished() const {
   return battle_data_saved_->season_finished;
 }
@@ -487,6 +517,14 @@ bool BattleData::CurrentRoundFinished() const {
   });
 }
 
+WarriorLite WarriorLite::Create(UinType uin, uint16_t zone_id, CampID camp_id) {
+  WarriorLite warrior_lite;
+  warrior_lite.uin = uin;
+  warrior_lite.zone_id = zone_id;
+  warrior_lite.camp_id = camp_id;
+  return warrior_lite;
+}
+
 Warrior Warrior::Create(UinType uin, uint16_t zone_id, CampID camp_id) {
   Warrior warrior;
   warrior.uin_ = uin;
@@ -494,14 +532,21 @@ Warrior Warrior::Create(UinType uin, uint16_t zone_id, CampID camp_id) {
   warrior.camp_id_ = camp_id;
   warrior.dead_ = false;
   warrior.last_draw_reward_round_ = 0;
-  warrior.killing_num_ = 0;
+  warrior.round_killing_num_ = 0;
+  warrior.season_killing_num_ = 0;
   warrior.last_killed_warrior_ = 0;
   return warrior;
+}
+
+void Warrior::add_killing_num() {
+  round_killing_num_ += 1;
+  season_killing_num_ += 1;
 }
 
 void Warrior::ResetRoundData() {
   set_dead(false);
   set_last_killed_warrior(0);
+  round_killing_num_ = 0;
 }
 
 Reward Reward::Create(uint32_t battle_point) {

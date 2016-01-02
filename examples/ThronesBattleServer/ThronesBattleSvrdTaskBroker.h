@@ -41,7 +41,8 @@ class TaskBroker final {
 
  private:
   using TaskID = uint64_t;
-  static const size_t kMaxNonAckedTaskNum = 256;
+  static const size_t kMaxNonAckedTaskNum = 64;
+  static const int kMaxIdleTime = 10000;  // ms
   void AddTask(FightServerProtocol::Task& task);
   void HandleCachedReplyData();
   void SendTaskToRemote(const FightServerProtocol::Task& task);

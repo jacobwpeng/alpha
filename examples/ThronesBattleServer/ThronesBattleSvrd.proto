@@ -28,6 +28,7 @@ message CampInfo {
 message RoundMatchups {
   optional uint32 one_camp = 1;
   optional uint32 the_other_camp = 2;
+  optional uint32 winner_camp = 3;
 }
 
 message Matchups {
@@ -39,6 +40,11 @@ message Matchups {
 message LuckyWarriors {
   optional uint32 camp = 1;
   repeated uint32 lucky_warrior = 2;
+}
+
+message RankUnit {
+  optional uint32 uin = 1;
+  optional uint32 val = 2;
 }
 
 message RequestWrapper {
@@ -56,13 +62,23 @@ message ResponseWrapper {
   optional bytes payload = 5;
 }
 
+message QuerySignUpRequest {
+}
+
+message QuerySignUpResponse {
+  optional uint32 season = 1;
+  optional uint32 zone = 2;
+  optional uint32 camp = 3;
+}
+
 message SignUpRequest {
   optional uint32 level = 1;
 }
 
 message SignUpResponse {
-  optional uint32 zone = 1;
-  optional uint32 camp = 2;
+  optional uint32 season = 1;
+  optional uint32 zone = 2;
+  optional uint32 camp = 3;
 }
 
 message QueryBattleStatusRequest {
@@ -79,6 +95,11 @@ message QueryBattleStatusResponse {
   optional Matchups matchups = 5;
   optional uint32 lucky_warriors_season = 6;
   repeated LuckyWarriors lucky_warriors = 7;
+  optional bool is_lucky_warrior = 8;
+  optional uint32 show_zone = 9;
+  optional uint32 show_round = 10;
+  optional bool in_sign_up_time = 11;
+  optional uint32 current_season_champion_camp = 12;
 };
 
 message PickLuckyWarriorsRequest {
@@ -93,7 +114,16 @@ message QueryLuckyWarriorRewardRequest {
 }
 
 message QueryLuckyWarriorRewardResponse {
-  optional Reward reward = 1;
+  optional uint32 season = 1;
+}
+
+message QueryRoundRewardRequest {
+}
+
+message QueryRoundRewardResponse {
+  optional uint32 season = 1;
+  optional uint32 zone = 2;
+  optional bytes game_log = 3;
 }
 
 message QueryGeneralInChiefRequest {
@@ -104,4 +134,21 @@ message QueryGeneralInChiefRequest {
 
 message QueryGeneralInChiefResponse {
   repeated General general = 1;
+  optional uint32 total = 2;
+}
+
+message QueryRankRequest {
+  optional uint32 type = 1;
+  optional uint32 zone = 2;
+  optional uint32 start = 3;
+  optional uint32 num = 4;
+}
+
+message QueryRankResponse {
+  optional uint32 rank_season = 1;
+  optional uint32 rank_season_finished = 2;
+  optional uint32 zone = 3;
+  optional uint32 self_rank = 4;
+  optional uint32 total = 5;
+  repeated RankUnit warriors = 6;
 }

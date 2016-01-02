@@ -17,12 +17,18 @@
 #include <alpha/format.h>
 #include <alpha/logger.h>
 #include <alpha/random.h>
+#include <alpha/Endian.h>
+#include <alpha/IOBuffer.h>
+#include <alpha/AsyncTcpConnection.h>
+#include <alpha/AsyncTcpConnectionException.h>
+#include <alpha/AsyncTcpConnectionCoroutine.h>
 #include "ThronesBattleSvrdConf.h"
 #include "ThronesBattleSvrdTaskBroker.h"
 #include "ThronesBattleSvrd.pb.h"
 #include "ThronesBattleSvrdFeedsUtil.h"
 #include "fightsvrd.pb.h"
 
+using namespace std::placeholders;
 namespace ThronesBattle {
 namespace detail {
 std::unique_ptr<alpha::MMapFile> OpenMemoryMapedFile(alpha::Slice path,
@@ -34,6 +40,13 @@ std::unique_ptr<alpha::MMapFile> OpenMemoryMapedFile(alpha::Slice path,
     return nullptr;
   }
   return std::move(file);
+}
+
+void CopyMemoryMapedFileToMemory(alpha::MMapFile* file,
+                                 alpha::IOBufferWithSize* buf) {
+  CHECK(file && buf);
+  CHECK(buf->size() == file->size());
+  memcpy(buf->data(), file->start(), file->size());
 }
 
 template <typename T>
@@ -55,15 +68,36 @@ std::unique_ptr<T> MakeFromMemoryMapedFile(alpha::MMapFile* file) {
   return std::move(result);
 }
 }
+
+const size_t ServerApp::kRankDataRegionSize = 1 << 16;
+const size_t ServerApp::kRankDataPaddingSize = 1 << 14;
+const size_t ServerApp::kRankMax = 1000;
+
 ServerApp::ServerApp() : async_tcp_client_(&loop_), udp_server_(&loop_) {}
 
 ServerApp::~ServerApp() = default;
 
 int ServerApp::Init(const char* file) {
+  server_id_ = alpha::Random::Rand64();
   conf_ = ServerConf::Create(file);
   if (conf_ == nullptr) {
     return EXIT_FAILURE;
   }
+
+  LOG_INFO << "Battle data file: " << conf_->battle_data_file();
+  LOG_INFO << "Battle data file size(Byte): " << conf_->battle_data_file_size();
+  LOG_INFO << "Warriors data file: " << conf_->warriors_data_file();
+  LOG_INFO << "Warriors data file size(Byte): "
+           << conf_->warriors_data_file_size();
+  LOG_INFO << "Rewards data file: " << conf_->rewards_data_file();
+  LOG_INFO << "Rewards data file size(Byte): "
+           << conf_->rewards_data_file_size();
+  LOG_INFO << "Rank data file: " << conf_->rank_data_file();
+  LOG_INFO << "Rank data file size(Byte): " << conf_->rank_data_file_size();
+  LOG_INFO << "Fight server addr: " << conf_->fight_server_addr();
+  LOG_INFO << "Feeds server addr: " << conf_->feeds_server_addr();
+  LOG_INFO << "Backup server addr: " << conf_->backup_server_addr();
+  LOG_INFO << "Backup interval(seconds): " << conf_->backup_interval();
 
   battle_data_underlying_file_ = detail::OpenMemoryMapedFile(
       conf_->battle_data_file(), conf_->battle_data_file_size());
@@ -80,6 +114,12 @@ int ServerApp::Init(const char* file) {
   rewards_data_underlying_file_ = detail::OpenMemoryMapedFile(
       conf_->rewards_data_file(), conf_->rewards_data_file_size());
   if (rewards_data_underlying_file_ == nullptr) {
+    return EXIT_FAILURE;
+  }
+
+  rank_data_underlying_file_ = detail::OpenMemoryMapedFile(
+      conf_->rank_data_file(), conf_->rank_data_file_size());
+  if (rank_data_underlying_file_ == nullptr) {
     return EXIT_FAILURE;
   }
 
@@ -128,12 +168,75 @@ int ServerApp::InitNormalMode() {
     return EXIT_FAILURE;
   }
 
+  if (rank_data_underlying_file_->size() <
+      2 * kMaxZoneNum * (kRankDataRegionSize + kRankDataPaddingSize)) {
+    LOG_ERROR << "Rank data file size is too small";
+    return EXIT_FAILURE;
+  }
+
+  // 恢复本届排行榜
+  size_t offset = 0;
+  auto const file_start =
+      reinterpret_cast<char*>(rank_data_underlying_file_->start());
+  for (uint16_t i = 0; i < kMaxZoneNum; ++i) {
+    auto zone_id = i + 1;
+    CHECK(offset + kRankDataRegionSize < rank_data_underlying_file_->size())
+        << "Invalid offset: " << offset
+        << ", file size: " << rank_data_underlying_file_->size();
+    auto data = file_start + offset;
+    auto rank = alpha::make_unique<RankVector>(kRankMax);
+    CHECK(rank);
+    CHECK(data + kRankDataRegionSize <=
+          file_start + rank_data_underlying_file_->size());
+    if (rank_data_underlying_file_->newly_created()) {
+      bool ok = rank->CreateFrom(data, kRankDataRegionSize);
+      if (!ok) {
+        LOG_ERROR << "Create rank failed, zone: " << zone_id;
+        return EXIT_FAILURE;
+      }
+    } else {
+      bool ok = rank->RestoreFrom(data, kRankDataRegionSize);
+      if (!ok) {
+        LOG_ERROR << "Restore rank failed, zone: " << zone_id;
+        return EXIT_FAILURE;
+      }
+    }
+    season_ranks_[zone_id] = std::move(rank);
+    offset += kRankDataRegionSize + kRankDataPaddingSize;
+  }
+
+  // 恢复上届排行榜
+  for (uint16_t i = 0; i < kMaxZoneNum; ++i) {
+    auto zone_id = i + 1;
+    auto data = file_start + offset;
+    auto rank = alpha::make_unique<RankVector>(kRankMax);
+    CHECK(rank);
+    CHECK(offset + kRankDataRegionSize < rank_data_underlying_file_->size())
+        << "Invalid offset: " << offset
+        << ", file size: " << rank_data_underlying_file_->size();
+    if (rank_data_underlying_file_->newly_created()) {
+      bool ok = rank->CreateFrom(data, kRankDataRegionSize);
+      if (!ok) {
+        LOG_ERROR << "Create rank failed, zone: " << zone_id;
+        return EXIT_FAILURE;
+      }
+    } else {
+      bool ok = rank->RestoreFrom(data, kRankDataRegionSize);
+      if (!ok) {
+        LOG_ERROR << "Restore rank failed, zone: " << zone_id;
+        return EXIT_FAILURE;
+      }
+    }
+    history_ranks_[zone_id] = std::move(rank);
+    offset += kRankDataRegionSize + kRankDataPaddingSize;
+  }
+
   auto err = feeds_socket_.Open();
   if (err) {
     PLOG_ERROR << "Open feeds socket failed, err: " << err;
     return EXIT_FAILURE;
   }
-  err = feeds_socket_.Connect(alpha::NetAddress("10.6.224.83", 50001));
+  err = feeds_socket_.Connect(conf_->feeds_server_addr());
   if (err) {
     PLOG_ERROR << "Feeds socket connect failed, err: " << err;
     return EXIT_FAILURE;
@@ -150,11 +253,12 @@ int ServerApp::InitNormalMode() {
     camp->AddWarrior(warrior.uin(), dead);
   }
 
-  using namespace std::placeholders;
 #define THRONES_BATTLE_REGISTER_HANDLER(ReqType, RespType, Handler) \
   message_dispatcher_.Register<ReqType, RespType>(                  \
       std::bind(&ServerApp::Handler, this, _1, _2, _3));
 
+  THRONES_BATTLE_REGISTER_HANDLER(QuerySignUpRequest, QuerySignUpResponse,
+                                  HandleQuerySignUp);
   THRONES_BATTLE_REGISTER_HANDLER(SignUpRequest, SignUpResponse, HandleSignUp);
   THRONES_BATTLE_REGISTER_HANDLER(QueryBattleStatusRequest,
                                   QueryBattleStatusResponse,
@@ -162,6 +266,17 @@ int ServerApp::InitNormalMode() {
   THRONES_BATTLE_REGISTER_HANDLER(PickLuckyWarriorsRequest,
                                   PickLuckyWarriorsResponse,
                                   HandlePickLuckyWarriors);
+  THRONES_BATTLE_REGISTER_HANDLER(QueryLuckyWarriorRewardRequest,
+                                  QueryLuckyWarriorRewardResponse,
+                                  HandleQueryLuckyWarriorReward);
+  THRONES_BATTLE_REGISTER_HANDLER(QueryRoundRewardRequest,
+                                  QueryRoundRewardResponse,
+                                  HandleQueryRoundRewardRequest);
+  THRONES_BATTLE_REGISTER_HANDLER(QueryGeneralInChiefRequest,
+                                  QueryGeneralInChiefResponse,
+                                  HandleQueryGeneralInChief);
+  THRONES_BATTLE_REGISTER_HANDLER(QueryRankRequest, QueryRankResponse,
+                                  HandleQueryRank);
 #undef THRONES_BATTLE_REGISTER_HANDLER
 
   if (battle_data_->SeasonFinished()) {
@@ -169,6 +284,9 @@ int ServerApp::InitNormalMode() {
   } else {
     AddTimerForBattleRound();
   }
+  // 保证启停不会马上备份, 如果需要使用HTTP管理发起备份
+  last_backup_time_ = alpha::Now();
+  AddTimerForBackup();
   return 0;
 }
 
@@ -214,8 +332,8 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
     return;
   }
 
-  auto warrior_fight_result_callback = std::bind(
-      &ServerApp::ProcessFightTaskResult, this, std::placeholders::_1);
+  auto warrior_fight_result_callback =
+      std::bind(&ServerApp::ProcessFightTaskResult, this, _1);
 
   for (auto match = 1; !done(); ++match) {
     auto& one_living_warriors = one_camp->living_warriors();
@@ -252,21 +370,86 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
   DoWhenTwoCampsMatchDone(zone, one_camp, the_other_camp, winner_camp);
 }
 
-void ServerApp::AddRoundReward(Zone* zone, Camp* camp) {
-  auto zone_current_round = zone->matchups()->CurrentRound();
-  auto game_log = zone->matchups()->GetGameLog(camp->id(), zone_current_round);
-  auto zone_conf = conf_->GetZoneConf(zone->id());
-  auto reward = zone_conf->GetRoundReward(game_log);
-  // 为这个区所有人加上这份奖励
-  camp->ForeachWarrior([this, reward](UinType uin) {
-    auto it = rewards_->find(uin);
-    if (it != rewards_->end()) {
-      it->second.Merge(reward);
-    } else {
-      rewards_->insert(alpha::make_pod_pair(uin, reward));
+void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
+                              alpha::AsyncTcpConnectionCoroutine* co,
+                              bool check_last_backup_time) {
+  if (check_last_backup_time) {
+    auto now = alpha::Now();
+    auto interval =
+        std::max(now, last_backup_time_) - std::min(now, last_backup_time_);
+    if (interval < conf_->backup_interval() * alpha::kMilliSecondsPerSecond) {
+      LOG_INFO << "Giveup backup, last_backup_time_: " << last_backup_time_
+               << ", now: " << now << ", interval: " << interval
+               << ", backup_interval: " << conf_->backup_interval();
+      return;
     }
-  });
+  }
+  DLOG_INFO << "Starting backup, server id: " << server_id_;
+  auto put = [](std::shared_ptr<alpha::AsyncTcpConnection> conn,
+                alpha::Slice key, alpha::Slice val) {
+    const int16_t kTTProtocolPutMagic = alpha::HostToBigEndian(0xC810);
+    auto szkey = alpha::HostToBigEndian(static_cast<uint32_t>(key.size()));
+    auto szval = alpha::HostToBigEndian(static_cast<uint32_t>(val.size()));
+    conn->Write(alpha::Slice(&kTTProtocolPutMagic));
+    conn->Write(alpha::Slice(&szkey));
+    conn->Write(alpha::Slice(&szval));
+    conn->Write(key);
+    conn->Write(val);
+  };
+  const char* backup_suffix[] = {"tick", "tock"};
+  static int backup_suffix_index = 0;
+  const char* suffix = backup_suffix[backup_suffix_index];
+  try {
+    auto server_id = server_id_;
+    auto create_backup_key = [server_id](alpha::Slice key, const char* suffix) {
+      // Key: ##SERVERID##-##KEY##-##SUFFIX##
+      std::ostringstream oss;
+      oss << server_id << '-' << key.ToString() << '-' << suffix;
+      return oss.str();
+    };
+    auto conn = client->ConnectTo(conf_->backup_server_addr(), co);
+
+    // 把瞬间状态保存到内存中
+    alpha::IOBufferWithSize battle_data(battle_data_underlying_file_->size());
+    memcpy(battle_data.data(), battle_data_underlying_file_->start(),
+           battle_data.size());
+
+    alpha::IOBufferWithSize warriors_data(
+        warriors_data_underlying_file_->size());
+    memcpy(warriors_data.data(), warriors_data_underlying_file_->start(),
+           warriors_data.size());
+
+    alpha::IOBufferWithSize rewards_data(rewards_data_underlying_file_->size());
+    memcpy(rewards_data.data(), rewards_data_underlying_file_->start(),
+           rewards_data.size());
+
+    alpha::IOBufferWithSize rank_data(rank_data_underlying_file_->size());
+    memcpy(rank_data.data(), rank_data_underlying_file_->start(),
+           rank_data.size());
+
+    auto key = create_backup_key("BattleData", suffix);
+    put(conn, key, alpha::Slice(battle_data.data(), battle_data.size()));
+
+    key = create_backup_key("WarriorsData", suffix);
+    put(conn, key, alpha::Slice(warriors_data.data(), warriors_data.size()));
+
+    key = create_backup_key("RewardsData", suffix);
+    put(conn, key, alpha::Slice(rewards_data.data(), rewards_data.size()));
+
+    key = create_backup_key("RankData", suffix);
+    put(conn, key, alpha::Slice(rank_data.data(), rank_data.size()));
+
+    LOG_INFO << "Backup done, server id: " << server_id
+             << ", suffix: " << suffix;
+    backup_suffix_index = 1 - backup_suffix_index;
+    last_backup_time_ = alpha::Now();
+  }
+  catch (alpha::AsyncTcpConnectionException& e) {
+    LOG_WARNING << "Backup failed, " << e.what();
+  }
 }
+
+void ServerApp::AddRoundReward(Zone* zone, Camp* camp) {}
 
 void ServerApp::ProcessFightTaskResult(
     const FightServerProtocol::TaskResult& result) {
@@ -305,8 +488,10 @@ void ServerApp::ProcessSurvivedWarrior(UinType winner, UinType loser) {
   auto camp = zone->GetCamp(warrior.camp_id());
   // 更新击杀数
   warrior.add_killing_num();
+  warrior.set_last_killed_warrior(loser);
+  ReportKillingNum(zone->id(), winner);
   // TODO: 上报排行榜
-  zone->leaders()->Notify(camp->id(), winner, warrior.killing_num());
+  zone->leaders()->Notify(camp->id(), winner, warrior.season_killing_num());
 }
 
 void ServerApp::ProcessRoundSurvivedWarrior(UinType uin) {
@@ -326,12 +511,18 @@ void ServerApp::ProcessRoundSurvivedWarrior(UinType uin) {
     AddFightMessage(
         &feeds_socket_, kThronesBattleWin, uin, warrior.last_killed_warrior(),
         battle_data_->CurrentSeason(), zone->matchups()->CurrentRound(),
-        warrior.last_killed_warrior(), warrior.killing_num());
+        warrior.last_killed_warrior(), warrior.round_killing_num());
   }
 }
 
 void ServerApp::DoWhenSeasonChanged() {
   LOG_INFO << "Season changed, new season: " << battle_data_->CurrentSeason();
+  // 保存上一届的参赛人员信息, 目前用于换届后领奖
+  for (const auto& p : *warriors_) {
+    auto warrior_lite =
+        WarriorLite::Create(p.first, p.second.zone_id(), p.second.camp_id());
+    rewards_->insert(alpha::make_pod_pair(p.first, warrior_lite));
+  }
   // 换届干掉上一届的参战人员
   warriors_->clear();
   AddTimerForBattleRound();
@@ -366,9 +557,11 @@ void ServerApp::DoWhenTwoCampsMatchDone(Zone* zone, Camp* one, Camp* the_other,
                                     one->LivingWarriorsNum());
   zone->matchups()->SetBattleResult(the_other->id(), the_other == winner_camp,
                                     the_other->LivingWarriorsNum());
+#if 0
   // 为双方阵营加本轮奖励
   AddRoundReward(zone, one);
   AddRoundReward(zone, the_other);
+#endif
 
   // 为获胜阵营所有仍然存活的人写feeds
   auto& living_warriors = winner_camp->living_warriors();
@@ -376,22 +569,37 @@ void ServerApp::DoWhenTwoCampsMatchDone(Zone* zone, Camp* one, Camp* the_other,
     ProcessRoundSurvivedWarrior(uin);
   }
 
+  auto current_season = battle_data_->CurrentSeason();
+  auto record_general = [zone, current_season](unsigned rank, Camp* camp) {
+    // 冠军阵营领军人记为大将军
+    if (rank != 1) return;
+    zone->generals()->AddGeneralInChief(
+        camp->id(), zone->leaders()->GetLeader(camp->id()).uin, current_season);
+  };
+
   // 如果打完了最后一轮，根据名次写feeds
-  unsigned one_rank = zone->matchups()->FinalRank(one->id());
-  if (one_rank != 0) {
-    CHECK(one_rank <= kCampIDMax);
+  unsigned rank = zone->matchups()->FinalRank(one->id());
+  if (rank) {
+    CHECK(rank <= kCampIDMax);
+    record_general(rank, one);
+    LOG_INFO << "Season: " << battle_data_->CurrentSeason()
+             << ", zone: " << zone->id() << ", camp: " << one->id()
+             << ", rank: " << rank;
     for (const auto& uin : one->Warriors()) {
-      AddFightMessage(&feeds_socket_, kThronesBattleCampRank[one_rank - 1], uin,
-                      0, battle_data_->CurrentSeason(), zone->id(), one_rank);
+      AddFightMessage(&feeds_socket_, kThronesBattleCampRank[rank - 1], uin, 0,
+                      battle_data_->CurrentSeason(), zone->id(), rank);
     }
   }
-  unsigned the_other_rank = zone->matchups()->FinalRank(the_other->id());
-  if (the_other_rank != 0) {
-    CHECK(the_other_rank <= kCampIDMax);
+  rank = zone->matchups()->FinalRank(the_other->id());
+  if (rank) {
+    CHECK(rank <= kCampIDMax);
+    record_general(rank, the_other);
+    LOG_INFO << "Season: " << battle_data_->CurrentSeason()
+             << ", zone: " << zone->id() << ", camp: " << the_other->id()
+             << ", rank: " << rank;
     for (const auto& uin : the_other->Warriors()) {
-      AddFightMessage(
-          &feeds_socket_, kThronesBattleCampRank[the_other_rank - 1], uin, 0,
-          battle_data_->CurrentSeason(), zone->id(), the_other_rank);
+      AddFightMessage(&feeds_socket_, kThronesBattleCampRank[rank - 1], uin, 0,
+                      battle_data_->CurrentSeason(), zone->id(), rank);
     }
   }
 
@@ -399,6 +607,16 @@ void ServerApp::DoWhenTwoCampsMatchDone(Zone* zone, Camp* one, Camp* the_other,
   if (battle_data_->CurrentRoundFinished()) {
     DoWhenRoundFinished();
   }
+}
+
+void ServerApp::ReportKillingNum(uint16_t zone_id, UinType uin) {
+  auto it = season_ranks_.find(zone_id);
+  CHECK(it != season_ranks_.end());
+  it->second->ReportDelta(uin, 1);
+
+  it = history_ranks_.find(zone_id);
+  CHECK(it != history_ranks_.end());
+  it->second->ReportDelta(uin, 1);
 }
 
 void ServerApp::ProcessDeadWarrior(UinType loser, UinType winner,
@@ -413,7 +631,7 @@ void ServerApp::ProcessDeadWarrior(UinType loser, UinType winner,
   AddFightEvent(&feeds_socket_, kThronesBattleLose, loser, winner,
                 fight_content, battle_data_->CurrentSeason(),
                 zone->matchups()->CurrentRound(), winner,
-                it->second.killing_num());
+                it->second.round_killing_num());
 }
 
 void ServerApp::AddTimerForChangeSeason() {
@@ -441,10 +659,26 @@ void ServerApp::AddTimerForBattleRound() {
   loop_.RunAt(at, [this] { RunBattle(); });
 }
 
+void ServerApp::AddTimerForBackup() {
+  // 防止某次备份失败后要等下一个Interval才能继续备份
+  auto check_interval =
+      conf_->backup_interval() / 10 * alpha::kMilliSecondsPerSecond;
+  loop_.RunEvery(check_interval, [this] {
+    async_tcp_client_.RunInCoroutine(
+        std::bind(&ServerApp::BackupRoutine, this, _1, _2, true));
+  });
+}
+
 void ServerApp::InitBeforeNewSeasonBattle() {
   CHECK(battle_data_->SeasonNotStarted());
   DLOG_INFO << "Reset season data";
+  // 新赛季开始，清空旧赛季的奖励名单
+  rewards_->clear();
   battle_data_->ResetSeasonData();
+  // 清空旧赛季的排行榜
+  for (auto& p : season_ranks_) {
+    p.second->Clear();
+  }
 }
 
 void ServerApp::RunBattle() {
@@ -486,8 +720,10 @@ void ServerApp::RunBattle() {
   using BattleTaskType = std::tuple<Zone*, CampID, CampID>;
   std::vector<BattleTaskType> unfinished_battle;
   battle_data_->ForeachZone([&unfinished_battle, current_round](Zone& zone) {
-    auto fill = [&unfinished_battle, &zone](CampID one, CampID the_other) {
-      unfinished_battle.push_back(std::make_tuple(&zone, one, the_other));
+    auto fill = [&unfinished_battle, &zone](const MatchupData* one,
+                                            const MatchupData* the_other) {
+      unfinished_battle.push_back(
+          std::make_tuple(&zone, one->camp, the_other->camp));
     };
     zone.matchups()->UnfinishedBattle(current_round, fill);
   });
@@ -498,7 +734,6 @@ void ServerApp::RunBattle() {
     // 还有没完成的战斗对
     std::for_each(std::begin(unfinished_battle), std::end(unfinished_battle),
                   [this](BattleTaskType& task) {
-      using namespace std::placeholders;
       async_tcp_client_.RunInCoroutine(
           std::bind(&ServerApp::RoundBattleRoutine, this, _1, _2,
                     std::get<0>(task), std::get<1>(task), std::get<2>(task)));
@@ -533,7 +768,6 @@ int ServerApp::Run() {
   //}
   /* Trap signals */
   TrapSignals();
-  using namespace std::placeholders;
   udp_server_.SetMessageCallback(
       std::bind(&ServerApp::HandleUDPMessage, this, _1, _2, _3, _4));
   bool ok = udp_server_.Run(alpha::NetAddress("0.0.0.0", 51000));
@@ -579,6 +813,7 @@ void ServerApp::HandleUDPMessage(alpha::UDPSocket* socket, alpha::IOBuffer* buf,
                 << alpha::HexDump(request_wrapper.payload());
     return;
   }
+  DLOG_INFO << "Request DebugString:\n" << message->DebugString();
 
   ResponseWrapper response_wrapper;
   response_wrapper.set_ctx(request_wrapper.ctx());
@@ -599,6 +834,20 @@ void ServerApp::HandleUDPMessage(alpha::UDPSocket* socket, alpha::IOBuffer* buf,
   } else {
     DLOG_INFO << "Send udp message to " << peer << ", size: " << out.size();
   }
+}
+
+int ServerApp::HandleQuerySignUp(UinType uin, const QuerySignUpRequest* req,
+                                 QuerySignUpResponse* resp) {
+  if (unlikely(uin == 0)) {
+    return Error::kInvalidArgument;
+  }
+  resp->set_season(battle_data_->CurrentSeason());
+  auto it = warriors_->find(uin);
+  if (it != warriors_->end()) {
+    resp->set_zone(it->second.zone_id());
+    resp->set_camp(it->second.camp_id());
+  }
+  return Error::kOk;
 }
 
 int ServerApp::HandleSignUp(UinType uin, const SignUpRequest* req,
@@ -635,6 +884,7 @@ int ServerApp::HandleSignUp(UinType uin, const SignUpRequest* req,
   Zone* zone = nullptr;
   Camp* camp = nullptr;
   while (it != zones.end()) {
+    // 从低等级到高等级遍历赛区
     zone = *it;
     auto zone_conf = conf_->GetZoneConf(zone);
     std::vector<Camp*> candidate_camps;
@@ -661,6 +911,7 @@ int ServerApp::HandleSignUp(UinType uin, const SignUpRequest* req,
       alpha::make_pod_pair(uin, Warrior::Create(uin, zone->id(), camp->id())));
   CHECK(p.second) << "Insert new warrior failed";
   camp->AddWarrior(uin);
+  resp->set_season(battle_data_->CurrentSeason());
   resp->set_zone(zone->id());
   resp->set_camp(camp->id());
   return Error::kOk;
@@ -704,6 +955,7 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
       battle_round = battle_data_->CurrentRound();
     }
   }
+
   CHECK(battle_round != 0 && battle_round <= kMaxRoundID)
       << "Invalid battle round: " << battle_round;
 
@@ -717,16 +969,25 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
   for (auto i = 0u; i < kCampIDMax; ++i) {
     auto camp_proto = resp->add_camp();
     auto camp = zone->GetCamp(i + 1);
+    // 如果本届已经开战，那么查询的轮应该小于等于当前轮
+    if (!battle_data_->SeasonNotStarted() &&
+        battle_round > battle_data_->CurrentRound()) {
+      return Error::kInvalidArgument;
+    }
     camp_proto->set_id(camp->id());
     camp_proto->set_warriors(camp->WarriorsNum());
     // 规则:
     //  1.查看当前正在打的这轮，从camps中提取实时剩余人数
     //  2.查看已经打完的某一轮，从matchups里面提取历史记录
-    //  TODO: 初始赛季有BUG
-    if (!battle_data_->CurrentRoundFinished() &&
-        battle_data_->CurrentRound() == battle_round) {
+    if (battle_data_->InitialSeason() || (battle_data_->CurrentSeason() == 1 &&
+                                          battle_data_->SeasonNotStarted())) {
+      camp_proto->set_living_warriors(0);
+    } else if (!battle_data_->CurrentRoundFinished() &&
+               battle_round == battle_data_->CurrentRound()) {
+      // 查看本届未完成的某轮信息
       camp_proto->set_living_warriors(camp->LivingWarriorsNum());
     } else {
+      // 查看上届/本届已完成某轮的对阵信息
       camp_proto->set_living_warriors(
           zone->matchups()->GetFinalLivingWarriorsNum(battle_round,
                                                       camp->id()));
@@ -737,22 +998,48 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
       camp_proto->set_leader_killing_num(leader.killing_num);
       camp_proto->set_picked_lucky_warriors(leader.picked_lucky_warriors);
     }
-    auto lucky_warriors = zone->lucky_warriors()->Get(camp->id());
-    auto lucky_warriors_proto = resp->add_lucky_warriors();
-    lucky_warriors_proto->set_camp(camp->id());
-    std::copy(std::begin(lucky_warriors), std::end(lucky_warriors),
-              google::protobuf::RepeatedFieldBackInserter(
-                  lucky_warriors_proto->mutable_lucky_warrior()));
+    if (zone->lucky_warriors()->PickedLuckyWarriors(camp->id())) {
+      auto lucky_warriors = zone->lucky_warriors()->Get(camp->id());
+      auto lucky_warriors_proto = resp->add_lucky_warriors();
+      lucky_warriors_proto->set_camp(camp->id());
+      std::copy(std::begin(lucky_warriors), std::end(lucky_warriors),
+                google::protobuf::RepeatedFieldBackInserter(
+                    lucky_warriors_proto->mutable_lucky_warrior()));
+    }
   }
-  auto matchups = zone->matchups();
   auto matchups_proto = resp->mutable_matchups();
-  matchups_proto->set_zone(zone->id());
-  auto cb = [matchups_proto](CampID one, CampID the_other) {
-    auto round_matchups = matchups_proto->add_round_matchups();
-    round_matchups->set_one_camp(one);
-    round_matchups->set_the_other_camp(the_other);
-  };
-  matchups->ForeachMatchup(battle_round, cb);
+  if (battle_data_->InitialSeason() || (battle_data_->CurrentSeason() == 1 &&
+                                        battle_data_->SeasonNotStarted())) {
+    // 初始赛季没有对阵列表，来个pesudo matchups
+    for (uint16_t i = 0; i < kCampIDMax; i += 2) {
+      auto one = i + 1;
+      auto the_other = i + 2;
+      auto round_matchups = matchups_proto->add_round_matchups();
+      round_matchups->set_one_camp(one);
+      round_matchups->set_the_other_camp(the_other);
+      round_matchups->set_winner_camp(0);
+    }
+  } else {
+    auto matchups = zone->matchups();
+    if (battle_round > matchups->CurrentRound()) {
+      return Error::kRoundNotStarted;
+    }
+    matchups_proto->set_zone(zone->id());
+    auto cb = [matchups_proto](const MatchupData* one,
+                               const MatchupData* the_other) {
+      auto round_matchups = matchups_proto->add_round_matchups();
+      round_matchups->set_one_camp(one->camp);
+      round_matchups->set_the_other_camp(the_other->camp);
+      if (one->win) {
+        round_matchups->set_winner_camp(one->camp);
+      } else if (the_other->win) {
+        round_matchups->set_winner_camp(the_other->camp);
+      } else {
+        round_matchups->set_winner_camp(0);
+      }
+    };
+    matchups->ForeachMatchup(battle_round, cb);
+  }
   auto current_season = battle_data_->CurrentSeason();
   CHECK(current_season >= 1);
   if (battle_data_->SeasonFinished()) {
@@ -761,6 +1048,26 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
     resp->set_lucky_warriors_season(1);  // 第一届还没打完，不能显示第0届啊
   } else {
     resp->set_lucky_warriors_season(current_season - 1);
+  }
+  bool is_lucky_warrior = false;
+  battle_data_->ForeachZone([uin, &is_lucky_warrior](const Zone& zone) {
+    is_lucky_warrior =
+        is_lucky_warrior || zone.lucky_warriors()->HasWarrior(uin);
+  });
+  resp->set_is_lucky_warrior(is_lucky_warrior);
+  resp->set_show_zone(zone_id);
+  resp->set_show_round(battle_round);
+  resp->set_in_sign_up_time(conf_->InSignUpTime());
+  if (!battle_data_->InitialSeason() && battle_data_->SeasonFinished()) {
+    for (int i = 0; i < kCampIDMax; ++i) {
+      CampID camp_id = (CampID)(i + 1);
+      auto rank = zone->matchups()->FinalRank(camp_id);
+      if (rank == 1) {
+        resp->set_current_season_champion_camp(camp_id);
+        break;
+      }
+    }
+    // resp->set_current_season_champion_camp(
   }
   return Error::kOk;
 }
@@ -784,6 +1091,7 @@ int ServerApp::HandlePickLuckyWarriors(UinType uin,
   auto camp_id = it->second.camp_id();
   auto camp_leader = zone->leaders()->GetLeader(camp_id);
   if (camp_leader.uin != uin) {
+    DLOG_INFO << "uin: " << uin << ", leader: " << camp_leader.uin;
     return Error::kNotCampLeader;
   }
   if (camp_leader.picked_lucky_warriors) {
@@ -825,14 +1133,67 @@ int ServerApp::HandleQueryLuckyWarriorReward(
   if (!is_lucky_warrior) {
     return Error::kNotLuckyWarrior;
   }
-  auto reward = conf_->lucky_warrior_reward();
-  auto reward_proto = resp->mutable_reward();
-  reward_proto->set_battle_point(reward.battle_point);
-  for (auto i = 0; i < reward.goods_size(); ++i) {
-    auto goods_proto = reward_proto->add_goods();
-    goods_proto->set_id(reward.goods_reward[i].id);
-    goods_proto->set_num(reward.goods_reward[i].num);
+  unsigned reward_season = battle_data_->SeasonNotStarted()
+                               ? battle_data_->CurrentSeason() - 1
+                               : battle_data_->CurrentSeason();
+  resp->set_season(reward_season);
+  return Error::kOk;
+}
+
+int ServerApp::HandleQueryRoundRewardRequest(UinType uin,
+                                             const QueryRoundRewardRequest* req,
+                                             QueryRoundRewardResponse* resp) {
+  if (unlikely(uin == 0)) {
+    return Error::kInvalidArgument;
   }
+  // 初始赛季
+  if (battle_data_->InitialSeason()) {
+    return Error::kNoRoundReward;
+  }
+  // 第一届还没开打时
+  if (battle_data_->CurrentSeason() == 1 && battle_data_->SeasonNotStarted()) {
+    return Error::kNoRoundReward;
+  }
+  // 第一轮开打了,但是还没打完
+  if (!battle_data_->SeasonNotStarted() && battle_data_->CurrentRound() == 1 &&
+      !battle_data_->CurrentRoundFinished()) {
+    return Error::kNoRoundReward;
+  }
+
+  uint16_t reward_season = 0;
+  uint16_t zone_id = 0;
+  uint16_t camp_id = 0;
+  if (battle_data_->SeasonNotStarted()) {
+    // 本届没开打，领取上届奖励
+    auto it = rewards_->find(uin);
+    if (it == rewards_->end()) {
+      // 没有参加上届比赛
+      return Error::kNoLastSeasonWarrior;
+    }
+    reward_season = battle_data_->CurrentSeason() - 1;
+    zone_id = it->second.zone_id;
+    camp_id = it->second.camp_id;
+  } else {
+    CHECK(battle_data_->FinishedRound() >= 1);
+    auto it = warriors_->find(uin);
+    if (it == warriors_->end()) {
+      // 没有参加本届比赛
+      return Error::kNotSignedUp;
+    }
+    reward_season = battle_data_->CurrentSeason();
+    zone_id = it->second.zone_id();
+    camp_id = it->second.camp_id();
+  }
+
+  CHECK(reward_season && zone_id && camp_id);
+  CHECK(ValidCampID(camp_id));
+  resp->set_season(reward_season);
+  resp->set_zone(zone_id);
+  auto zone = battle_data_->GetZone(zone_id);
+  auto zone_finished_round = zone->matchups()->FinishedRound();
+  auto game_log =
+      zone->matchups()->GetGameLog((CampID)camp_id, zone_finished_round);
+  resp->set_game_log(game_log);
   return Error::kOk;
 }
 
@@ -845,6 +1206,8 @@ int ServerApp::HandleQueryGeneralInChief(UinType uin,
   }
   auto zone = battle_data_->GetZone(zone_id);
   auto generals = zone->generals()->Get(req->start(), req->num());
+  DLOG_INFO << "generals.size() =  " << generals.size();
+  resp->set_total(zone->generals()->Size());
   std::transform(generals.begin(), generals.end(),
                  google::protobuf::AllocatedRepeatedPtrFieldBackInserter(
                      resp->mutable_general()),
@@ -855,6 +1218,70 @@ int ServerApp::HandleQueryGeneralInChief(UinType uin,
     general_proto->set_camp(general.camp);
     general_proto->set_season(general.season);
     return general_proto.release();
+  });
+  return Error::kOk;
+}
+
+int ServerApp::HandleQueryRank(UinType uin, const QueryRankRequest* req,
+                               QueryRankResponse* resp) {
+  if (unlikely(uin == 0)) {
+    return Error::kInvalidArgument;
+  }
+  uint16_t zone_id = 0;
+  if (req->has_zone()) {
+    zone_id = req->zone();
+    if (!ValidZoneID(zone_id)) {
+      return Error::kInvalidArgument;
+    }
+  } else {
+    if (battle_data_->SeasonNotStarted()) {
+      auto it = rewards_->find(uin);
+      zone_id = it == rewards_->end() ? kUnlimitedZoneID : it->second.zone_id;
+    } else {
+      auto it = warriors_->find(uin);
+      zone_id =
+          it == warriors_->end() ? kUnlimitedZoneID : it->second.zone_id();
+    }
+  }
+  CHECK(ValidZoneID(zone_id));
+  auto type = req->type();
+  auto ranks = &history_ranks_;
+  if (type == 1) {
+    // 本届
+    unsigned rank_season = 0;
+    bool rank_season_finished = false;
+    ranks = &season_ranks_;
+    if (battle_data_->SeasonFinished()) {
+      // 本届已结束
+      rank_season = battle_data_->CurrentSeason();
+      rank_season_finished = true;
+    } else if (battle_data_->SeasonNotStarted()) {
+      // 本届还没开始，这是上一届的排行榜
+      rank_season = battle_data_->CurrentSeason() - 1;
+      rank_season_finished = true;
+    } else {
+      // 本届已开战，还没打完
+      rank_season = battle_data_->CurrentSeason();
+      rank_season_finished = false;
+    }
+    resp->set_rank_season(rank_season);
+    resp->set_rank_season_finished(rank_season_finished);
+    resp->set_zone(zone_id);
+  }
+  auto it = ranks->find(zone_id);
+  CHECK(it != ranks->end());
+  auto& rank = it->second;
+  resp->set_self_rank(rank->Rank(uin));
+  resp->set_total(rank->Size());
+  auto v = rank->GetRange(req->start(), req->num());
+  std::transform(v.begin(), v.end(),
+                 google::protobuf::AllocatedRepeatedPtrFieldBackInserter(
+                     resp->mutable_warriors()),
+                 [](const RankVectorUnit& u) {
+    auto rank_unit = alpha::make_unique<RankUnit>();
+    rank_unit->set_uin(u.uin);
+    rank_unit->set_val(u.val);
+    return rank_unit.release();
   });
   return Error::kOk;
 }

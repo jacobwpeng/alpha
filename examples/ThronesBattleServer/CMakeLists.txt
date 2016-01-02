@@ -3,6 +3,7 @@ set(PROG "ThronesBattleSvrd")
 list(APPEND THRONES_BATTLE_SVRD_SRCS
   "fightsvrd.pb.cc"
   "feedssvrd.pb.cc"
+  "ThronesBattleSvrdRankVector.cc"
   "ThronesBattleSvrd.pb.cc"
   "ThronesBattleSvrdDef.cc"
   "ThronesBattleSvrdConf.cc"

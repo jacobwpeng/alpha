@@ -16,7 +16,6 @@
 #include <alpha/AsyncTcpConnectionException.h>
 
 namespace ThronesBattle {
-static const int kMaxIdleTime = 3000;  // ms
 TaskBroker::TaskBroker(alpha::AsyncTcpClient* client,
                        alpha::AsyncTcpConnectionCoroutine* co,
                        const alpha::NetAddress& fight_server_addr,
@@ -185,10 +184,7 @@ size_t TaskBroker::HandleIncomingData(int idle_time, bool all) {
       return received;
     }
     auto payload = conn_->Read(header->payload_size, idle_time);
-    if (payload.size() != header->payload_size) {
-      LOG_WARNING << "Connection closed by peer, abort this connection";
-      return received;
-    }
+    CHECK(payload.size() == header->payload_size);
     data.append(payload);
     auto frame = reinterpret_cast<const NetSvrdFrame*>(data.data());
     bool ok = HandleReplyFrame(frame);

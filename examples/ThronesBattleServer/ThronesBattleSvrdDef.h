@@ -47,6 +47,9 @@ enum Error : int32_t {
   kNotInPickLuckyWarriorsTime = -10010,
   kNotSignedUp = -10011,
   kNotLuckyWarrior = -10012,
+  kNoRoundReward = -10013,
+  kNoLastSeasonWarrior = -10014,
+  kRoundNotStarted = -10015,
 };
 
 enum CampID : uint16_t {
@@ -79,6 +82,7 @@ class GeneralInChiefList {
   void AddGeneralInChief(CampID camp, UinType uin, uint32_t season);
   std::vector<General> Get(unsigned start, unsigned num) const;
   void Clear();
+  uint16_t Size() const { return next_index_; }
 
  private:
   static const unsigned kMaxGeneralNum = 1000;
@@ -91,6 +95,7 @@ class LuckyWarriorList {
   void AddLuckyWarrior(CampID camp, UinType uin);
   std::vector<UinType> Get(uint16_t camp_id) const;
   bool HasWarrior(UinType uin) const;
+  bool PickedLuckyWarriors(CampID camp_id) const;
   void Clear();
 
  private:
@@ -128,11 +133,13 @@ struct MatchupData {
 
 class CampMatchups {
  public:
-  using MatchupFunc = std::function<void(CampID, CampID)>;
+  using MatchupFunc =
+      std::function<void(const MatchupData*, const MatchupData*)>;
   bool BattleNotStarted() const;
   bool CurrentRoundFinished() const;
   bool RoundFinished(uint16_t battle_round) const;
   uint16_t CurrentRound() const;
+  uint16_t FinishedRound() const;
   std::string GetGameLog(CampID camp, uint16_t max_battle_round) const;
   uint32_t GetFinalLivingWarriorsNum(uint16_t battle_round, CampID camp) const;
   // 如果最后一轮的次序确定，则返回对应次序，否则返回0
@@ -248,6 +255,7 @@ class BattleData final {
   void SetCurrentRound(uint16_t battle_round);
   void SetSeasonFinished();
 
+  bool InitialSeason() const;
   bool SeasonFinished() const;
   bool SeasonNotStarted() const;
   uint16_t CurrentRound() const;
@@ -272,11 +280,12 @@ class Warrior final {
   bool dead() const { return dead_; }
   uint16_t zone_id() const { return zone_id_; }
   CampID camp_id() const { return camp_id_; }
-  uint32_t killing_num() const { return killing_num_; }
+  uint32_t round_killing_num() const { return round_killing_num_; }
+  uint32_t season_killing_num() const { return season_killing_num_; }
   UinType last_killed_warrior() const { return last_killed_warrior_; }
 
   void set_dead(bool dead) { dead_ = dead; }
-  void add_killing_num() { ++killing_num_; }
+  void add_killing_num();
   void set_last_killed_warrior(UinType uin) { last_killed_warrior_ = uin; }
   void ResetRoundData();
 
@@ -285,9 +294,17 @@ class Warrior final {
   uint16_t zone_id_;
   CampID camp_id_;
   uint16_t last_draw_reward_round_;
-  uint32_t killing_num_;
+  uint32_t round_killing_num_;
+  uint32_t season_killing_num_;
   UinType last_killed_warrior_;
   UinType uin_;
+};
+
+struct WarriorLite final {
+  static WarriorLite Create(UinType uin, uint16_t zone_id, CampID camp_id);
+  uint16_t zone_id;
+  CampID camp_id;
+  UinType uin;
 };
 
 // TODO: 改成一个class

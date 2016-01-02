@@ -41,6 +41,12 @@ void ReadFileOption(const boost::property_tree::ptree& pt, std::string* path,
   *path = pt.get<std::string>("<xmlattr>.file");
   *size = pt.get<uint32_t>("<xmlattr>.size") << 20;  // MiB
 }
+
+alpha::NetAddress ReadServerAddr(const boost::property_tree::ptree& pt) {
+  auto ip = pt.get<std::string>("<xmlattr>.ip");
+  auto port = pt.get<int>("<xmlattr>.port");
+  return alpha::NetAddress(ip, port);
+}
 }
 
 bool ServerConf::InSignUpTime() const {
@@ -117,7 +123,6 @@ std::unique_ptr<ServerConf> ServerConf::Create(const char* file) {
 }
 
 bool ServerConf::InitFromFile(const char* file) {
-  fight_server_addr_ = alpha::NetAddress("10.6.224.83", 50000);
   CurrentSeasonBaseTime();
   using namespace boost::property_tree;
   ptree pt;
@@ -135,12 +140,19 @@ bool ServerConf::InitFromFile(const char* file) {
       CHECK(round != 0 && round <= kMaxRoundID);
       round_start_time_offsets_[round - 1] = t;
     }
+    fight_server_addr_ = detail::ReadServerAddr(pt.get_child("Server.Fight"));
+    feeds_server_addr_ = detail::ReadServerAddr(pt.get_child("Server.Feeds"));
+    backup_server_addr_ = detail::ReadServerAddr(pt.get_child("Server.BackUp"));
+    backup_interval_ = pt.get<unsigned>("Server.BackUp.<xmlattr>.interval");
+
     detail::ReadFileOption(pt.get_child("Server.BattleData"),
                            &battle_data_file_, &battle_data_file_size_);
     detail::ReadFileOption(pt.get_child("Server.WarriorsData"),
                            &warriors_data_file_, &warriors_data_file_size_);
     detail::ReadFileOption(pt.get_child("Server.RewardData"),
                            &rewards_data_file_, &rewards_data_file_size_);
+    detail::ReadFileOption(pt.get_child("Server.RankData"), &rank_data_file_,
+                           &rank_data_file_size_);
     lucky_warrior_reward_ =
         detail::ReadReward(pt.get_child("LuckyWarriorReward"));
     BOOST_FOREACH(const ptree::value_type & child, pt.get_child("Zones")) {
