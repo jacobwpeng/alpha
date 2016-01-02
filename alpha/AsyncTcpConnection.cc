@@ -80,7 +80,7 @@ std::string AsyncTcpConnection::Read(size_t bytes, int timeout) {
       throw alpha::AsyncTcpConnectionOperationTimeout();
     }
     if (closed()) {
-      return result;
+      throw AsyncTcpConnectionClosed("Read");
     }
   } while (1);
   status_ = Status::kIdle;

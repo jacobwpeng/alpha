@@ -22,6 +22,9 @@ class IOBuffer {
   explicit IOBuffer(size_t size);
   char* data() { return data_; }
 
+  IOBuffer(const IOBuffer& other) = delete;
+  IOBuffer& operator=(const IOBuffer& other) = delete;
+
  protected:
   explicit IOBuffer(char* data);
 
@@ -32,7 +35,7 @@ class IOBuffer {
 class IOBufferWithSize : public IOBuffer {
  public:
   explicit IOBufferWithSize(size_t size);
-  ~IOBufferWithSize() override;
+  virtual ~IOBufferWithSize() override;
   size_t size() const { return size_; }
 
  protected:
