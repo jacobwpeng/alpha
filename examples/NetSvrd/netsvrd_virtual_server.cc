@@ -46,7 +46,8 @@ bool NetSvrdAddressParser::Parse(const std::string& addr) {
   }
   try {
     server_address_ = alpha::NetAddress(parts[1], stoul(parts[2]));
-  } catch (std::exception& e) {
+  }
+  catch (std::exception& e) {
     LOG_ERROR << "Convert " << parts[2] << " to integer failed, " << e.what();
     return false;
   }
@@ -176,7 +177,7 @@ void NetSvrdVirtualServer::OnClose(alpha::TcpConnectionPtr conn) {
   CHECK(ctx);
   auto num = connections_.erase(ctx->connection_id_);
   CHECK(num == 1);
-  LOG_INFO << "Connection closed, id: " << _ctx->connection_id_;
+  LOG_INFO << "Connection closed, id: " << ctx->connection_id_;
 }
 
 void NetSvrdVirtualServer::OnUDPMessage(alpha::UDPSocket* socket,
@@ -249,7 +250,7 @@ NetSvrdWorkerPtr NetSvrdVirtualServer::SpawnWorker(int worker_id) {
   CHECK(bus_out);
   DLOG_INFO << "Create worker , path: " << worker_path_;
   std::vector<std::string> argv = {worker_path_, std::to_string(net_server_id_),
-                                   bus_in_path, bus_out_path};
+                                   bus_in_path,  bus_out_path};
   alpha::Subprocess::Options options;
   options.CloseOtherFds();
   return alpha::make_unique<NetSvrdWorker>(
