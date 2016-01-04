@@ -6,6 +6,6 @@ list(APPEND MYSTIC_SALESMAN_SVRD_SRCS
   "MysticSalesmanSvrdMain.cc"
 )
 
-find_library(PROTOBUF "protobuf")
+find_library(PROTOBUF "libprotobuf.a")
 add_executable(${PROG} ${MYSTIC_SALESMAN_SVRD_SRCS})
 target_link_libraries(${PROG} "alpha" ${PROTOBUF})
