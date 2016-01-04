@@ -119,8 +119,8 @@ void MysticSalesmanSvrdApp::HandleUDPMessage(alpha::UDPSocket* socket,
   ok = resp.SerializeToArray(out.data(), out.size());
   CHECK(ok);
   int nwritten = socket->SendTo(&out, out.size(), peer);
-  LOG_WARNING_IF(nwritten) << "Send udp message to " << peer
-                           << " failed, size: " << out.size();
+  LOG_WARNING_IF(nwritten < 0) << "Send udp message to " << peer
+                               << " failed, size: " << out.size();
 }
 
 void MysticSalesmanSvrdApp::HandleHTTPMessage(
