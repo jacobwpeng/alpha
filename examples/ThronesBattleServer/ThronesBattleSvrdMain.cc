@@ -15,14 +15,18 @@
 #include "ThronesBattleSvrdApp.h"
 
 int main(int argc, char* argv[]) {
-  if (argc != 2) {
-    fprintf(stderr, "Usage: %s ConfFile\n", argv[0]);
+  if (argc != 2 && argc != 4) {
+    fprintf(stderr,
+            "Usage:\n"
+            "   [Normal Mode]   %s conf \n"
+            "   [Recovery Mode] %s conf server-id tick/tock\n",
+            argv[0], argv[0]);
     return EXIT_FAILURE;
   }
   alpha::Logger::set_logtostderr(true);
   alpha::Logger::Init(argv[0]);
   ThronesBattle::ServerApp app;
-  int err = app.Init(argv[1]);
+  int err = app.Init(argc, argv);
   if (err) {
     return err;
   }

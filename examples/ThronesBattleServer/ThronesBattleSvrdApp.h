@@ -56,7 +56,7 @@ class ServerApp final {
  public:
   ServerApp();
   ~ServerApp();
-  int Init(const char* file);
+  int Init(int argc, char* argv[]);
   int Run();
 
  private:
@@ -65,15 +65,28 @@ class ServerApp final {
   static const size_t kRankDataRegionSize;
   static const size_t kRankDataPaddingSize;
   static const size_t kRankMax;
+  static const char kBattleDataKey[];
+  static const char kWarriorsDataKey[];
+  static const char kRewardsDataKey[];
+  static const char kRankDataKey[];
   int InitNormalMode();
-  int InitRecoveryMode();
+  int InitRecoveryMode(const char* server_id, const char* suffix);
   void TrapSignals();
   void RoundBattleRoutine(alpha::AsyncTcpClient* client,
                           alpha::AsyncTcpConnectionCoroutine* co, Zone* zone,
                           CampID one, CampID the_other);
+
+  // 备份/恢复
+  std::string CreateBackupKey(alpha::Slice key, const char* suffix,
+                              const char* server_id = nullptr);
   void BackupRoutine(alpha::AsyncTcpClient* client,
                      alpha::AsyncTcpConnectionCoroutine* co,
                      bool check_last_backup_time = false);
+  void RecoveryRoutine(alpha::AsyncTcpClient* client,
+                       alpha::AsyncTcpConnectionCoroutine* co,
+                       const char* server_id, const char* suffix);
+  bool RecoverOneFile(alpha::AsyncTcpConnection* conn,
+                      const std::string& backup_key, alpha::MMapFile* file);
   void AddRoundReward(Zone* zone, Camp* camp);
 
   void ProcessFightTaskResult(const FightServerProtocol::TaskResult& result);

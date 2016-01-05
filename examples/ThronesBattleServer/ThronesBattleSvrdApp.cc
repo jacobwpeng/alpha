@@ -12,6 +12,7 @@
 
 #include "ThronesBattleSvrdApp.h"
 #include <unistd.h>
+#include <boost/scope_exit.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <google/protobuf/descriptor.h>
 #include <alpha/format.h>
@@ -72,12 +73,18 @@ std::unique_ptr<T> MakeFromMemoryMapedFile(alpha::MMapFile* file) {
 const size_t ServerApp::kRankDataRegionSize = 1 << 16;
 const size_t ServerApp::kRankDataPaddingSize = 1 << 14;
 const size_t ServerApp::kRankMax = 1000;
+const char ServerApp::kBattleDataKey[] = "BattleData";
+const char ServerApp::kWarriorsDataKey[] = "WarriorsData";
+const char ServerApp::kRewardsDataKey[] = "RewardsData";
+const char ServerApp::kRankDataKey[] = "RankData";
 
 ServerApp::ServerApp() : async_tcp_client_(&loop_), udp_server_(&loop_) {}
 
 ServerApp::~ServerApp() = default;
 
-int ServerApp::Init(const char* file) {
+int ServerApp::Init(int argc, char* argv[]) {
+  CHECK(argc == 2 || argc == 4) << "Invalid argc: " << argc;
+  const char* file = argv[1];
   server_id_ = alpha::Random::Rand64();
   conf_ = ServerConf::Create(file);
   if (conf_ == nullptr) {
@@ -123,7 +130,7 @@ int ServerApp::Init(const char* file) {
     return EXIT_FAILURE;
   }
 
-  return RecoveryMode() ? InitRecoveryMode() : InitNormalMode();
+  return argc == 4 ? InitRecoveryMode(argv[2], argv[3]) : InitNormalMode();
 }
 
 int ServerApp::InitNormalMode() {
@@ -290,7 +297,13 @@ int ServerApp::InitNormalMode() {
   return 0;
 }
 
-int ServerApp::InitRecoveryMode() { return EXIT_FAILURE; }
+int ServerApp::InitRecoveryMode(const char* server_id, const char* suffix) {
+  loop_.QueueInLoop([this, server_id, suffix] {
+    async_tcp_client_.RunInCoroutine(std::bind(
+        &ServerApp::RecoveryRoutine, this, _1, _2, server_id, suffix));
+  });
+  return EXIT_SUCCESS;
+}
 
 void ServerApp::TrapSignals() {
   auto ignore = [] {};
@@ -370,9 +383,27 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
   DoWhenTwoCampsMatchDone(zone, one_camp, the_other_camp, winner_camp);
 }
 
+std::string ServerApp::CreateBackupKey(alpha::Slice key, const char* suffix,
+                                       const char* server_id) {
+  // Key: ##KEY##-##SERVERID##-##SUFFIX##
+  std::ostringstream oss;
+  oss << key.ToString() << '-';  // << server_id_ << '-' << suffix;
+  if (server_id) {
+    oss << server_id;
+  } else {
+    oss << server_id_;
+  }
+  oss << '-' << suffix;
+  return oss.str();
+}
+
 void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
                               alpha::AsyncTcpConnectionCoroutine* co,
                               bool check_last_backup_time) {
+  if (is_backup_in_progress_) {
+    LOG_INFO << "Last backup is still in progress";
+    return;
+  }
   if (check_last_backup_time) {
     auto now = alpha::Now();
     auto interval =
@@ -380,33 +411,40 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
     if (interval < conf_->backup_interval() * alpha::kMilliSecondsPerSecond) {
       LOG_INFO << "Giveup backup, last_backup_time_: " << last_backup_time_
                << ", now: " << now << ", interval: " << interval
-               << ", backup_interval: " << conf_->backup_interval();
+               << ", backup_interval: "
+               << conf_->backup_interval() * alpha::kMilliSecondsPerSecond;
       return;
     }
   }
+  is_backup_in_progress_ = true;
+  BOOST_SCOPE_EXIT(&is_backup_in_progress_) { is_backup_in_progress_ = false; }
+  BOOST_SCOPE_EXIT_END
+
   DLOG_INFO << "Starting backup, server id: " << server_id_;
   auto put = [](std::shared_ptr<alpha::AsyncTcpConnection> conn,
                 alpha::Slice key, alpha::Slice val) {
-    const int16_t kTTProtocolPutMagic = alpha::HostToBigEndian(0xC810);
-    auto szkey = alpha::HostToBigEndian(static_cast<uint32_t>(key.size()));
-    auto szval = alpha::HostToBigEndian(static_cast<uint32_t>(val.size()));
-    conn->Write(alpha::Slice(&kTTProtocolPutMagic));
+    uint8_t kTTProtocolPutMagicFirst = 0xC8;
+    uint8_t kTTProtocolPutMagicSecond = 0x10;
+    uint32_t szkey = alpha::HostToBigEndian(static_cast<uint32_t>(key.size()));
+    uint32_t szval = alpha::HostToBigEndian(static_cast<uint32_t>(val.size()));
+    conn->Write(alpha::Slice(&kTTProtocolPutMagicFirst));
+    conn->Write(alpha::Slice(&kTTProtocolPutMagicSecond));
     conn->Write(alpha::Slice(&szkey));
     conn->Write(alpha::Slice(&szval));
     conn->Write(key);
     conn->Write(val);
+    LOG_INFO << "Try read response code";
+    auto data = conn->Read(1);
+    uint8_t rc = data[0];
+    LOG_WARNING_IF(rc != 0) << "Failed response for put, rc: " << rc
+                            << ", key: " << key.ToString();
+    return rc;
   };
   const char* backup_suffix[] = {"tick", "tock"};
   static int backup_suffix_index = 0;
   const char* suffix = backup_suffix[backup_suffix_index];
   try {
     auto server_id = server_id_;
-    auto create_backup_key = [server_id](alpha::Slice key, const char* suffix) {
-      // Key: ##SERVERID##-##KEY##-##SUFFIX##
-      std::ostringstream oss;
-      oss << server_id << '-' << key.ToString() << '-' << suffix;
-      return oss.str();
-    };
     auto conn = client->ConnectTo(conf_->backup_server_addr(), co);
 
     // 把瞬间状态保存到内存中
@@ -427,24 +465,112 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
     memcpy(rank_data.data(), rank_data_underlying_file_->start(),
            rank_data.size());
 
-    auto key = create_backup_key("BattleData", suffix);
-    put(conn, key, alpha::Slice(battle_data.data(), battle_data.size()));
+    auto key = CreateBackupKey(kBattleDataKey, suffix);
+    auto err =
+        put(conn, key, alpha::Slice(battle_data.data(), battle_data.size()));
+    if (err) return;
+    LOG_INFO << "Backup battle data done, key: " << key;
 
-    key = create_backup_key("WarriorsData", suffix);
-    put(conn, key, alpha::Slice(warriors_data.data(), warriors_data.size()));
+    key = CreateBackupKey(kWarriorsDataKey, suffix);
+    err = put(conn, key,
+              alpha::Slice(warriors_data.data(), warriors_data.size()));
+    if (err) return;
+    LOG_INFO << "Backup warriors data done, key: " << key;
 
-    key = create_backup_key("RewardsData", suffix);
-    put(conn, key, alpha::Slice(rewards_data.data(), rewards_data.size()));
+    key = CreateBackupKey(kRewardsDataKey, suffix);
+    err =
+        put(conn, key, alpha::Slice(rewards_data.data(), rewards_data.size()));
+    if (err) return;
+    LOG_INFO << "Backup rewards data done, key: " << key;
 
-    key = create_backup_key("RankData", suffix);
-    put(conn, key, alpha::Slice(rank_data.data(), rank_data.size()));
+    key = CreateBackupKey(kRankDataKey, suffix);
+    err = put(conn, key, alpha::Slice(rank_data.data(), rank_data.size()));
+    if (err) return;
+    LOG_INFO << "Backup rank data done, key: " << key;
 
     LOG_INFO << "Backup done, server id: " << server_id
              << ", suffix: " << suffix;
     backup_suffix_index = 1 - backup_suffix_index;
     last_backup_time_ = alpha::Now();
-  } catch (alpha::AsyncTcpConnectionException& e) {
+  }
+  catch (alpha::AsyncTcpConnectionException& e) {
     LOG_WARNING << "Backup failed, " << e.what();
+  }
+}
+
+void ServerApp::RecoveryRoutine(alpha::AsyncTcpClient* client,
+                                alpha::AsyncTcpConnectionCoroutine* co,
+                                const char* server_id, const char* suffix) {
+  LOG_INFO << "Recovery started, server id: " << server_id
+           << ", suffix: " << suffix;
+  auto conn = client->ConnectTo(conf_->backup_server_addr(), co);
+  auto ok = RecoverOneFile(conn.get(),
+                           CreateBackupKey(kBattleDataKey, suffix, server_id),
+                           battle_data_underlying_file_.get());
+  if (!ok) return;
+
+  ok = RecoverOneFile(conn.get(),
+                      CreateBackupKey(kWarriorsDataKey, suffix, server_id),
+                      warriors_data_underlying_file_.get());
+  if (!ok) return;
+
+  ok = RecoverOneFile(conn.get(),
+                      CreateBackupKey(kRewardsDataKey, suffix, server_id),
+                      rewards_data_underlying_file_.get());
+  if (!ok) return;
+
+  ok = RecoverOneFile(conn.get(),
+                      CreateBackupKey(kRankDataKey, suffix, server_id),
+                      rank_data_underlying_file_.get());
+  if (!ok) return;
+
+  LOG_INFO << "Recovery done, server id: " << server_id
+           << ", suffix: " << suffix;
+  loop_.Quit();
+}
+
+bool ServerApp::RecoverOneFile(alpha::AsyncTcpConnection* conn,
+                               const std::string& backup_key,
+                               alpha::MMapFile* file) {
+  const uint8_t kTTProtocolGetMagicFirst = 0xC8;
+  const uint8_t kTTProtocolGetMagicSecond = 0x30;
+  try {
+    LOG_INFO << "Start recover one file, backup key: " << backup_key;
+    uint32_t szkey =
+        alpha::HostToBigEndian(static_cast<uint32_t>(backup_key.size()));
+    conn->Write(alpha::Slice(&kTTProtocolGetMagicFirst));
+    conn->Write(alpha::Slice(&kTTProtocolGetMagicSecond));
+    conn->Write(alpha::Slice(&szkey));
+    conn->Write(backup_key);
+
+    auto data = conn->Read(1);
+    uint8_t rc = data[0];
+    if (rc != 0) {
+      LOG_ERROR << "Failed response, code: " << rc;
+      return false;
+    }
+
+    data = conn->Read(sizeof(uint32_t));
+    uint32_t szval =
+        alpha::BigEndianToHost(*reinterpret_cast<const uint32_t*>(data.data()));
+    LOG_INFO << "Backup value size: " << szval;
+
+    if (szval > file->size()) {
+      LOG_ERROR << "MMapFile size is too small, expect: " << szval
+                << ", actual: " << file->size();
+      return false;
+    }
+    data = conn->Read(szval);
+    memcpy(file->start(), data.data(), szval);
+
+    LOG_INFO << "Recovery done, backup key: " << backup_key
+             << ", backup size: " << szval;
+    return true;
+  }
+  catch (alpha::AsyncTcpConnectionException& e) {
+    LOG_ERROR << "RecoverOneFile catch AsyncTcpConnectionException, "
+              << e.what();
+    return false;
   }
 }
 
@@ -662,6 +788,11 @@ void ServerApp::AddTimerForBackup() {
   // 防止某次备份失败后要等下一个Interval才能继续备份
   auto check_interval =
       conf_->backup_interval() / 10 * alpha::kMilliSecondsPerSecond;
+  static const int kMinCheckBackupInterval = 1000;
+  if (check_interval < kMinCheckBackupInterval) {
+    check_interval = kMinCheckBackupInterval;
+  }
+  DLOG_INFO << "Check backup interval: " << check_interval;
   loop_.RunEvery(check_interval, [this] {
     async_tcp_client_.RunInCoroutine(
         std::bind(&ServerApp::BackupRoutine, this, _1, _2, true));
@@ -745,17 +876,6 @@ void ServerApp::RunBattle() {
     battle_data_->SetCurrentRound(current_round + 1);
     AddTimerForBattleRound();
   }
-}
-
-bool ServerApp::RecoveryMode() const {
-  auto env = getenv("RecoveryMode");
-  if (env) {
-    std::string mode(env);
-    if (mode == "1" || boost::iequals(mode, "true")) {
-      return true;
-    }
-  }
-  return false;
 }
 
 int ServerApp::Run() {
@@ -906,6 +1026,10 @@ int ServerApp::HandleSignUp(UinType uin, const SignUpRequest* req,
   if (camp == nullptr) {
     return Error::kAllZoneAreFull;
   }
+  auto zone_conf = conf_->GetZoneConf(zone);
+  CHECK(user_level <= zone_conf->max_level())
+      << "Invalid zone found , user level: " << user_level
+      << ", zone max level: " << zone_conf->max_level();
   auto p = warriors_->insert(
       alpha::make_pod_pair(uin, Warrior::Create(uin, zone->id(), camp->id())));
   CHECK(p.second) << "Insert new warrior failed";
@@ -1024,8 +1148,8 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
       return Error::kRoundNotStarted;
     }
     matchups_proto->set_zone(zone->id());
-    auto cb =
-        [matchups_proto](const MatchupData* one, const MatchupData* the_other) {
+    auto cb = [matchups_proto](const MatchupData* one,
+                               const MatchupData* the_other) {
       auto round_matchups = matchups_proto->add_round_matchups();
       round_matchups->set_one_camp(one->camp);
       round_matchups->set_the_other_camp(the_other->camp);
@@ -1071,7 +1195,6 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
         break;
       }
     }
-    // resp->set_current_season_champion_camp(
   }
   return Error::kOk;
 }
