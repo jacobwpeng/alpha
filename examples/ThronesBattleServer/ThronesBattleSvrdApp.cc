@@ -656,6 +656,7 @@ void ServerApp::DoWhenSeasonChanged() {
 void ServerApp::DoWhenSeasonFinished() {
   LOG_INFO << "Season " << battle_data_->CurrentSeason() << " finished";
   battle_data_->SetSeasonFinished();
+  battle_data_->ResetLuckyWarriors();
   AddTimerForChangeSeason();
 }
 
@@ -804,7 +805,8 @@ void ServerApp::InitBeforeNewSeasonBattle() {
   DLOG_INFO << "Reset season data";
   // 新赛季开始，清空旧赛季的奖励名单
   rewards_->clear();
-  battle_data_->ResetSeasonData();
+  battle_data_->ResetLeaders();
+  battle_data_->ResetMatchups();
   // 清空旧赛季的排行榜
   for (auto& p : season_ranks_) {
     p.second->Clear();

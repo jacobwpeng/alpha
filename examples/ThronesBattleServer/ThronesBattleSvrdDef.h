@@ -251,7 +251,9 @@ class BattleData final {
   };
 
   bool ChangeSeason();
-  void ResetSeasonData();
+  void ResetMatchups();
+  void ResetLeaders();
+  void ResetLuckyWarriors();
   void SetCurrentRound(uint16_t battle_round);
   void SetSeasonFinished();
 

@@ -324,14 +324,14 @@ MatchupData* CampMatchups::RoundMatchupsDataEnd(uint16_t battle_round) {
   return std::end(matchups_data_[battle_round - 1]);
 }
 
-const MatchupData* CampMatchups::RoundMatchupsDataBegin(
-    uint16_t battle_round) const {
+const MatchupData* CampMatchups::RoundMatchupsDataBegin(uint16_t battle_round)
+    const {
   CHECK(battle_round != 0 && battle_round <= kMaxRoundID);
   return std::begin(matchups_data_[battle_round - 1]);
 }
 
-const MatchupData* CampMatchups::RoundMatchupsDataEnd(
-    uint16_t battle_round) const {
+const MatchupData* CampMatchups::RoundMatchupsDataEnd(uint16_t battle_round)
+    const {
   CHECK(battle_round != 0 && battle_round <= kMaxRoundID);
   return std::end(matchups_data_[battle_round - 1]);
 }
@@ -461,11 +461,21 @@ bool BattleData::ChangeSeason() {
   return true;
 }
 
-void BattleData::ResetSeasonData() {
+void BattleData::ResetMatchups() {
+  for (auto i = 0u; i < kMaxZoneNum; ++i) {
+    battle_data_saved_->matchups[i].Reset();
+  }
+}
+
+void BattleData::ResetLeaders() {
+  for (auto i = 0u; i < kMaxZoneNum; ++i) {
+    battle_data_saved_->camp_leaders[i].Clear();
+  }
+}
+
+void BattleData::ResetLuckyWarriors() {
   for (auto i = 0u; i < kMaxZoneNum; ++i) {
     battle_data_saved_->lucky_warriors[i].Clear();
-    battle_data_saved_->camp_leaders[i].Clear();
-    battle_data_saved_->matchups[i].Reset();
   }
 }
 
