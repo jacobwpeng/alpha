@@ -22,7 +22,7 @@ message CampInfo {
   optional uint32 living_warriors = 3;
   optional uint32 leader = 4;
   optional uint32 leader_killing_num = 5;
-  optional bool picked_lucky_warriors = 6;
+  optional bool can_pick_lucky_warriors = 6;
 }
 
 message RoundMatchups {

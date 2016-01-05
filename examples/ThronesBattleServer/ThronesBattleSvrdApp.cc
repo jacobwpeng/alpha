@@ -1119,7 +1119,9 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
     if (!leader.empty()) {
       camp_proto->set_leader(leader.uin);
       camp_proto->set_leader_killing_num(leader.killing_num);
-      camp_proto->set_picked_lucky_warriors(leader.picked_lucky_warriors);
+      // 赛季完结后才能挑选福将
+      camp_proto->set_can_pick_lucky_warriors(battle_data_->SeasonFinished() &&
+                                              !leader.picked_lucky_warriors);
     }
     if (zone->lucky_warriors()->PickedLuckyWarriors(camp->id())) {
       auto lucky_warriors = zone->lucky_warriors()->Get(camp->id());
