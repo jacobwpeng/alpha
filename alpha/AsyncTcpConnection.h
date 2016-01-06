@@ -50,6 +50,9 @@ class AsyncTcpConnection {
  private:
   friend class AsyncTcpClient;
   void set_status(Status status) { status_ = status; }
+  void SetWaitingWriteDone() { status_ = Status::kWaitingWriteDone; }
+  void SetIdle() { status_ = Status::kIdle; }
+  void SetWaitingMessage() { status_ = Status::kWaitingMessage; }
   void set_tcp_connection(TcpConnectionPtr& conn) { conn_ = conn; }
 
   Status status_;

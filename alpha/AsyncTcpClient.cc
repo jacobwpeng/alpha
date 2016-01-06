@@ -52,6 +52,8 @@ void AsyncTcpClient::OnConnected(TcpConnectionPtr conn) {
   auto co = info->co;
   info->async_conn = std::make_shared<AsyncTcpConnection>(conn, co);
   MapConnected(conn.get(), *info);
+  DLOG_INFO << "Connected resume, id: " << co->id()
+            << ", addr: " << conn->PeerAddr();
   co->Resume();
 }
 
@@ -59,6 +61,7 @@ void AsyncTcpClient::OnConnectError(const NetAddress& addr) {
   auto it = FindConnecting(addr);
   auto info = &it->second;
   auto co = info->co;
+  DLOG_INFO << "ConnectError resume, id: " << co->id() << ", addr: " << addr;
   co->Resume();
 }
 
@@ -71,6 +74,8 @@ void AsyncTcpClient::OnClosed(TcpConnectionPtr conn) {
       << "Invalid status: " << info->co->status() << ", info->co: " << info->co;
   if (info->co->IsSuspended() &&
       old_connection_status != AsyncTcpConnection::Status::kIdle) {
+    DLOG_INFO << "Closed resume, id: " << info->co->id()
+              << ", addr: " << conn->PeerAddr();
     info->co->Resume();
   }
   RemoveConnected(conn.get());
@@ -81,6 +86,8 @@ void AsyncTcpClient::OnMessage(TcpConnectionPtr conn, TcpConnectionBuffer*) {
   CHECK(info->async_conn);
   if (info->async_conn->status() ==
       AsyncTcpConnection::Status::kWaitingMessage) {
+    DLOG_INFO << "Message resume, id: " << info->co->id()
+              << ", addr: " << conn->PeerAddr();
     info->co->Resume();
   }
 }
@@ -90,6 +97,8 @@ void AsyncTcpClient::OnWriteDone(TcpConnectionPtr conn) {
   CHECK(info->async_conn);
   if (info->async_conn->status() ==
       AsyncTcpConnection::Status::kWaitingWriteDone) {
+    DLOG_INFO << "WriteDone resume, id: " << info->co->id()
+              << ", addr: " << conn->PeerAddr();
     info->co->Resume();
   }
 }

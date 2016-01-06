@@ -37,13 +37,13 @@ void AsyncTcpConnection::Write(alpha::Slice data) {
     if (data.empty()) {
       break;
     }
-    status_ = Status::kWaitingWriteDone;
+    SetWaitingWriteDone();
     co_->Yield();
     if (closed()) {
       throw AsyncTcpConnectionClosed("Write");
     }
   } while (1);
-  status_ = Status::kIdle;
+  SetIdle();
 }
 
 std::string AsyncTcpConnection::Read(size_t bytes, int timeout) {
@@ -64,13 +64,14 @@ std::string AsyncTcpConnection::Read(size_t bytes, int timeout) {
         CHECK(result.size() == bytes || (bytes == 0 && !result.empty()))
             << "bytes: " << bytes << ", result.size(): " << result.size()
             << ", sz: " << sz;
+        SetIdle();
         return result;
       } else {
         result.append(data.data(), data.size());
         buffer->ConsumeBytes(data.size());
       }
     }
-    status_ = Status::kWaitingMessage;
+    SetWaitingMessage();
     if (timeout == kNoTimeout) {
       co_->Yield();
     } else {
@@ -83,7 +84,7 @@ std::string AsyncTcpConnection::Read(size_t bytes, int timeout) {
       throw AsyncTcpConnectionClosed("Read");
     }
   } while (1);
-  status_ = Status::kIdle;
+  SetIdle();
   return result;
 }
 

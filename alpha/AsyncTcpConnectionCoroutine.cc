@@ -13,6 +13,7 @@
 #include "AsyncTcpConnectionCoroutine.h"
 #include "AsyncTcpClient.h"
 #include "event_loop.h"
+#include "logger.h"
 
 namespace alpha {
 AsyncTcpConnectionCoroutine::AsyncTcpConnectionCoroutine(
@@ -21,6 +22,7 @@ AsyncTcpConnectionCoroutine::AsyncTcpConnectionCoroutine(
 
 AsyncTcpConnectionCoroutine::~AsyncTcpConnectionCoroutine() {
   MaybeCancelTimeoutTimer();
+  DLOG_INFO << "AsyncTcpConnectionCoroutine destroyed, id: " << id();
 }
 
 void AsyncTcpConnectionCoroutine::Routine() {
