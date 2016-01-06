@@ -18,15 +18,12 @@ namespace alpha {
 thread_local Coroutine* current = nullptr;
 thread_local char shared_stack[Coroutine::kMaxStackSize];
 
-std::atomic_int Coroutine::next_coroutine_id_(0);
+std::atomic_int Coroutine::next_coroutine_id_(1);
 
 Coroutine::Coroutine()
     : status_(Status::kReady),
       real_stack_size_(0),
-      id_(next_coroutine_id_.fetch_add(1)) {
-  DLOG_INFO << "Coroutine stack range: " << (void*)shared_stack << " - "
-            << (void*)(shared_stack + Coroutine::kMaxStackSize);
-}
+      id_(next_coroutine_id_.fetch_add(1)) {}
 
 Coroutine::~Coroutine() {}
 
