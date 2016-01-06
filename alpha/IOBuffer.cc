@@ -27,4 +27,8 @@ IOBufferWithSize::IOBufferWithSize(char* data, size_t size)
     : IOBuffer(data), size_(size) {}
 
 IOBufferWithSize::~IOBufferWithSize() = default;
+
+WrappedIOBuffer::WrappedIOBuffer(const void* data) : IOBuffer((char*)data) {}
+
+WrappedIOBuffer::~WrappedIOBuffer() { data_ = nullptr; }
 }

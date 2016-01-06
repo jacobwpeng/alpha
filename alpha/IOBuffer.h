@@ -27,8 +27,6 @@ class IOBuffer {
 
  protected:
   explicit IOBuffer(char* data);
-
- private:
   char* data_;
 };
 
@@ -42,6 +40,12 @@ class IOBufferWithSize : public IOBuffer {
   IOBufferWithSize(char* data, size_t size);
 
   size_t size_;
+};
+
+class WrappedIOBuffer : public IOBuffer {
+ public:
+  explicit WrappedIOBuffer(const void* data);
+  virtual ~WrappedIOBuffer() override;
 };
 
 #if 0
