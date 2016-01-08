@@ -73,7 +73,7 @@ class NetSvrdVirtualServer final {
  private:
   using TcpServerPtr = std::unique_ptr<alpha::TcpServer>;
   using UDPServerPtr = std::unique_ptr<alpha::UDPServer>;
-  static const uint32_t kCheckWorkerStatusInterval = 1000;  // 1000 ms
+  static const uint32_t kCheckWorkerStatusInterval = 5000;  // milliseconds
   void OnConnected(alpha::TcpConnectionPtr conn);
   void OnMessage(alpha::TcpConnectionPtr conn,
                  alpha::TcpConnectionBuffer* buffer);

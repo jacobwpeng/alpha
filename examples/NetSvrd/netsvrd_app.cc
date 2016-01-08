@@ -47,7 +47,8 @@ int NetSvrdApp::Init(const char* file) {
       }
       servers_.emplace_back(std::move(virtual_server));
     }
-  } catch (std::exception& e) {
+  }
+  catch (std::exception& e) {
     LOG_ERROR << "NetSvrdApp::Init failed, file: " << file << ", " << e.what();
     return -1;
   }
@@ -55,6 +56,11 @@ int NetSvrdApp::Init(const char* file) {
 }
 
 int NetSvrdApp::Run() {
+  int err = daemon(0, 0);
+  if (err) {
+    PLOG_ERROR << "daemon";
+    return err;
+  }
   bool ok = true;
   std::for_each(std::begin(servers_), std::end(servers_),
                 [&ok](NetSvrdVirtualServerPtr& server) {

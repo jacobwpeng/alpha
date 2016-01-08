@@ -21,7 +21,6 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
   alpha::Logger::Init(argv[0]);
-  alpha::Logger::set_logtostderr(true);
 
   alpha::EventLoop loop;
   NetSvrdApp app(&loop);
