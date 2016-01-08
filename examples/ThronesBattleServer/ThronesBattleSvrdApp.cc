@@ -687,11 +687,10 @@ void ServerApp::DoWhenTwoCampsMatchDone(BattleContext* ctx) {
   ctx->zone->matchups()->SetBattleResult(ctx->the_other->id(),
                                          ctx->the_other == ctx->winner,
                                          ctx->the_other->LivingWarriorsNum());
-#if 0
-  // 为双方阵营加本轮奖励
-  AddRoundReward(zone, one);
-  AddRoundReward(zone, the_other);
-#endif
+
+  // 判断当前所有赛区本轮所有比赛是否已经打完
+  // 记录瞬间状态，否则在写完每轮Feeds后可能多个协程同时进入每轮结束流程
+  bool round_finished = battle_data_->CurrentRoundFinished();
 
   // 为获胜阵营所有仍然存活的人写feeds
   auto& living_warriors = ctx->winner->living_warriors();
@@ -702,8 +701,7 @@ void ServerApp::DoWhenTwoCampsMatchDone(BattleContext* ctx) {
   WriteRankFeedsIfSeasonFinished(ctx, ctx->one);
   WriteRankFeedsIfSeasonFinished(ctx, ctx->the_other);
 
-  // 判断当前所有赛区本轮所有比赛是否已经打完
-  if (battle_data_->CurrentRoundFinished()) {
+  if (round_finished) {
     DoWhenRoundFinished();
   }
 }
@@ -819,6 +817,8 @@ void ServerApp::RunBattle() {
   StartAllZonesToCurrentRound();
 
   auto unfinished_battle_tasks = GetAllUnfinishedTasks();
+  DLOG_INFO << "unfinished_battle_tasks.size() = "
+            << unfinished_battle_tasks.size();
   if (!unfinished_battle_tasks.empty()) {
     for (auto& task : unfinished_battle_tasks) {
       RunBattleTask(task);
@@ -889,11 +889,11 @@ void ServerApp::StartAllZonesToCurrentRound() {
 
 int ServerApp::Run() {
   /* Daemonize */
-  // int err = daemon(0, 0);
-  // if (err) {
-  //  PLOG_ERROR << "daemon";
-  //  return err;
-  //}
+  int err = daemon(0, 0);
+  if (err) {
+    PLOG_ERROR << "daemon";
+    return err;
+  }
   /* Trap signals */
   TrapSignals();
   udp_server_.SetMessageCallback(

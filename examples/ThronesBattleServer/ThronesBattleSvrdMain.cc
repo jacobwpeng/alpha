@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
             argv[0], argv[0]);
     return EXIT_FAILURE;
   }
-  alpha::Logger::set_logtostderr(true);
+  // alpha::Logger::set_logtostderr(true);
   alpha::Logger::Init(argv[0]);
   ThronesBattle::ServerApp app;
   int err = app.Init(argc, argv);
