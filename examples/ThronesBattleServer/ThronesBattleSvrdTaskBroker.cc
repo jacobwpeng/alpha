@@ -56,6 +56,9 @@ void TaskBroker::Wait() {
     catch (alpha::AsyncTcpConnectionException& e) {
       LOG_WARNING << "TaskBroker::Wait failed, " << e.what();
       ReconnectToRemote();
+      DLOG_INFO << "After ReconnectToRemote, index = " << index
+                << ", one_camp_warriors_.size() = " << one_camp_warriors_.size()
+                << ", non_acked_tasks_.size() = " << non_acked_tasks_.size();
     }
   }
 }
@@ -174,6 +177,9 @@ void TaskBroker::HandleNonAckedTask(bool all) {
 }
 
 size_t TaskBroker::HandleIncomingData(int idle_time, bool all) {
+  if (non_acked_tasks_.empty()) {
+    return 0;
+  }
   size_t received = 0;
   do {
     auto data = conn_->Read(NetSvrdFrame::kHeaderSize, idle_time);
@@ -204,11 +210,10 @@ void TaskBroker::ReconnectToRemote() {
   do {
     LOG_INFO << "Connect to " << fight_server_addr_;
     conn_ = client_->ConnectTo(fight_server_addr_, co_);
-    if (conn_ == nullptr) {
-      LOG_WARNING << "Failed connect to remote";
-      // Yield some time
-      co_->YieldWithTimeout(3000);
-    }
+    DLOG_INFO_IF(conn_) << "Reconnect succeed";
+    if (conn_) break;
+    LOG_WARNING << "Failed connect to remote";
+    co_->YieldWithTimeout(3000);
   } while (conn_ == nullptr);
 }
 }

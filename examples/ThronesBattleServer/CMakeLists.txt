@@ -6,6 +6,7 @@ list(APPEND THRONES_BATTLE_SVRD_SRCS
   "ThronesBattleSvrdConf.cc"
   "ThronesBattleSvrdMessageDispatcher.cc"
   "ThronesBattleSvrdTaskBroker.cc"
+  "ThronesBattleSvrdFeedsChannel.cc"
   "ThronesBattleSvrdApp.cc"
   "ThronesBattleSvrdMain.cc"
 )

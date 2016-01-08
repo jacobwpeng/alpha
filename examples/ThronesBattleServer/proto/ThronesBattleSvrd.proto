@@ -101,6 +101,7 @@ message QueryBattleStatusResponse {
   optional bool in_sign_up_time = 11;
   optional uint32 current_season_champion_camp = 12;
   optional uint32 max_show_round = 13;
+  optional bool show_round_finished = 14;
 };
 
 message PickLuckyWarriorsRequest {
@@ -152,4 +153,13 @@ message QueryRankResponse {
   optional uint32 self_rank = 4;
   optional uint32 total = 5;
   repeated RankUnit warriors = 6;
+}
+
+message QueryWarriorRankRequest {
+}
+
+message QueryWarriorRankResponse {
+  optional uint32 zone = 1;
+  optional uint32 camp = 2;
+  optional uint32 rank = 3;
 }

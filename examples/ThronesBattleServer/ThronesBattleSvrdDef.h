@@ -20,8 +20,14 @@
 #include <functional>
 #include <type_traits>
 
+namespace alpha {
+class AsyncTcpClient;
+class AsyncTcpConnectionCoroutine;
+}
+
 namespace ThronesBattle {
 
+class FeedsChannel;
 static const uint16_t kMinZoneID = 1;
 static const uint16_t kMaxZoneID = 4;
 static const uint16_t kCurrentZoneNum = 4;
@@ -50,6 +56,7 @@ enum Error : int32_t {
   kNoRoundReward = -10013,
   kNoLastSeasonWarrior = -10014,
   kRoundNotStarted = -10015,
+  kNotInRewardTime = -10016,
 };
 
 enum CampID : uint16_t {
@@ -64,6 +71,7 @@ enum CampID : uint16_t {
   kLvBu = 8,
   kMax = 8
 };
+
 static const uint16_t kCampIDMax = static_cast<uint16_t>(CampID::kMax);
 bool ValidCampID(uint16_t camp);
 bool ValidZoneID(uint16_t zone_id);
@@ -174,6 +182,7 @@ class Camp final {
   void MarkWarriorDead(UinType uin);
   void ResetLivingWarriors();
 
+  UinList RandomChooseLivingWarriors(size_t num) const;
   const UinSet& living_warriors() const { return living_warriors_; }
   bool NoLivingWarriors() const;
   size_t LivingWarriorsNum() const;
@@ -254,7 +263,7 @@ class BattleData final {
   void ResetMatchups();
   void ResetLeaders();
   void ResetLuckyWarriors();
-  void SetCurrentRound(uint16_t battle_round);
+  void IncreaseCurrentRound();
   void SetSeasonFinished();
 
   bool InitialSeason() const;
@@ -346,6 +355,22 @@ class ZoneConf final {
   std::string name_;
   std::map<unsigned, Reward> rank_reward_map_;
   std::map<std::string, Reward> round_reward_map_;
+};
+
+struct BattleContext {
+  alpha::AsyncTcpClient* async_tcp_client;
+  alpha::AsyncTcpConnectionCoroutine* co;
+  Zone* zone;
+  Camp* one;
+  Camp* the_other;
+  Camp* winner;
+  FeedsChannel* feeds_channel;
+};
+
+struct BattleTask {
+  Zone* zone;
+  CampID one;
+  CampID the_other;
 };
 
 static_assert(std::is_pod<BattleDataSaved>::value,

@@ -356,6 +356,17 @@ void Camp::MarkWarriorDead(UinType uin) { living_warriors_.erase(uin); }
 
 void Camp::ResetLivingWarriors() { living_warriors_ = warriors_; }
 
+UinList Camp::RandomChooseLivingWarriors(size_t num) const {
+  CHECK(LivingWarriorsNum() >= num);
+  UinList choosen_warriors;
+  auto choosen_warrior_iters = alpha::Random::Sample(
+      living_warriors_.begin(), living_warriors_.end(), num);
+  std::transform(choosen_warrior_iters.begin(), choosen_warrior_iters.end(),
+                 std::back_inserter(choosen_warriors),
+                 [](const UinSet::const_iterator& it) { return *it; });
+  return choosen_warriors;
+}
+
 bool Camp::NoLivingWarriors() const { return living_warriors_.empty(); }
 
 size_t Camp::LivingWarriorsNum() const { return living_warriors_.size(); }
@@ -479,9 +490,9 @@ void BattleData::ResetLuckyWarriors() {
   }
 }
 
-void BattleData::SetCurrentRound(uint16_t battle_round) {
-  CHECK(battle_round != 0 && battle_round <= kMaxRoundID);
-  battle_data_saved_->battle_round = battle_round;
+void BattleData::IncreaseCurrentRound() {
+  CHECK(CurrentRound() <= kMaxRoundID);
+  battle_data_saved_->battle_round++;
 }
 
 void BattleData::SetSeasonFinished() {

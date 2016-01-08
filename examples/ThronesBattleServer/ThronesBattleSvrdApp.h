@@ -89,24 +89,29 @@ class ServerApp final {
                       const std::string& backup_key, alpha::MMapFile* file);
   void AddRoundReward(Zone* zone, Camp* camp);
 
-  void ProcessFightTaskResult(const FightServerProtocol::TaskResult& result);
-  void ProcessSurvivedWarrior(UinType winner, UinType loser);
-  void ProcessDeadWarrior(UinType loser, UinType winner,
+  void ProcessFightTaskResult(BattleContext* ctx,
+                              const FightServerProtocol::TaskResult& result);
+  void ProcessSurvivedWarrior(BattleContext* ctx, UinType winner,
+                              UinType loser);
+  void ProcessDeadWarrior(BattleContext* ctx, UinType loser, UinType winner,
                           const std::string& fight_content);
-  void ProcessRoundSurvivedWarrior(UinType winner);
+  void ProcessRoundSurvivedWarrior(BattleContext* ctx, UinType winner);
 
   void DoWhenSeasonChanged();
   void DoWhenSeasonFinished();
   void DoWhenRoundFinished();
-  void DoWhenTwoCampsMatchDone(Zone* zone, Camp* one, Camp* the_other,
-                               Camp* winner_camp);
-  void ReportKillingNum(uint16_t zone_id, UinType uin);
+  void ReportKillingNumToRank(uint16_t zone_id, UinType uin);
+  void DoWhenTwoCampsMatchDone(BattleContext* ctx);
+  void WriteRankFeedsIfSeasonFinished(BattleContext* ctx, Camp* camp);
 
   void AddTimerForChangeSeason();
   void AddTimerForBattleRound();
   void AddTimerForBackup();
   void InitBeforeNewSeasonBattle();
   void RunBattle();
+  std::vector<BattleTask> GetAllUnfinishedTasks();
+  void RunBattleTask(BattleTask task);
+  void StartAllZonesToCurrentRound();
   bool RecoveryMode() const;
 
   // Handlers for CGI UDP requests
@@ -130,6 +135,8 @@ class ServerApp final {
                                 QueryGeneralInChiefResponse* resp);
   int HandleQueryRank(UinType uin, const QueryRankRequest* req,
                       QueryRankResponse* resp);
+  int HandleQueryWarriorRank(UinType uin, const QueryWarriorRankRequest* req,
+                             QueryWarriorRankResponse* resp);
   alpha::EventLoop loop_;
   std::unique_ptr<ServerConf> conf_;
   std::unique_ptr<alpha::MMapFile> battle_data_underlying_file_;
