@@ -166,6 +166,7 @@ void NetSvrdVirtualServer::OnMessage(alpha::TcpConnectionPtr conn,
   CHECK(ctx);
   while (buffer->Read().size() >= NetSvrdFrame::kHeaderSize) {
     auto frame = ctx->codec->OnMessage(conn, buffer);
+    if (conn->closed()) break;
     if (frame) {
       OnFrame(ctx->connection_id_, std::move(frame));
     }
