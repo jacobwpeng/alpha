@@ -12,6 +12,7 @@
 
 #include "ThronesBattleSvrdFeedsChannel.h"
 #include <alpha/AsyncTcpConnectionException.h>
+#include <alpha/random.h>
 
 namespace ThronesBattle {
 FeedsChannel::FeedsChannel(alpha::AsyncTcpClient* async_tcp_client,
@@ -22,6 +23,13 @@ FeedsChannel::FeedsChannel(alpha::AsyncTcpClient* async_tcp_client,
   PCHECK(!err) << "Open failed";
   err = socket_.Connect(address_);
   PCHECK(err == 0) << "Connect failed";
+}
+
+void FeedsChannel::WaitAllFeedsSended() {
+  auto r = alpha::Random::Rand32();
+  DLOG_INFO << "Will wait all message sended, r: " << r;
+  conn_->WaitWriteDone();
+  DLOG_INFO << "Wait all message sended done, r: " << r;
 }
 
 FeedsChannel::~FeedsChannel() {

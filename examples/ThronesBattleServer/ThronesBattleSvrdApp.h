@@ -18,6 +18,7 @@
 #include <alpha/AsyncTcpClient.h>
 #include <alpha/UDPSocket.h>
 #include <alpha/UDPServer.h>
+#include <alpha/SimpleHTTPServer.h>
 #include <alpha/experimental/RegionBasedHashMap.h>
 #include "ThronesBattleSvrdDef.h"
 #include "ThronesBattleSvrdMessageDispatcher.h"
@@ -137,6 +138,10 @@ class ServerApp final {
                       QueryRankResponse* resp);
   int HandleQueryWarriorRank(UinType uin, const QueryWarriorRankRequest* req,
                              QueryWarriorRankResponse* resp);
+
+  // Handlers for HTTP message admin
+  void HandleHTTPMessage(alpha::TcpConnectionPtr conn,
+                         const alpha::HTTPMessage& message);
   alpha::EventLoop loop_;
   std::unique_ptr<ServerConf> conf_;
   std::unique_ptr<alpha::MMapFile> battle_data_underlying_file_;
@@ -155,7 +160,6 @@ class ServerApp final {
   alpha::AsyncTcpClient async_tcp_client_;
   MessageDispatcher message_dispatcher_;
   alpha::UDPServer udp_server_;
-  alpha::UDPSocket feeds_socket_;
-  alpha::UDPSocket rank_socket_;
+  alpha::SimpleHTTPServer http_server_;
 };
 }

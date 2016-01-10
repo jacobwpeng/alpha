@@ -37,6 +37,8 @@ class FeedsChannel final {
                const alpha::NetAddress& address);
   ~FeedsChannel();
 
+  void WaitAllFeedsSended();
+
   template <typename... Args>
   void AddFightMessage(unsigned msg_type, unsigned self, unsigned opponent,
                        Args&&... args);

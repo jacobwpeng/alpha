@@ -401,7 +401,6 @@ BattleDataSaved* BattleDataSaved::Create(void* p, size_t sz) {
   memset(p, 0x0, sizeof(BattleDataSaved));
   auto d = reinterpret_cast<BattleDataSaved*>(p);
   d->magic = kMagic;
-  d->last_season_data_dropped = false;
   d->initial_season = true;   //发布周的没有打的初始赛季
   d->season_finished = true;  //周四发布，所以算第一届打完了
   d->battle_round = 3;        // 同上
@@ -438,14 +437,6 @@ BattleData::BattleData(BattleDataSaved* d) : battle_data_saved_(d) {
   }
 }
 
-bool BattleData::last_season_data_dropped() const {
-  return battle_data_saved_->last_season_data_dropped;
-}
-
-void BattleData::set_last_season_data_dropped(bool dropped) {
-  battle_data_saved_->last_season_data_dropped = dropped;
-}
-
 Zone* BattleData::GetZone(uint16_t zone_id) {
   CHECK(ValidZoneID(zone_id));
   return &zones_[zone_id - 1];
@@ -456,7 +447,6 @@ bool BattleData::ChangeSeason() {
     return false;
   }
   battle_data_saved_->season_finished = false;
-  battle_data_saved_->last_season_data_dropped = false;
   battle_data_saved_->battle_round = 0;
   if (battle_data_saved_->initial_season) {
     battle_data_saved_->initial_season = false;

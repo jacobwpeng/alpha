@@ -12,7 +12,6 @@
 
 #include "ThronesBattleSvrdApp.h"
 #include <unistd.h>
-#include <boost/scope_exit.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <google/protobuf/descriptor.h>
 #include <alpha/format.h>
@@ -78,7 +77,10 @@ const char ServerApp::kWarriorsDataKey[] = "WarriorsData";
 const char ServerApp::kRewardsDataKey[] = "RewardsData";
 const char ServerApp::kRankDataKey[] = "RankData";
 
-ServerApp::ServerApp() : async_tcp_client_(&loop_), udp_server_(&loop_) {}
+ServerApp::ServerApp()
+    : async_tcp_client_(&loop_),
+      udp_server_(&loop_),
+      http_server_(&loop_, alpha::NetAddress("0.0.0.0", 51001)) {}
 
 ServerApp::~ServerApp() = default;
 
@@ -238,17 +240,6 @@ int ServerApp::InitNormalMode() {
     offset += kRankDataRegionSize + kRankDataPaddingSize;
   }
 
-  auto err = feeds_socket_.Open();
-  if (err) {
-    PLOG_ERROR << "Open feeds socket failed, err: " << err;
-    return EXIT_FAILURE;
-  }
-  err = feeds_socket_.Connect(conf_->feeds_server_addr());
-  if (err) {
-    PLOG_ERROR << "Feeds socket connect failed, err: " << err;
-    return EXIT_FAILURE;
-  }
-
   battle_data_ = alpha::make_unique<BattleData>(battle_data_saved);
   for (const auto& p : *warriors_) {
     auto& warrior = p.second;
@@ -259,6 +250,9 @@ int ServerApp::InitNormalMode() {
     auto dead = warrior.dead();
     camp->AddWarrior(warrior.uin(), dead);
   }
+
+  http_server_.SetCallback(
+      std::bind(&ServerApp::HandleHTTPMessage, this, _1, _2));
 
 #define THRONES_BATTLE_REGISTER_HANDLER(ReqType, RespType, Handler) \
   message_dispatcher_.Register<ReqType, RespType>(                  \
@@ -384,6 +378,7 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
 
   ctx->winner = one_camp->NoLivingWarriors() ? the_other_camp : one_camp;
   DoWhenTwoCampsMatchDone(ctx);
+  ctx->feeds_channel->WaitAllFeedsSended();
 }
 
 std::string ServerApp::CreateBackupKey(alpha::Slice key, const char* suffix,
@@ -420,8 +415,9 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
     }
   }
   is_backup_in_progress_ = true;
-  BOOST_SCOPE_EXIT(&is_backup_in_progress_) { is_backup_in_progress_ = false; }
-  BOOST_SCOPE_EXIT_END
+  auto reset_backup_status = [](bool* status) { *status = false; };
+  std::unique_ptr<bool, decltype(reset_backup_status)> stub(
+      &is_backup_in_progress_, reset_backup_status);
 
   DLOG_INFO << "Starting backup, server id: " << server_id_;
   auto put = [](std::shared_ptr<alpha::AsyncTcpConnection> conn,
@@ -764,7 +760,8 @@ void ServerApp::AddTimerForChangeSeason() {
     if (done) {
       DoWhenSeasonChanged();
     } else {
-      LOG_WARNING << "Change season failed";
+      LOG_WARNING
+      << "Change season failed, maybe multiple timers for season change";
     }
   });
 }
@@ -899,6 +896,8 @@ int ServerApp::Run() {
   udp_server_.SetMessageCallback(
       std::bind(&ServerApp::HandleUDPMessage, this, _1, _2, _3, _4));
   bool ok = udp_server_.Run(alpha::NetAddress("0.0.0.0", 51000));
+  if (!ok) return EXIT_FAILURE;
+  ok = http_server_.Run();
   if (!ok) return EXIT_FAILURE;
   loop_.Run();
   return EXIT_SUCCESS;

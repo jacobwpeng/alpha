@@ -88,6 +88,7 @@ struct General {
 class GeneralInChiefList {
  public:
   void AddGeneralInChief(CampID camp, UinType uin, uint32_t season);
+  // start 从0开始
   std::vector<General> Get(unsigned start, unsigned num) const;
   void Clear();
   uint16_t Size() const { return next_index_; }
@@ -231,7 +232,6 @@ struct BattleDataSaved {
   static BattleDataSaved* Restore(void* p, size_t sz);
 
   static const uint32_t kMagic = 0xf8219e4d;
-  uint8_t last_season_data_dropped;
   uint8_t season_finished;
   uint8_t initial_season;
   uint16_t battle_round;
@@ -246,8 +246,6 @@ struct BattleDataSaved {
 class BattleData final {
  public:
   BattleData(BattleDataSaved* d);
-  bool last_season_data_dropped() const;
-  void set_last_season_data_dropped(bool dropped);
   Zone* GetZone(uint16_t zone_id);
   template <typename LAMBDA>
   void ForeachZone(LAMBDA lambda) {
