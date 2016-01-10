@@ -74,9 +74,9 @@ int RingBuffer::space_left() const {
   char *front = get_front();
   char *back = get_back();
   if (back >= front) {
-    return end_ - back + front - start_ - kExtraSpace;
+    return end_ - back + front - start_ - kExtraSpace - sizeof(int32_t);
   } else {
-    return front - back - kExtraSpace;
+    return front - back - kExtraSpace - sizeof(int32_t);
   }
 }
 
