@@ -46,6 +46,16 @@ void AsyncTcpConnection::Write(alpha::Slice data) {
   SetIdle();
 }
 
+void AsyncTcpConnection::WaitWriteDone() {
+  auto data = conn_->WriteBuffer()->Read();
+  if (data.empty()) {
+    return;
+  }
+  DLOG_INFO << data.size() << " bytes to send";
+  SetWaitingWriteDone();
+  co_->Yield();
+}
+
 std::string AsyncTcpConnection::Read(size_t bytes, int timeout) {
   if (closed()) {
     throw AsyncTcpConnectionClosed("Read");
