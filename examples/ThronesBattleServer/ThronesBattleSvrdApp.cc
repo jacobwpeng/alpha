@@ -1437,20 +1437,20 @@ int ServerApp::HandleQueryWarriorRank(UinType uin,
   if (unlikely(uin == 0)) {
     return Error::kInvalidArgument;
   }
-  if (battle_data_->SeasonFinished()) {
-    auto it = warriors_->find(uin);
-    if (it != warriors_->end()) {
-      resp->set_zone(it->second.zone_id());
-      resp->set_camp(it->second.camp_id());
-      auto& rank = *season_ranks_[it->second.zone_id()];
-      resp->set_rank(rank.Rank(uin));
-    }
-  } else {
+  if (battle_data_->SeasonNotStarted()) {
     auto it = rewards_->find(uin);
     if (it != rewards_->end()) {
       resp->set_zone(it->second.zone_id);
       resp->set_camp(it->second.camp_id);
       auto& rank = *season_ranks_[it->second.zone_id];
+      resp->set_rank(rank.Rank(uin));
+    }
+  } else {
+    auto it = warriors_->find(uin);
+    if (it != warriors_->end()) {
+      resp->set_zone(it->second.zone_id());
+      resp->set_camp(it->second.camp_id());
+      auto& rank = *season_ranks_[it->second.zone_id()];
       resp->set_rank(rank.Rank(uin));
     }
   }
