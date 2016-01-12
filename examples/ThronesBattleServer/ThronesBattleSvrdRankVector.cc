@@ -73,28 +73,24 @@ void RankVector::Clear() {
 }
 
 void RankVector::Report(uint32_t uin, uint32_t val) {
-  RankVectorUnit u;
-  u.uin = uin;
-  u.val = val;
-  if (v_->size() < max_) {
-    v_->push_back(u);
-  } else if (u > v_->back()) {
-    v_->back() = u;
-  } else {
-    return;
-  }
-  KeepOrdered();
-}
-
-void RankVector::ReportDelta(uint32_t uin, uint32_t delta) {
   auto rank = Rank(uin);
   if (rank == 0) {
-    Report(uin, delta);
+    // 还不在榜
+    RankVectorUnit u;
+    u.uin = uin;
+    u.val = val;
+    if (v_->size() < max_) {
+      v_->push_back(u);
+    } else if (u > v_->back()) {
+      v_->back() = u;
+    } else {
+      return;
+    }
   } else {
     auto it = std::next(v_->begin(), rank - 1);
-    it->val += delta;
-    KeepOrdered();
+    it->val = val;
   }
+  KeepOrdered();
 }
 
 unsigned RankVector::Rank(uint32_t uin) const {

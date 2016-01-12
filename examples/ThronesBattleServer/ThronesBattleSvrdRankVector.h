@@ -33,7 +33,6 @@ class RankVector {
   size_t Size() const;
   void Clear();
   void Report(uint32_t uin, uint32_t val);
-  void ReportDelta(uint32_t uin, uint32_t delta);
   unsigned Rank(uint32_t uin) const;
   // start 从0开始
   std::vector<RankVectorUnit> GetRange(unsigned start, unsigned num) const;

@@ -101,7 +101,8 @@ class ServerApp final {
   void DoWhenSeasonChanged();
   void DoWhenSeasonFinished();
   void DoWhenRoundFinished();
-  void ReportKillingNumToRank(uint16_t zone_id, UinType uin);
+  void ReportKillingNumToRank(uint16_t zone_id, UinType uin,
+                              uint32_t killing_num);
   void DoWhenTwoCampsMatchDone(BattleContext* ctx);
   void WriteRankFeedsIfSeasonFinished(BattleContext* ctx, Camp* camp);
 

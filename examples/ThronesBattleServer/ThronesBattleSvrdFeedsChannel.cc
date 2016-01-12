@@ -13,6 +13,8 @@
 #include "ThronesBattleSvrdFeedsChannel.h"
 #include <alpha/AsyncTcpConnectionException.h>
 #include <alpha/random.h>
+#include <alpha/logger.h>
+#include "proto/feedssvrd.pb.h"
 
 namespace ThronesBattle {
 FeedsChannel::FeedsChannel(alpha::AsyncTcpClient* async_tcp_client,
@@ -25,11 +27,28 @@ FeedsChannel::FeedsChannel(alpha::AsyncTcpClient* async_tcp_client,
   PCHECK(err == 0) << "Connect failed";
 }
 
+void FeedsChannel::AddFightMessage(unsigned msg_type,
+                                   const google::protobuf::Message* m) {
+  FeedsServerProtocol::Task task;
+  task.set_msg_type(msg_type);
+  bool ok = m->SerializeToString(task.mutable_payload());
+  CHECK(ok) << "Serialize fight message proto failed";
+  auto frame = NetSvrdFrame::CreateUnique(task.ByteSize());
+  ok = task.SerializeToArray(frame->payload, frame->payload_size);
+  CHECK(ok) << "Serialize fight message proto failed";
+  SendToRemote(std::move(frame));
+}
+
 void FeedsChannel::WaitAllFeedsSended() {
   auto r = alpha::Random::Rand32();
-  DLOG_INFO << "Will wait all message sended, r: " << r;
-  conn_->WaitWriteDone();
-  DLOG_INFO << "Wait all message sended done, r: " << r;
+  try {
+    DLOG_INFO << "Will wait all message sended, r: " << r;
+    conn_->WaitWriteDone();
+    DLOG_INFO << "Wait all message sended done, r: " << r;
+  }
+  catch (alpha::AsyncTcpConnectionException& e) {
+    LOG_WARNING << "Catch exception when wait write done, " << e.what();
+  }
 }
 
 FeedsChannel::~FeedsChannel() {
@@ -37,10 +56,6 @@ FeedsChannel::~FeedsChannel() {
     conn_->Close();
     conn_.reset();
   }
-}
-
-std::string FeedsChannel::CreateParams(std::ostringstream& oss) {
-  return oss.str();
 }
 
 void FeedsChannel::SendToRemote(NetSvrdFrame::UniquePtr&& frame) {

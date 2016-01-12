@@ -131,6 +131,7 @@ void ServerApp::HandleHTTPMessage(alpha::TcpConnectionPtr conn,
 
     alpha::HTTPResponseBuilder builder(conn);
     builder.status(200, "OK").body(oss.str()).SendWithEOM();
+  } else if (path == "/warrior") {
   }
 }
 }

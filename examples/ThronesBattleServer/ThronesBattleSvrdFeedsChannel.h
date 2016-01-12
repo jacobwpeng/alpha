@@ -20,6 +20,7 @@
 #include <alpha/AsyncTcpClient.h>
 #include <alpha/AsyncTcpConnection.h>
 #include <alpha/AsyncTcpConnectionCoroutine.h>
+#include <google/protobuf/message.h>
 #include "ThronesBattleSvrdDef.h"
 #include "ext/netsvrd_frame.h"
 
@@ -38,23 +39,12 @@ class FeedsChannel final {
   ~FeedsChannel();
 
   void WaitAllFeedsSended();
-
-  template <typename... Args>
-  void AddFightMessage(unsigned msg_type, unsigned self, unsigned opponent,
-                       Args&&... args);
-
-  template <typename... Args>
-  void AddFightEvent(unsigned msg_type, unsigned self, unsigned opponent,
-                     const std::string& reply, Args&&... args);
+  void AddFightMessage(unsigned msg_type, const google::protobuf::Message* m);
 
  private:
   static const int kReconnectInterval = 3000;  // ms
-  std::string CreateParams(std::ostringstream& oss);
   void SendToRemote(NetSvrdFrame::UniquePtr&& frame);
   void ReconnectToRemote();
-
-  template <typename Arg, typename... Tail>
-  std::string CreateParams(std::ostringstream& oss, Arg&& arg, Tail&&... tail);
 
   alpha::AsyncTcpClient* async_tcp_client_;
   alpha::AsyncTcpConnectionCoroutine* co_;
@@ -63,5 +53,3 @@ class FeedsChannel final {
   alpha::UDPSocket socket_;
 };
 }
-
-#include "ThronesBattleSvrdFeedsChannel-inl.h"

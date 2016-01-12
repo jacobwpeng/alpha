@@ -26,6 +26,7 @@
 #include "ThronesBattleSvrdTaskBroker.h"
 #include "ThronesBattleSvrdFeedsChannel.h"
 #include "proto/ThronesBattleSvrd.pb.h"
+#include "proto/feedssvrd.pb.h"
 #include "proto/fightsvrd.pb.h"
 
 using namespace std::placeholders;
@@ -613,7 +614,7 @@ void ServerApp::ProcessSurvivedWarrior(BattleContext* ctx, UinType winner,
   // 更新击杀数
   warrior.add_killing_num();
   warrior.set_last_killed_warrior(loser);
-  ReportKillingNumToRank(ctx->zone->id(), winner);
+  ReportKillingNumToRank(ctx->zone->id(), winner, warrior.season_killing_num());
   ctx->zone->leaders()->Notify(camp->id(), winner,
                                warrior.season_killing_num());
 }
@@ -625,16 +626,24 @@ void ServerApp::ProcessRoundSurvivedWarrior(BattleContext* ctx, UinType uin) {
   auto& warrior = it->second;
   bool bye = warrior.last_killed_warrior() == 0;
   if (bye) {
-    // 写轮空feeds
-    ctx->feeds_channel->AddFightMessage(kThronesBattleBye, uin, uin,
-                                        battle_data_->CurrentSeason(),
-                                        ctx->zone->matchups()->CurrentRound());
+    FeedsServerProtocol::ThronesBattleBye feeds;
+    feeds.set_src(uin);
+    feeds.set_dst(uin);
+    feeds.set_season(battle_data_->CurrentSeason());
+    feeds.set_zone(ctx->zone->id());
+    feeds.set_round(ctx->zone->matchups()->CurrentRound());
+    ctx->feeds_channel->AddFightMessage(kThronesBattleBye, &feeds);
   } else {
     // 写本轮胜利feeds
-    ctx->feeds_channel->AddFightMessage(
-        kThronesBattleWin, uin, warrior.last_killed_warrior(),
-        battle_data_->CurrentSeason(), ctx->zone->matchups()->CurrentRound(),
-        warrior.last_killed_warrior(), warrior.round_killing_num());
+    FeedsServerProtocol::ThronesBattleWin feeds;
+    feeds.set_src(uin);
+    feeds.set_dst(uin);
+    feeds.set_season(battle_data_->CurrentSeason());
+    feeds.set_zone(ctx->zone->id());
+    feeds.set_round(ctx->zone->matchups()->CurrentRound());
+    feeds.set_round_killing_num(warrior.round_killing_num());
+    feeds.set_last_killed_warrior(warrior.last_killed_warrior());
+    ctx->feeds_channel->AddFightMessage(kThronesBattleWin, &feeds);
   }
 }
 
@@ -711,9 +720,14 @@ void ServerApp::WriteRankFeedsIfSeasonFinished(BattleContext* ctx, Camp* camp) {
              << ", zone: " << ctx->zone->id() << ", camp: " << camp->id()
              << ", rank: " << rank;
     for (const auto& uin : camp->Warriors()) {
-      ctx->feeds_channel->AddFightMessage(kThronesBattleCampRank[rank - 1], uin,
-                                          0, battle_data_->CurrentSeason(),
-                                          ctx->zone->id(), rank);
+      FeedsServerProtocol::ThronesBattleCampRank feeds;
+      feeds.set_src(uin);
+      feeds.set_dst(uin);
+      feeds.set_season(battle_data_->CurrentSeason());
+      feeds.set_zone(ctx->zone->id());
+      feeds.set_rank(rank);
+      ctx->feeds_channel->AddFightMessage(kThronesBattleCampRank[rank - 1],
+                                          &feeds);
     }
 
     // 冠军阵营领军人记为大将军
@@ -725,14 +739,15 @@ void ServerApp::WriteRankFeedsIfSeasonFinished(BattleContext* ctx, Camp* camp) {
   }
 }
 
-void ServerApp::ReportKillingNumToRank(uint16_t zone_id, UinType uin) {
+void ServerApp::ReportKillingNumToRank(uint16_t zone_id, UinType uin,
+                                       uint32_t killing_num) {
   auto it = season_ranks_.find(zone_id);
   CHECK(it != season_ranks_.end());
-  it->second->ReportDelta(uin, 1);
+  it->second->Report(uin, killing_num);
 
-  it = history_ranks_.find(zone_id);
-  CHECK(it != history_ranks_.end());
-  it->second->ReportDelta(uin, 1);
+  // it = history_ranks_.find(zone_id);
+  // CHECK(it != history_ranks_.end());
+  // it->second->ReportDelta(uin, killing_num);
 }
 
 void ServerApp::ProcessDeadWarrior(BattleContext* ctx, UinType loser,
@@ -744,11 +759,15 @@ void ServerApp::ProcessDeadWarrior(BattleContext* ctx, UinType loser,
   auto camp = ctx->zone->GetCamp(warrior.camp_id());
   warrior.set_dead(true);
   camp->MarkWarriorDead(loser);
-  // 写战败的feeds
-  ctx->feeds_channel->AddFightEvent(
-      kThronesBattleLose, loser, winner, fight_content,
-      battle_data_->CurrentSeason(), ctx->zone->matchups()->CurrentRound(),
-      winner, warrior.round_killing_num());
+  FeedsServerProtocol::ThronesBattleLose feeds;
+  feeds.set_src(loser);
+  feeds.set_dst(winner);
+  feeds.set_season(battle_data_->CurrentSeason());
+  feeds.set_zone(ctx->zone->id());
+  feeds.set_round(ctx->zone->matchups()->CurrentRound());
+  feeds.set_round_killing_num(warrior.round_killing_num());
+  feeds.set_fight_content(fight_content);
+  ctx->feeds_channel->AddFightMessage(kThronesBattleLose, &feeds);
 }
 
 void ServerApp::AddTimerForChangeSeason() {

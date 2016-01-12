@@ -86,10 +86,11 @@ void TaskBroker::AddTask(FightServerProtocol::Task& task) {
   if (non_acked_tasks_.size() == kMaxNonAckedTaskNum) {
     HandleNonAckedTask(false);
   }
+  static const int kThronesBattleFightType = 34;
   CHECK(non_acked_tasks_.size() < kMaxNonAckedTaskNum);
   auto task_id = next_task_id_;
   ++next_task_id_;
-  task.set_fight_type(34);
+  task.set_fight_type(kThronesBattleFightType);
   task.set_context(task_id);
   auto p = non_acked_tasks_.emplace(task_id, task);
   CHECK(p.second);
@@ -210,7 +211,7 @@ void TaskBroker::ReconnectToRemote() {
   do {
     LOG_INFO << "Connect to " << fight_server_addr_;
     conn_ = client_->ConnectTo(fight_server_addr_, co_);
-    DLOG_INFO_IF(conn_) << "Reconnect succeed";
+    LOG_INFO_IF(conn_) << "Reconnect succeed";
     if (conn_) break;
     LOG_WARNING << "Failed connect to remote";
     co_->YieldWithTimeout(3000);
