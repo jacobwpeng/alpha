@@ -37,14 +37,10 @@ File::File(alpha::Slice path, int flags, mode_t mode) : File() {
   }
 }
 
-File::File(File&& other) {
-  owns_fd_ = std::move(other.owns_fd_);
-  fd_ = std::move(other.fd_);
-}
+File::File(File&& other) { swap(other); }
 
 File& File::operator=(File&& other) {
-  owns_fd_ = std::move(other.owns_fd_);
-  fd_ = std::move(other.fd_);
+  swap(other);
   return *this;
 }
 
@@ -159,6 +155,11 @@ int64_t File::GetLength() {
   struct stat buf;
   fstat(fd_, &buf);
   return buf.st_size;
+}
+
+bool File::SetLength(int64_t length) {
+  assert(Valid());
+  return ftruncate(fd_, length) == 0;
 }
 
 void File::Lock() {

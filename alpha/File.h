@@ -50,6 +50,7 @@ class File {
   bool Flush();
 
   int64_t GetLength();
+  bool SetLength(int64_t length);
 
   void Lock();
   bool TryLock();
