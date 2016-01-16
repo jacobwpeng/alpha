@@ -28,9 +28,9 @@ void LoggerFile::Write(const char* content, int len) {
   if (unlikely(!file_)) {
     ::fprintf(stderr, content, len);
   } else {
-    ssize_t n = ::write(file_.fd(), content, len);
+    int n = file_.Write(content, len);
     if (unlikely(n != len)) {
-      ::perror("write trucated");
+      ::perror("write");
     }
   }
 }
@@ -41,7 +41,7 @@ void LoggerFile::MaybeChangeLogFile() {
     return;
   }
 
-  if (likely(!!file_)) {
+  if (likely(file_.Valid())) {
     bool ok = file_.Close();
     assert(ok);
     (void)ok;
