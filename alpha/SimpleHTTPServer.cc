@@ -20,15 +20,13 @@
 #include "HTTPMessageCodec.h"
 
 namespace alpha {
-SimpleHTTPServer::SimpleHTTPServer(EventLoop* loop,
-                                   const alpha::NetAddress& addr)
-    : loop_(loop), addr_(addr) {}
+SimpleHTTPServer::SimpleHTTPServer(EventLoop* loop) : loop_(loop) {}
 
 SimpleHTTPServer::~SimpleHTTPServer() = default;
 
-bool SimpleHTTPServer::Run() {
+bool SimpleHTTPServer::Run(const NetAddress& addr) {
   using namespace std::placeholders;
-  server_.reset(new TcpServer(loop_, addr_));
+  server_.reset(new TcpServer(loop_, addr));
   server_->SetOnRead(std::bind(&SimpleHTTPServer::OnMessage, this, _1, _2));
   server_->SetOnNewConnection(
       std::bind(&SimpleHTTPServer::OnConnected, this, _1));

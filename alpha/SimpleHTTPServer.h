@@ -30,9 +30,9 @@ class SimpleHTTPServer {
       std::function<void(TcpConnectionPtr, const HTTPMessage& message)>;
   using RequestCallback = std::function<
       void(TcpConnectionPtr, Slice path, const HTTPHeader& header, Slice data)>;
-  SimpleHTTPServer(EventLoop* loop, const NetAddress& addr);
+  SimpleHTTPServer(EventLoop* loop);
   ~SimpleHTTPServer();
-  bool Run();
+  bool Run(const NetAddress& addr);
   void SetCallback(const Callback& cb) { callback_ = cb; }
 
  private:
@@ -44,7 +44,6 @@ class SimpleHTTPServer {
 
   static const int kReadHeaderTimeout = 3000;  // ms
   EventLoop* loop_;
-  NetAddress addr_;
   std::unique_ptr<TcpServer> server_;
   Callback callback_;
 };
