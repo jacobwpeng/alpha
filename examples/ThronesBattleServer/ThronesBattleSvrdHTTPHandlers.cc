@@ -132,6 +132,54 @@ void ServerApp::HandleHTTPMessage(alpha::TcpConnectionPtr conn,
     alpha::HTTPResponseBuilder builder(conn);
     builder.status(200, "OK").body(oss.str()).SendWithEOM();
   } else if (path == "/warrior") {
+    UinType uin = 0;
+    auto params = message.Params();
+    auto it = params.find("uin");
+    if (it != params.end()) {
+      try {
+        uin = std::stoul(it->second);
+      }
+      catch (std::exception& e) {
+        LOG_INFO << "Invalid uin: " << it->second;
+      }
+    }
+    std::string reply;
+    if (uin) {
+      boost::property_tree::ptree pt;
+      auto it = warriors_->find(uin);
+      if (it != warriors_->end()) {
+        auto& warrior = it->second;
+        pt.put("current_season", true);
+        pt.put("uin", warrior.uin());
+        pt.put("zone", warrior.zone_id());
+        pt.put("camp", warrior.camp_id());
+        pt.put("dead", warrior.dead());
+        pt.put("last_killed_warrior", warrior.last_killed_warrior());
+        pt.put("round_killing_num", warrior.round_killing_num());
+        pt.put("season_killing_num", warrior.season_killing_num());
+        std::ostringstream oss;
+        boost::property_tree::write_json(oss, pt);
+        reply = oss.str();
+      } else {
+        auto it = rewards_->find(uin);
+        if (it != rewards_->end()) {
+          auto& lite = it->second;
+          pt.put("current_season", false);
+          pt.put("uin", lite.uin);
+          pt.put("zone", lite.zone_id);
+          pt.put("camp", lite.camp_id);
+          std::ostringstream oss;
+          boost::property_tree::write_json(oss, pt);
+          reply = oss.str();
+        }
+      }
+    }
+    alpha::HTTPResponseBuilder builder(conn);
+    if (reply.empty()) {
+      builder.status(400, "Bad Request").SendWithEOM();
+    } else {
+      builder.status(200, "OK").body(reply).SendWithEOM();
+    }
   }
 }
 }

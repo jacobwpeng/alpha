@@ -90,6 +90,7 @@ class GeneralInChiefList {
   void AddGeneralInChief(CampID camp, UinType uin, uint32_t season);
   // start 从0开始
   std::vector<General> Get(unsigned start, unsigned num) const;
+  General GetBySeason(unsigned season, bool* found) const;
   void Clear();
   uint16_t Size() const { return next_index_; }
 

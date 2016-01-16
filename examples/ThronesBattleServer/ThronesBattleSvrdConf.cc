@@ -143,7 +143,11 @@ bool ServerConf::InitFromFile(const char* file) {
     fight_server_addr_ = detail::ReadServerAddr(pt.get_child("Server.Fight"));
     feeds_server_addr_ = detail::ReadServerAddr(pt.get_child("Server.Feeds"));
     backup_server_addr_ = detail::ReadServerAddr(pt.get_child("Server.BackUp"));
+    service_addr_ = detail::ReadServerAddr(pt.get_child("Server.Game"));
+    admin_addr_ = detail::ReadServerAddr(pt.get_child("Server.Admin"));
     backup_interval_ = pt.get<unsigned>("Server.BackUp.<xmlattr>.interval");
+    pid_file_ = pt.get<std::string>("Server.PidFile.<xmlattr>.path");
+    daemonize_ = pt.get<bool>("Server.Daemonize.<xmlattr>.val");
 
     detail::ReadFileOption(pt.get_child("Server.BattleData"),
                            &battle_data_file_, &battle_data_file_size_);

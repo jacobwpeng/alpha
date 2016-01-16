@@ -79,9 +79,7 @@ const char ServerApp::kRewardsDataKey[] = "RewardsData";
 const char ServerApp::kRankDataKey[] = "RankData";
 
 ServerApp::ServerApp()
-    : async_tcp_client_(&loop_),
-      udp_server_(&loop_),
-      http_server_(&loop_, alpha::NetAddress("0.0.0.0", 51001)) {}
+    : async_tcp_client_(&loop_), udp_server_(&loop_), http_server_(&loop_) {}
 
 ServerApp::~ServerApp() = default;
 
@@ -319,8 +317,9 @@ void ServerApp::TrapSignals() {
 void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
                                    alpha::AsyncTcpConnectionCoroutine* co,
                                    Zone* zone, CampID one, CampID the_other) {
-  DLOG_INFO << "Zone: " << zone->id() << ", one camp: " << one
-            << ", the other camp: " << the_other;
+  LOG_INFO << "Perform battle between camps, Zone: " << zone->id()
+           << ", one camp: " << one << ", the other camp: " << the_other
+           << "coroutine id: " << co->id();
 
   auto one_camp = zone->GetCamp(one);
   auto the_other_camp = zone->GetCamp(the_other);
@@ -328,10 +327,10 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
     return one_camp->NoLivingWarriors() || the_other_camp->NoLivingWarriors();
   };
 
-  DLOG_INFO << "Before battle, Zone: " << zone->id()
-            << ", one camp living: " << one_camp->LivingWarriorsNum()
-            << ", the other camp living: "
-            << the_other_camp->LivingWarriorsNum();
+  LOG_INFO << "Before battle, Zone: " << zone->id()
+           << ", one camp living: " << one_camp->LivingWarriorsNum()
+           << ", the other camp living: "
+           << the_other_camp->LivingWarriorsNum();
 
   FeedsChannel feeds_channel(client, co, conf_->feeds_server_addr());
   BattleContext context = {.async_tcp_client = client,
@@ -374,7 +373,8 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
     broker.SetTheOtherCampWarriorRange(the_other_camp_choosen_warriors);
     broker.Wait();
 
-    DLOG_INFO << "One match done, total: " << match;
+    LOG_INFO << "One match done, total: " << match
+             << ", coroutine id: " << co->id();
   }
 
   ctx->winner = one_camp->NoLivingWarriors() ? the_other_camp : one_camp;
@@ -420,7 +420,7 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
   std::unique_ptr<bool, decltype(reset_backup_status)> stub(
       &is_backup_in_progress_, reset_backup_status);
 
-  DLOG_INFO << "Starting backup, server id: " << server_id_;
+  LOG_INFO << "Starting backup, server id: " << server_id_;
   auto put = [](std::shared_ptr<alpha::AsyncTcpConnection> conn,
                 alpha::Slice key, alpha::Slice val) {
     uint8_t kTTProtocolPutMagicFirst = 0xC8;
@@ -670,7 +670,8 @@ void ServerApp::DoWhenSeasonFinished() {
 void ServerApp::DoWhenRoundFinished() {
   CHECK(battle_data_->CurrentRoundFinished());
   auto current = battle_data_->CurrentRound();
-  LOG_INFO << "Round " << current << " finished";
+  LOG_INFO << "Season: " << battle_data_->CurrentSeason() << ", Round "
+           << current << " finished";
   if (current == kMaxRoundID) {
     DoWhenSeasonFinished();
   } else {
@@ -773,7 +774,7 @@ void ServerApp::ProcessDeadWarrior(BattleContext* ctx, UinType loser,
 void ServerApp::AddTimerForChangeSeason() {
   CHECK(battle_data_->SeasonFinished());
   alpha::TimeStamp at = alpha::from_time_t(conf_->NextSeasonBaseTime());
-  DLOG_INFO << "Will change season at " << at;
+  LOG_INFO << "Will change season at " << at;
   loop_.RunAt(at, [this] {
     bool done = battle_data_->ChangeSeason();
     if (done) {
@@ -792,7 +793,7 @@ void ServerApp::AddTimerForBattleRound() {
   auto next_round = finished_round + 1;
   alpha::TimeStamp at =
       alpha::from_time_t(conf_->BattleRoundStartTime(next_round));
-  DLOG_INFO << "Will start round " << next_round << " at " << at;
+  LOG_INFO << "Will start round " << next_round << " at " << at;
   loop_.RunAt(at, [this] { RunBattle(); });
 }
 
@@ -833,8 +834,9 @@ void ServerApp::RunBattle() {
   StartAllZonesToCurrentRound();
 
   auto unfinished_battle_tasks = GetAllUnfinishedTasks();
-  DLOG_INFO << "unfinished_battle_tasks.size() = "
-            << unfinished_battle_tasks.size();
+  LOG_INFO << "Season: " << battle_data_->CurrentSeason()
+           << ", Round: " << battle_data_->CurrentRound()
+           << ", Unfinished task: " << unfinished_battle_tasks.size();
   if (!unfinished_battle_tasks.empty()) {
     for (auto& task : unfinished_battle_tasks) {
       RunBattleTask(task);
@@ -883,8 +885,8 @@ void ServerApp::StartAllZonesToCurrentRound() {
       // 开启本轮
       bool ok = zone->matchups()->StartNextRound();
       CHECK(ok) << "Start next round failed, zone_id: " << zone_id;
-      DLOG_INFO << "Set zone(" << zone_id << ") to next round("
-                << zone->matchups()->CurrentRound() << ")";
+      LOG_INFO << "Set zone(" << zone_id << ") to round("
+               << zone->matchups()->CurrentRound() << ")";
 
       //重置所有赛场玩家的存活状态
       for (uint16_t i = 0; i < kCampIDMax; ++i) {
@@ -904,19 +906,26 @@ void ServerApp::StartAllZonesToCurrentRound() {
 }
 
 int ServerApp::Run() {
-  /* Daemonize */
-  int err = daemon(0, 0);
-  if (err) {
-    PLOG_ERROR << "daemon";
-    return err;
+  if (conf_->daemonize()) {
+    /* Daemonize */
+    int err = daemon(0, 0);
+    if (err) {
+      PLOG_ERROR << "daemon";
+      return err;
+    }
+  }
+  pid_file_ = alpha::make_unique<alpha::PidFile>(conf_->pid_file());
+  if (!pid_file_->valid()) {
+    LOG_ERROR << "Create PidFile failed";
+    return EXIT_FAILURE;
   }
   /* Trap signals */
   TrapSignals();
   udp_server_.SetMessageCallback(
       std::bind(&ServerApp::HandleUDPMessage, this, _1, _2, _3, _4));
-  bool ok = udp_server_.Run(alpha::NetAddress("0.0.0.0", 51000));
+  bool ok = udp_server_.Run(conf_->service_addr());
   if (!ok) return EXIT_FAILURE;
-  ok = http_server_.Run();
+  ok = http_server_.Run(conf_->admin_addr());
   if (!ok) return EXIT_FAILURE;
   loop_.Run();
   return EXIT_SUCCESS;
@@ -1223,7 +1232,8 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
   } else {
     resp->set_max_show_round(kMaxRoundID);
   }
-  if (!battle_data_->InitialSeason() && battle_data_->SeasonFinished()) {
+  if (!battle_data_->InitialSeason() &&
+      (battle_data_->SeasonNotStarted() || battle_data_->SeasonFinished())) {
     for (int i = 0; i < kCampIDMax; ++i) {
       CampID camp_id = (CampID)(i + 1);
       auto rank = zone->matchups()->FinalRank(camp_id);
@@ -1353,11 +1363,19 @@ int ServerApp::HandleQueryRoundRewardRequest(UinType uin,
   CHECK(ValidCampID(camp_id));
   resp->set_season(reward_season);
   resp->set_zone(zone_id);
+  resp->set_camp(camp_id);
   auto zone = battle_data_->GetZone(zone_id);
   auto zone_finished_round = zone->matchups()->FinishedRound();
   auto game_log =
       zone->matchups()->GetGameLog((CampID)camp_id, zone_finished_round);
   resp->set_game_log(game_log);
+  if (!battle_data_->InitialSeason()) {
+    bool found = false;
+    auto general = zone->generals()->GetBySeason(reward_season, &found);
+    if (found) {
+      resp->set_zone_general(general.uin);
+    }
+  }
   return Error::kOk;
 }
 

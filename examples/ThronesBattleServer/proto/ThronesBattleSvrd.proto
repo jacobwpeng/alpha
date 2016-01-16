@@ -126,6 +126,8 @@ message QueryRoundRewardResponse {
   optional uint32 season = 1;
   optional uint32 zone = 2;
   optional bytes game_log = 3;
+  optional uint32 zone_general = 4;
+  optional uint32 camp = 5;
 }
 
 message QueryGeneralInChiefRequest {

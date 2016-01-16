@@ -30,6 +30,8 @@ class ServerConf final {
   std::string warriors_data_file() const { return warriors_data_file_; }
   std::string rewards_data_file() const { return rewards_data_file_; }
   std::string rank_data_file() const { return rank_data_file_; }
+  std::string pid_file() const { return pid_file_; }
+  bool daemonize() const { return daemonize_; }
 
   bool InSignUpTime() const;
   bool InRewardTime(bool season_finished) const;
@@ -42,6 +44,8 @@ class ServerConf final {
   alpha::NetAddress fight_server_addr() const { return fight_server_addr_; }
   alpha::NetAddress feeds_server_addr() const { return feeds_server_addr_; }
   alpha::NetAddress backup_server_addr() const { return backup_server_addr_; }
+  alpha::NetAddress service_addr() const { return service_addr_; }
+  alpha::NetAddress admin_addr() const { return admin_addr_; }
 
   const ZoneConf* GetZoneConf(const Zone* zone);
   const ZoneConf* GetZoneConf(uint16_t zone_id);
@@ -51,6 +55,7 @@ class ServerConf final {
   bool InitFromFile(const char* file);
   time_t CurrentSeasonBaseTime() const;
 
+  bool daemonize_;
   unsigned backup_interval_;
   unsigned signup_start_offset_;
   unsigned signup_finish_offset_;
@@ -63,12 +68,15 @@ class ServerConf final {
   alpha::NetAddress fight_server_addr_;
   alpha::NetAddress feeds_server_addr_;
   alpha::NetAddress backup_server_addr_;
+  alpha::NetAddress admin_addr_;
+  alpha::NetAddress service_addr_;
   Reward lucky_warrior_reward_;
   unsigned round_start_time_offsets_[kMaxRoundID];
   std::string battle_data_file_;
   std::string warriors_data_file_;
   std::string rewards_data_file_;
   std::string rank_data_file_;
+  std::string pid_file_;
   std::vector<ZoneConf> zones_;
 };
 }

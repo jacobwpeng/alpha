@@ -52,6 +52,7 @@ class TaskBroker final {
 
   void SendNonAckedTask(size_t max = std::numeric_limits<size_t>::max());
   void WaitAllTasks();
+  void ConnectToRemote();
   void ReconnectToRemote();
 
   alpha::AsyncTcpClient* client_;

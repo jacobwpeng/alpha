@@ -35,7 +35,7 @@ TaskBroker::~TaskBroker() {
 }
 
 void TaskBroker::Wait() {
-  ReconnectToRemote();
+  ConnectToRemote();
   CHECK(one_camp_warriors_.size() == the_other_camp_warriors_.size());
   size_t index = 0;
   while (1) {
@@ -52,6 +52,10 @@ void TaskBroker::Wait() {
       }
       WaitAllTasks();
       if (non_acked_tasks_.empty()) break;
+    }
+    catch (alpha::AsyncTcpConnectionOperationTimeout& e) {
+      LOG_WARNING << "Operation timeout, try reestablish connection";
+      ReconnectToRemote();
     }
     catch (alpha::AsyncTcpConnectionException& e) {
       LOG_WARNING << "TaskBroker::Wait failed, " << e.what();
@@ -203,18 +207,29 @@ size_t TaskBroker::HandleIncomingData(int idle_time, bool all) {
   return received;
 }
 
+void TaskBroker::ConnectToRemote() {
+  CHECK(conn_ == nullptr);
+  do {
+    LOG_INFO << "Connecting to fight server " << fight_server_addr_;
+    conn_ = client_->ConnectTo(fight_server_addr_, co_);
+    if (conn_) {
+      LOG_INFO << "Connected to fight server " << fight_server_addr_;
+      break;
+    }
+    static const int kRetryInterval = 3000;
+    LOG_WARNING << "Failed connect to fight server, retry after "
+                << kRetryInterval << " ms";
+    co_->YieldWithTimeout(kRetryInterval);
+    co_->clear_timeout();
+  } while (conn_ == nullptr);
+}
+
 void TaskBroker::ReconnectToRemote() {
   if (conn_) {
     conn_->Close();
     conn_ = nullptr;
   }
-  do {
-    LOG_INFO << "Connect to " << fight_server_addr_;
-    conn_ = client_->ConnectTo(fight_server_addr_, co_);
-    LOG_INFO_IF(conn_) << "Reconnect succeed";
-    if (conn_) break;
-    LOG_WARNING << "Failed connect to remote";
-    co_->YieldWithTimeout(3000);
-  } while (conn_ == nullptr);
+  ConnectToRemote();
+  LOG_INFO_IF(conn_) << "Reconnect succeed";
 }
 }

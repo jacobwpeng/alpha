@@ -41,6 +41,17 @@ std::vector<General> GeneralInChiefList::Get(unsigned start,
   return result;
 }
 
+General GeneralInChiefList::GetBySeason(unsigned season, bool* found) const {
+  for (auto i = 0u; i < next_index_; ++i) {
+    if (generals_[i].season == season) {
+      *found = true;
+      return generals_[i];
+    }
+  }
+  *found = false;
+  return General();
+}
+
 void GeneralInChiefList::Clear() {
   next_index_ = 0;
   memset(generals_, 0x0, sizeof(generals_));

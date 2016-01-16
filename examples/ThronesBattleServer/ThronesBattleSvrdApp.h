@@ -20,6 +20,7 @@
 #include <alpha/UDPServer.h>
 #include <alpha/SimpleHTTPServer.h>
 #include <alpha/experimental/RegionBasedHashMap.h>
+#include <alpha/experimental/PidFile.h>
 #include "ThronesBattleSvrdDef.h"
 #include "ThronesBattleSvrdMessageDispatcher.h"
 #include "ThronesBattleSvrdRankVector.h"
@@ -152,6 +153,7 @@ class ServerApp final {
   std::unique_ptr<BattleData> battle_data_;
   std::unique_ptr<WarriorMap> warriors_;
   std::unique_ptr<RewardMap> rewards_;
+  std::unique_ptr<alpha::PidFile> pid_file_;
   std::map<uint16_t, std::unique_ptr<RankVector>> season_ranks_;
   std::map<uint16_t, std::unique_ptr<RankVector>> history_ranks_;
 
