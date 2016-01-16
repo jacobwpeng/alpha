@@ -17,7 +17,7 @@
 #include <vector>
 #include <atomic>
 #include <functional>
-#include <alpha/logger_file.h>
+#include <alpha/LoggerFile.h>
 #include <alpha/logger_stream.h>
 
 namespace alpha {

@@ -21,7 +21,6 @@
 #include <cstdio>
 #include <cstring>
 #include <functional>
-#include <alpha/logger_file.h>
 #include <alpha/compiler.h>
 #include <alpha/StackTrace.h>
 

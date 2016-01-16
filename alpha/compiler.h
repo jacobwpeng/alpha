@@ -9,8 +9,7 @@
  * ==============================================================================
  */
 
-#ifndef __COMPILER_H__
-#define __COMPILER_H__
+#pragma once
 
 #ifndef likely
 #define likely(x) __builtin_expect((x), 1)
@@ -36,5 +35,3 @@ std::unique_ptr<T> make_unique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 }
-
-#endif /* ----- #ifndef __COMPILER_H__----- */
