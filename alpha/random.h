@@ -17,8 +17,20 @@
 #include <algorithm>
 #include <functional>
 #include <type_traits>
+#include <alpha/compiler.h>
+#include <alpha/ScopedGeneric.h>
 
 namespace alpha {
+
+class BufferedRandomDevice {
+ public:
+  explicit BufferedRandomDevice();
+  void Get(void* data, size_t size);
+
+ private:
+  alpha::ScopedFILE file_;
+};
+
 class ThreadLocalPRNG {
  public:
   ThreadLocalPRNG();
@@ -52,6 +64,8 @@ class Random {
 
   template <typename RNG = DefaultRNG>
   static void Seed(ValidRNG<RNG>& rng);
+
+  static void SecureRandom(void* data, size_t size);
 
   template <typename RNG = ThreadLocalPRNG>
   static uint32_t Rand32(uint32_t min, uint32_t max,

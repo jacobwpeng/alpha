@@ -13,6 +13,16 @@
 #include "random.h"
 
 namespace alpha {
+BufferedRandomDevice::BufferedRandomDevice()
+    : file_(::fopen("/dev/urandom", "rb")) {
+  CHECK(file_.is_valid());
+}
+
+void BufferedRandomDevice::Get(void* data, size_t size) {
+  auto nread = ::fread(data, 1, size, file_.get());
+  CHECK(nread == size);
+}
+
 class ThreadLocalPRNG::LocalInstancePRNG {
  public:
   LocalInstancePRNG() : rng(Random::Create()) {}
@@ -28,5 +38,10 @@ ThreadLocalPRNG::result_type ThreadLocalPRNG::impl(
 ThreadLocalPRNG::ThreadLocalPRNG() {
   thread_local static LocalInstancePRNG local;
   local_ = &local;
+}
+
+void Random::SecureRandom(void* data, size_t size) {
+  static thread_local BufferedRandomDevice d;
+  d.Get(data, size);
 }
 }
