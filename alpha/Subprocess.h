@@ -93,6 +93,8 @@ class Subprocess {
   pid_t pid() const { return pid_; }
 
  private:
+  int PrepareChild(const std::vector<std::string>& argv, const char* executable,
+                   const Options& options);
   pid_t pid_;
   ProcessReturnCode return_code_;
 };

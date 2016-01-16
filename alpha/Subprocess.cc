@@ -100,26 +100,10 @@ Subprocess::Subprocess(const std::vector<std::string>& argv,
   if (rc < 0) {
     throw SubprocessSpawnError("fork failed", errno);
   } else if (rc == 0) {
-    for (const auto& p : options.fd_actions_) {
-      if (p.second == Options::kActionClose) {
-        ::close(p.second);
-      }
+    int err = PrepareChild(argv, executable, options);
+    if (err) {
+      throw SubprocessSpawnError("PrepareChild", err);
     }
-    if (options.close_other_fds_) {
-      for (int fd = getdtablesize() - 1; fd >= 3; --fd) {
-        if (options.fd_actions_.count(fd) == 0) {
-          ::close(fd);
-        }
-      }
-    }
-    std::vector<char*> args;
-    std::transform(
-        std::begin(argv), std::end(argv), std::back_inserter(args),
-        [](const std::string& arg) { return const_cast<char*>(arg.data()); });
-    args.push_back(nullptr);
-    rc = execv(executable, args.data());
-    PLOG_ERROR << "execv";
-    throw SubprocessSpawnError("execv failed", errno);
   } else {
     return_code_.SetRunning();
     pid_ = rc;
@@ -150,5 +134,33 @@ ProcessReturnCode Subprocess::Poll() {
     return_code_ = ProcessReturnCode(raw_status);
   }
   return return_code_;
+}
+
+int Subprocess::PrepareChild(const std::vector<std::string>& argv,
+                             const char* executable,
+                             const Subprocess::Options& options) {
+  for (int i = 0; i < NSIG; ++i) {
+    signal(i, SIG_DFL);
+  }
+  for (const auto& p : options.fd_actions_) {
+    if (p.second == Options::kActionClose) {
+      ::close(p.second);
+    }
+  }
+  if (options.close_other_fds_) {
+    for (int fd = getdtablesize() - 1; fd >= 3; --fd) {
+      if (options.fd_actions_.count(fd) == 0) {
+        ::close(fd);
+      }
+    }
+  }
+  std::vector<char*> args;
+  std::transform(
+      std::begin(argv), std::end(argv), std::back_inserter(args),
+      [](const std::string& arg) { return const_cast<char*>(arg.data()); });
+  args.push_back(nullptr);
+  int rc = execv(executable, args.data());
+  PLOG_ERROR << "execv failed";
+  return rc;
 }
 }
