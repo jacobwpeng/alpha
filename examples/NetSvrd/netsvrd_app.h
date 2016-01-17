@@ -16,6 +16,7 @@
 #include <memory>
 #include <alpha/compiler.h>
 #include <alpha/tcp_server.h>
+#include <alpha/File.h>
 
 class NetSvrdVirtualServer;
 class NetSvrdApp {
@@ -29,10 +30,14 @@ class NetSvrdApp {
 
  private:
   using NetSvrdVirtualServerPtr = std::unique_ptr<NetSvrdVirtualServer>;
+  bool CreatePidFile();
+  void TrapSignals();
   int Cron();
 
   alpha::EventLoop* loop_;
   uint64_t net_server_id_;
+  alpha::File pid_file_;
+  std::string pid_file_path_;
   std::vector<NetSvrdVirtualServerPtr> servers_;
 };
 
