@@ -18,7 +18,7 @@
 #include <alpha/logger.h>
 #include <alpha/format.h>
 #include <alpha/HTTPResponseBuilder.h>
-#include "MysticSalesmanSvrd.pb.h"
+#include "proto/MysticSalesmanSvrd.pb.h"
 
 MysticSalesmanSvrdApp::MysticSalesmanSvrdApp(int udp_port, int http_port,
                                              const char* mmap_file_path)
@@ -26,7 +26,7 @@ MysticSalesmanSvrdApp::MysticSalesmanSvrdApp(int udp_port, int http_port,
       http_port_(http_port),
       mmap_file_path_(mmap_file_path),
       udp_server_(&loop_),
-      http_server_(&loop_, alpha::NetAddress("0.0.0.0", http_port)) {}
+      http_server_(&loop_) {}
 
 int MysticSalesmanSvrdApp::Run() {
   using namespace std::placeholders;
@@ -70,7 +70,7 @@ int MysticSalesmanSvrdApp::Run() {
 
   http_server_.SetCallback(
       std::bind(&MysticSalesmanSvrdApp::HandleHTTPMessage, this, _1, _2));
-  ok = http_server_.Run();
+  ok = http_server_.Run(alpha::NetAddress("0.0.0.0", http_port_));
   if (!ok) {
     PLOG_ERROR << "Start http server failed";
     return EXIT_FAILURE;
