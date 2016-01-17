@@ -21,115 +21,123 @@
 #include <cassert>
 #include <sstream>
 
-#include "compiler.h"
-#include "logger.h"
-#include "event_loop.h"
-#include "net_address.h"
-#include "socket_ops.h"
-
-static void DelayChannelDestroy(std::shared_ptr<alpha::Channel> channel) {
-  (void)channel;
-}
+#include <alpha/compiler.h>
+#include <alpha/logger.h>
+#include <alpha/channel.h>
+#include <alpha/event_loop.h>
+#include <alpha/net_address.h>
+#include <alpha/socket_ops.h>
+#include <alpha/UnixErrorUtil.h>
+#include <alpha/ScopedGeneric.h>
 
 namespace alpha {
 TcpConnector::TcpConnector(EventLoop* loop) : loop_(loop) {}
 
-TcpConnector::~TcpConnector() {
-  for (auto& p : connecting_fds_) {
-    ::close(p.first);
-  }
-}
+TcpConnector::~TcpConnector() = default;
 
 void TcpConnector::ConnectTo(const alpha::NetAddress& addr) {
   assert(connected_callback_);
-  int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-  if (unlikely(fd == -1)) {
-    PLOG_ERROR << "Create socket failed, addr = " << addr;
-    assert(false);
-    return;
-  }
-  SocketOps::SetNonBlocking(fd);
+  alpha::ScopedFD scoped_fd(::socket(AF_INET, SOCK_STREAM, 0));
+  PCHECK(scoped_fd.is_valid()) << "Create socket failed, addr = " << addr;
+  SocketOps::SetNonBlocking(scoped_fd.get());
   struct sockaddr_in sock_addr = addr.ToSockAddr();
-  int err =
-      ::connect(fd, reinterpret_cast<sockaddr*>(&sock_addr), sizeof(sock_addr));
+  int err = ::connect(scoped_fd.get(), reinterpret_cast<sockaddr*>(&sock_addr),
+                      sizeof(sock_addr));
   if (err) {
     if (errno == EINPROGRESS) {
       DLOG_INFO << "connect inprogress to " << addr;
-      bool ok = AddConnectingFd(fd, addr);
-      CHECK(ok);
+      AddConnectingFd(std::move(scoped_fd), addr);
     } else {
-      ::close(fd);
       PLOG_WARNING << "connect to " << addr << " failed immediately";
       if (error_callback_) {
         error_callback_(addr);
       }
     }
   } else {
-    DLOG_INFO << "connected to " << addr << " immediately, fd: " << fd;
-    connected_callback_(fd);
+    DLOG_INFO << "connected to " << addr
+              << " immediately, fd: " << scoped_fd.get();
+    connected_callback_(scoped_fd.Release());
   }
 }
 
 void TcpConnector::OnConnected(int fd, const NetAddress& addr) {
-  bool ok = RemoveConnectingFd(fd);
-  CHECK(ok);
+  auto connecting_fd_info = CheckRemoveConnectingFD(fd);
+  DeferDestroyChannel(std::move(connecting_fd_info.channel));
   int err = SocketOps::GetAndClearError(fd);
   if (err) {
     DLOG_INFO << "Writable when connect error";
-    ::close(fd);
     if (error_callback_) error_callback_(addr);
   } else {
     DLOG_INFO << "connected to " << addr << ", fd: " << fd;
-    connected_callback_(fd);
+    connected_callback_(connecting_fd_info.fd.Release());
   }
 }
 
 void TcpConnector::OnError(int fd, const alpha::NetAddress& addr) {
+  auto connecting_fd_info = CheckRemoveConnectingFD(fd);
+  connecting_fd_info.channel->set_write_callback(nullptr);
+  DeferDestroyChannel(std::move(connecting_fd_info.channel));
   int err = SocketOps::GetAndClearError(fd);
-  bool ok = RemoveConnectingFd(fd);
-  assert(ok);
-  (void)ok;
-  char buf[128];
-  char* msg = ::strerror_r(err, buf, sizeof(buf));
+  auto msg = UnixErrorToString(err);
   if (err == ECONNREFUSED) {
     // 不把这个当做是异常
     LOG_INFO << msg << ", addr = " << addr << ", fd: " << fd;
   } else {
     LOG_WARNING << msg << ", addr = " << addr << ", fd: " << fd;
   }
-  ::close(fd);
   if (error_callback_) {
     error_callback_(addr);
   }
 }
 
-bool TcpConnector::RemoveConnectingFd(int fd) {
-  auto it = connecting_fds_.find(fd);
-  if (it == connecting_fds_.end()) {
-    return false;
+void TcpConnector::OnConnectTimeout(int fd, const NetAddress& addr) {
+  auto connecting_fd_info = CheckRemoveConnectingFD(fd, true);
+  LOG_INFO << "Connecting to " << addr << " timeout, fd: " << fd;
+  (void)connecting_fd_info;
+  if (error_callback_) {
+    error_callback_(addr);
   }
-  std::shared_ptr<Channel> channel(std::move(it->second));
-  channel->Remove();
-  loop_->QueueInLoop(std::bind(DelayChannelDestroy, channel));
-  connecting_fds_.erase(it);
-  return true;
 }
 
-bool TcpConnector::AddConnectingFd(int fd, const NetAddress& addr) {
+TcpConnector::ConnectingFDInfo TcpConnector::CheckRemoveConnectingFD(
+    int fd, bool timeout) {
   auto it = connecting_fds_.find(fd);
-  if (it != connecting_fds_.end()) {
-    return false;
+  CHECK(it != connecting_fds_.end()) << "fd not found, fd: " << fd;
+  auto info = std::move(it->second);
+  connecting_fds_.erase(it);
+  if (!timeout) {
+    loop_->RemoveTimer(info.timeout_timer_id);
+    info.timeout_timer_id = 0;
   }
-  std::unique_ptr<Channel> channel(new Channel(loop_, fd));
+  return std::move(info);
+}
+
+void TcpConnector::AddConnectingFd(alpha::ScopedFD fd, const NetAddress& addr) {
+  int raw_fd = fd.get();
+  LOG_INFO << "Add connecting fd: " << raw_fd;
   using namespace std::placeholders;
-  DLOG_INFO << "Create channel for Connect to " << addr << ", fd: " << fd
-            << ", channel: " << channel.get();
-  channel->set_error_callback(
-      std::bind(&TcpConnector::OnError, this, fd, addr));
-  channel->set_write_callback(
-      std::bind(&TcpConnector::OnConnected, this, fd, addr));
-  channel->EnableWriting();
-  connecting_fds_.emplace(fd, std::move(channel));
-  return true;
+  auto it = connecting_fds_.find(raw_fd);
+  CHECK(it == connecting_fds_.end()) << "Same fd in connecting map, fd: "
+                                     << raw_fd;
+  ConnectingFDInfo info;
+  info.channel = alpha::make_unique<Channel>(loop_, raw_fd);
+  info.channel->set_error_callback(
+      std::bind(&TcpConnector::OnError, this, raw_fd, addr));
+  info.channel->set_write_callback(
+      std::bind(&TcpConnector::OnConnected, this, raw_fd, addr));
+  info.channel->EnableWriting();
+  static const int kDefaultConnectTimeout = 5000;  // ms
+  info.timeout_timer_id = loop_->RunAfter(
+      kDefaultConnectTimeout,
+      std::bind(&TcpConnector::OnConnectTimeout, this, raw_fd, addr));
+  info.fd = std::move(fd);
+  connecting_fds_.emplace(raw_fd, std::move(info));
+}
+
+void TcpConnector::DeferDestroyChannel(std::unique_ptr<Channel>&& channel) {
+  channel->DisableAll();
+  channel->Remove();
+  std::shared_ptr<Channel> shared_channel(std::move(channel));
+  loop_->QueueInLoop([shared_channel] {});
 }
 }
