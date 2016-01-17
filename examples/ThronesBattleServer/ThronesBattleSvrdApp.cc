@@ -19,6 +19,7 @@
 #include <alpha/random.h>
 #include <alpha/Endian.h>
 #include <alpha/IOBuffer.h>
+#include <alpha/FileUtil.h>
 #include <alpha/AsyncTcpConnection.h>
 #include <alpha/AsyncTcpConnectionException.h>
 #include <alpha/AsyncTcpConnectionCoroutine.h>
@@ -81,7 +82,11 @@ const char ServerApp::kRankDataKey[] = "RankData";
 ServerApp::ServerApp()
     : async_tcp_client_(&loop_), udp_server_(&loop_), http_server_(&loop_) {}
 
-ServerApp::~ServerApp() = default;
+ServerApp::~ServerApp() {
+  if (pid_file_) {
+    alpha::DeleteFile(conf_->pid_file());
+  }
+}
 
 int ServerApp::Init(int argc, char* argv[]) {
   CHECK(argc == 2 || argc == 4) << "Invalid argc: " << argc;
@@ -299,6 +304,26 @@ int ServerApp::InitRecoveryMode(const char* server_id, const char* suffix) {
         &ServerApp::RecoveryRoutine, this, _1, _2, server_id, suffix));
   });
   return EXIT_SUCCESS;
+}
+
+bool ServerApp::CreatePidFile() {
+  alpha::File file(conf_->pid_file(), O_WRONLY | O_CREAT);
+  if (!file) {
+    PLOG_ERROR << "Open pid file failed";
+    return false;
+  }
+  if (!file.TryLock()) {
+    PLOG_ERROR << "Lock pid file failed";
+    return false;
+  }
+  auto pid = std::to_string(getpid());
+  int rc = file.Write(pid.c_str(), pid.size());
+  if (rc != static_cast<int>(pid.size())) {
+    PLOG_ERROR << "Write pid to file failed";
+    return false;
+  }
+  pid_file_ = std::move(file);
+  return true;
 }
 
 void ServerApp::TrapSignals() {
@@ -914,8 +939,7 @@ int ServerApp::Run() {
       return err;
     }
   }
-  pid_file_ = alpha::make_unique<alpha::PidFile>(conf_->pid_file());
-  if (!pid_file_->valid()) {
+  if (!CreatePidFile()) {
     LOG_ERROR << "Create PidFile failed";
     return EXIT_FAILURE;
   }

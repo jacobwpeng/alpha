@@ -220,7 +220,6 @@ void TaskBroker::ConnectToRemote() {
     LOG_WARNING << "Failed connect to fight server, retry after "
                 << kRetryInterval << " ms";
     co_->YieldWithTimeout(kRetryInterval);
-    co_->clear_timeout();
   } while (conn_ == nullptr);
 }
 
