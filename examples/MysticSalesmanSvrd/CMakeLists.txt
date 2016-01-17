@@ -10,4 +10,4 @@ add_subdirectory(proto)
 
 find_library(PROTOBUF "libprotobuf.a")
 add_executable(${PROG} ${MYSTIC_SALESMAN_SVRD_SRCS})
-target_link_libraries(${PROG} ${MYSTIC_SALESMAN_PROTO_LIB} "alpha" ${PROTOBUF})
+target_link_libraries(${PROG} ${MYSTIC_SALESMAN_PROTO_LIB} "alpha" ${PROTOBUF} "pthread")
