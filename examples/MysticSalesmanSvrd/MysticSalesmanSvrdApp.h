@@ -29,7 +29,12 @@ class MysticSalesmanSvrdApp final {
 
  private:
   static const size_t kMMapFileSize = 10 << 20;
-  using UserGroupMap = alpha::RegionBasedHashMap<uint32_t, uint32_t>;
+  struct UserSalesInfo {
+    unsigned group;
+    unsigned from;
+    unsigned to;
+  };
+  using UserGroupMap = alpha::RegionBasedHashMap<uint32_t, UserSalesInfo>;
   int Daemonize();
   void TrapSignals();
   void HandleUDPMessage(alpha::UDPSocket* socket, alpha::IOBuffer* buf,

@@ -7,4 +7,6 @@ message QueryUserGroup {
 message QueryUserGroupReply {
   optional uint32 uin = 1;
   optional uint32 user_group = 2;
+  optional uint32 sales_from = 3;
+  optional uint32 sales_to = 4;
 };

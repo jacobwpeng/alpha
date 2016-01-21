@@ -112,24 +112,49 @@ void MysticSalesmanSvrdApp::HandleUDPMessage(alpha::UDPSocket* socket,
   if (it == user_group_map_->end()) {
     resp.set_user_group(0);
   } else {
-    resp.set_user_group(it->second);
+    resp.set_user_group(it->second.group);
+    resp.set_sales_from(it->second.from);
+    resp.set_sales_to(it->second.to);
   }
   DLOG_INFO << "Process uin " << req.uin() << ", group: " << resp.user_group();
   alpha::IOBufferWithSize out(resp.ByteSize());
   ok = resp.SerializeToArray(out.data(), out.size());
   CHECK(ok);
-  int nwritten = socket->SendTo(&out, out.size(), peer);
-  LOG_WARNING_IF(nwritten < 0) << "Send udp message to " << peer
-                               << " failed, size: " << out.size();
+  int n = socket->SendTo(&out, out.size(), peer);
+  LOG_WARNING_IF(n < 0) << "Send udp message to " << peer
+                        << " failed, size: " << out.size();
 }
 
 void MysticSalesmanSvrdApp::HandleHTTPMessage(
     alpha::TcpConnectionPtr conn, const alpha::HTTPMessage& message) {
   alpha::HTTPResponseBuilder bad_request(conn);
   bad_request.status(400, "Bad Request");
-  if (message.Method() != "POST") {
-    LOG_INFO << "Unexpected method: " << message.Method();
-    bad_request.SendWithEOM();
+  if (message.Method() == "GET") {
+    unsigned uin = 0;
+    auto it = message.Params().find("uin");
+    if (it != message.Params().end()) {
+      try {
+        uin = std::stoul(it->second);
+      }
+      catch (std::exception& e) {
+        LOG_INFO << "Invalid uin: " << it->second;
+      }
+    }
+
+    if (uin == 0) {
+      bad_request.SendWithEOM();
+    } else {
+      auto it = user_group_map_->find(uin);
+      alpha::HTTPResponseBuilder builder(conn);
+      if (it != user_group_map_->end()) {
+        std::ostringstream oss;
+        oss << "Group: " << it->second.group << ", From: " << it->second.from
+            << ", To: " << it->second.to;
+        builder.status(200, "OK").body(oss.str()).SendWithEOM();
+      } else {
+        builder.status(404, "Not Found").SendWithEOM();
+      }
+    }
     return;
   }
 
@@ -146,18 +171,25 @@ void MysticSalesmanSvrdApp::HandleHTTPMessage(
   boost::trim(file);
   std::istringstream iss(file);
   std::string line;
-  std::map<uint32_t, uint32_t> new_user_group_map;
+  std::map<uint32_t, UserSalesInfo> new_user_group_map;
+  int lineno = 0;
   while (std::getline(iss, line)) {
+    ++lineno;
     boost::trim(line);
-    uint32_t uin, group;
-    int num = sscanf(line.c_str(), "%u %u", &uin, &group);
-    if (num != 2) {
+    UserSalesInfo info;
+    uint32_t uin;
+    int num = sscanf(line.c_str(), "%u  %u  %u  %u", &uin, &info.group,
+                     &info.from, &info.to);
+    if (num != 4 || info.from == 0 || info.to == 0) {
+      std::ostringstream oss;
+      oss << "Invalid line in file, line num: " << lineno << ", line: " << line;
       LOG_INFO << "Invalid line in file: " << line;
-      bad_request.SendWithEOM();
+      bad_request.body(oss.str()).SendWithEOM();
       return;
     }
-    DLOG_INFO << "Read " << uin << " " << group;
-    new_user_group_map[uin] = group;
+    DLOG_INFO << "Uin: " << uin << ", group: " << info.group
+              << ", from: " << info.from << ", to: " << info.to;
+    new_user_group_map[uin] = info;
   }
 
   user_group_map_->clear();
@@ -168,5 +200,10 @@ void MysticSalesmanSvrdApp::HandleHTTPMessage(
     user_group_map_->insert(pair);
   }
   LOG_INFO << "User group map updated, new size: " << user_group_map_->size();
-  alpha::HTTPResponseBuilder(conn).status(200, "OK").SendWithEOM();
+  std::ostringstream oss;
+  oss << "Update succeed, new size: " << user_group_map_->size();
+  alpha::HTTPResponseBuilder(conn)
+      .status(200, "OK")
+      .body(oss.str())
+      .SendWithEOM();
 }
