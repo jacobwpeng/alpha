@@ -180,6 +180,12 @@ void ServerApp::HandleHTTPMessage(alpha::TcpConnectionPtr conn,
     } else {
       builder.status(200, "OK").body(reply).SendWithEOM();
     }
+  } else if (path == "/backup") {
+    auto backup = [this](alpha::AsyncTcpClient* client,
+                         alpha::AsyncTcpConnectionCoroutine* co) {
+      BackupRoutine(client, co, false);
+    };
+    async_tcp_client_.RunInCoroutine(backup);
   }
 }
 }
