@@ -398,8 +398,8 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
     broker.SetTheOtherCampWarriorRange(the_other_camp_choosen_warriors);
     broker.Wait();
 
-    LOG_INFO << "One match done, total: " << match
-             << ", coroutine id: " << co->id();
+    DLOG_INFO << "One match done, total: " << match
+              << ", coroutine id: " << co->id();
   }
 
   ctx->winner = one_camp->NoLivingWarriors() ? the_other_camp : one_camp;
@@ -517,6 +517,7 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
              << ", suffix: " << suffix;
     backup_suffix_index = 1 - backup_suffix_index;
     last_backup_time_ = alpha::Now();
+    conn->Close();
   }
   catch (alpha::AsyncTcpConnectionException& e) {
     LOG_WARNING << "Backup failed, " << e.what();
@@ -1206,8 +1207,6 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
     }
   } else {
     auto matchups = zone->matchups();
-    LOG_INFO << "battle_round: " << battle_round
-             << ", matchups->CurrentRound() = " << matchups->CurrentRound();
     if (battle_round > matchups->CurrentRound()) {
       return Error::kRoundNotStarted;
     }
