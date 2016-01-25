@@ -14,7 +14,7 @@
 
 #include <string>
 #include <alpha/slice.h>
-#include <alpha/time_util.h>
+#include <alpha/TimeUtil.h>
 #include <alpha/File.h>
 
 namespace alpha {

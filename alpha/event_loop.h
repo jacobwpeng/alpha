@@ -20,7 +20,7 @@
 #include <memory>
 #include <functional>
 #include "compiler.h"
-#include "time_util.h"
+#include "TimeUtil.h"
 #include "timer_manager.h"
 
 namespace alpha {
