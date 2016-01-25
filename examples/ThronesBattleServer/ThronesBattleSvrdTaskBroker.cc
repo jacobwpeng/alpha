@@ -210,10 +210,10 @@ size_t TaskBroker::HandleIncomingData(int idle_time, bool all) {
 void TaskBroker::ConnectToRemote() {
   CHECK(conn_ == nullptr);
   do {
-    LOG_INFO << "Connecting to fight server " << fight_server_addr_;
+    DLOG_INFO << "Connecting to fight server " << fight_server_addr_;
     conn_ = client_->ConnectTo(fight_server_addr_, co_);
     if (conn_) {
-      LOG_INFO << "Connected to fight server " << fight_server_addr_;
+      DLOG_INFO << "Connected to fight server " << fight_server_addr_;
       break;
     }
     static const int kRetryInterval = 3000;

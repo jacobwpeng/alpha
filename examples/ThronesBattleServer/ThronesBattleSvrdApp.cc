@@ -398,8 +398,11 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
     broker.SetTheOtherCampWarriorRange(the_other_camp_choosen_warriors);
     broker.Wait();
 
-    DLOG_INFO << "One match done, total: " << match
-              << ", coroutine id: " << co->id();
+    LOG_INFO << "Zone: " << ctx->zone->id() << ", one: " << ctx->one->id()
+             << ", living warriors num: " << ctx->one->LivingWarriorsNum()
+             << ", the other: " << ctx->the_other->id()
+             << ", living warriors num: " << ctx->the_other->LivingWarriorsNum()
+             << ", match: " << match;
   }
 
   ctx->winner = one_camp->NoLivingWarriors() ? the_other_camp : one_camp;
@@ -433,10 +436,12 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
     auto interval =
         std::max(now, last_backup_time_) - std::min(now, last_backup_time_);
     if (interval < conf_->backup_interval() * alpha::kMilliSecondsPerSecond) {
-      LOG_INFO << "Giveup backup, last_backup_time_: " << last_backup_time_
-               << ", now: " << now << ", interval: " << interval
-               << ", backup_interval: "
-               << conf_->backup_interval() * alpha::kMilliSecondsPerSecond;
+      LOG_INFO << "Giveup backup, last_backup_time_: "
+               << alpha::to_time_t(last_backup_time_)
+               << ", now: " << alpha::to_time_t(now)
+               << ", interval: " << interval << "(ms), backup_interval: "
+               << conf_->backup_interval() * alpha::kMilliSecondsPerSecond
+               << "(ms)";
       return;
     }
   }
@@ -529,29 +534,34 @@ void ServerApp::RecoveryRoutine(alpha::AsyncTcpClient* client,
                                 const char* server_id, const char* suffix) {
   LOG_INFO << "Recovery started, server id: " << server_id
            << ", suffix: " << suffix;
-  auto conn = client->ConnectTo(conf_->backup_server_addr(), co);
-  auto ok = RecoverOneFile(conn.get(),
-                           CreateBackupKey(kBattleDataKey, suffix, server_id),
-                           battle_data_underlying_file_.get());
-  if (!ok) return;
+  try {
+    auto conn = client->ConnectTo(conf_->backup_server_addr(), co);
+    auto ok = RecoverOneFile(conn.get(),
+                             CreateBackupKey(kBattleDataKey, suffix, server_id),
+                             battle_data_underlying_file_.get());
+    if (!ok) return;
 
-  ok = RecoverOneFile(conn.get(),
-                      CreateBackupKey(kWarriorsDataKey, suffix, server_id),
-                      warriors_data_underlying_file_.get());
-  if (!ok) return;
+    ok = RecoverOneFile(conn.get(),
+                        CreateBackupKey(kWarriorsDataKey, suffix, server_id),
+                        warriors_data_underlying_file_.get());
+    if (!ok) return;
 
-  ok = RecoverOneFile(conn.get(),
-                      CreateBackupKey(kRewardsDataKey, suffix, server_id),
-                      rewards_data_underlying_file_.get());
-  if (!ok) return;
+    ok = RecoverOneFile(conn.get(),
+                        CreateBackupKey(kRewardsDataKey, suffix, server_id),
+                        rewards_data_underlying_file_.get());
+    if (!ok) return;
 
-  ok = RecoverOneFile(conn.get(),
-                      CreateBackupKey(kRankDataKey, suffix, server_id),
-                      rank_data_underlying_file_.get());
-  if (!ok) return;
+    ok = RecoverOneFile(conn.get(),
+                        CreateBackupKey(kRankDataKey, suffix, server_id),
+                        rank_data_underlying_file_.get());
+    if (!ok) return;
 
-  LOG_INFO << "Recovery done, server id: " << server_id
-           << ", suffix: " << suffix;
+    LOG_INFO << "Recovery done, server id: " << server_id
+             << ", suffix: " << suffix;
+  }
+  catch (alpha::AsyncTcpConnectionException& e) {
+    LOG_ERROR << "Recovery failed, " << e.what();
+  }
   loop_.Quit();
 }
 
@@ -599,8 +609,6 @@ bool ServerApp::RecoverOneFile(alpha::AsyncTcpConnection* conn,
     return false;
   }
 }
-
-void ServerApp::AddRoundReward(Zone* zone, Camp* camp) {}
 
 void ServerApp::ProcessFightTaskResult(
     BattleContext* ctx, const FightServerProtocol::TaskResult& result) {
@@ -771,10 +779,6 @@ void ServerApp::ReportKillingNumToRank(uint16_t zone_id, UinType uin,
   auto it = season_ranks_.find(zone_id);
   CHECK(it != season_ranks_.end());
   it->second->Report(uin, killing_num);
-
-  // it = history_ranks_.find(zone_id);
-  // CHECK(it != history_ranks_.end());
-  // it->second->ReportDelta(uin, killing_num);
 }
 
 void ServerApp::ProcessDeadWarrior(BattleContext* ctx, UinType loser,

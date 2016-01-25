@@ -90,8 +90,6 @@ class ServerApp final {
                        const char* server_id, const char* suffix);
   bool RecoverOneFile(alpha::AsyncTcpConnection* conn,
                       const std::string& backup_key, alpha::MMapFile* file);
-  void AddRoundReward(Zone* zone, Camp* camp);
-
   void ProcessFightTaskResult(BattleContext* ctx,
                               const FightServerProtocol::TaskResult& result);
   void ProcessSurvivedWarrior(BattleContext* ctx, UinType winner,
