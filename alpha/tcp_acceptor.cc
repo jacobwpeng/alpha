@@ -20,6 +20,7 @@
 #include "net_address.h"
 #include "event_loop.h"
 #include "socket_ops.h"
+#include <alpha/ScopedGeneric.h>
 
 namespace alpha {
 TcpAcceptor::TcpAcceptor(EventLoop* loop) : loop_(loop), listen_fd_(-1) {}
@@ -52,15 +53,15 @@ bool TcpAcceptor::Bind(const alpha::NetAddress& addr) {
 }
 
 bool TcpAcceptor::Listen() {
+  CHECK(new_connection_callback_);
   int ret = ::listen(listen_fd_, SOMAXCONN);
   if (unlikely(ret == -1)) {
     PLOG_ERROR << "listen failed";
     return false;
   } else {
     channel_.reset(new Channel(loop_, listen_fd_));
-    channel_->EnableReading();
     channel_->set_read_callback(std::bind(&TcpAcceptor::OnNewConnection, this));
-    loop_->UpdateChannel(channel_.get());
+    channel_->EnableReading();
     return true;
   }
 }
@@ -68,14 +69,18 @@ bool TcpAcceptor::Listen() {
 void TcpAcceptor::OnNewConnection() {
   struct sockaddr_in addr;
   socklen_t len = sizeof(addr);
-  int fd = ::accept(listen_fd_, reinterpret_cast<sockaddr*>(&addr), &len);
-  if (unlikely(fd == -1)) {
+  alpha::ScopedFD fd(
+      ::accept(listen_fd_, reinterpret_cast<sockaddr*>(&addr), &len));
+  if (unlikely(!fd.is_valid())) {
     PLOG_WARNING << "accept failed";
   } else {
-    SocketOps::SetNonBlocking(fd);
-    DLOG_INFO << "New Connection, fd = " << fd;
-    if (new_connection_callback_) {
-      new_connection_callback_(fd);
+    int err = SocketOps::GetAndClearError(fd.get());
+    if (unlikely(err)) {
+      LOG_INFO << "Error immediately after accept, err: " << err;
+    } else {
+      SocketOps::SetNonBlocking(fd.get());
+      DLOG_INFO << "New Connection, fd = " << fd.get();
+      new_connection_callback_(fd.Release());
     }
   }
 }
