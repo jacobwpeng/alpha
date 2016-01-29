@@ -73,11 +73,8 @@ sockaddr_in NetAddress::ToSockAddr() const {
   sa.sin_family = AF_INET;
   sa.sin_port = htons(port_);
   int ret = ::inet_pton(AF_INET, ip_.c_str(), &(sa.sin_addr));
-  if (unlikely(ret != 1)) {
-    LOG_ERROR << "inet_pton failed, ret = " << ret
-              << ", addr = " << FullAddress();
-    assert(false);
-  }
+  PCHECK(ret == 1) << "inet_pton failed, ret = " << ret
+                   << ", addr = " << FullAddress();
 
   return sa;
 }
@@ -87,11 +84,8 @@ NetAddress NetAddress::GetLocalAddr(int sockfd) {
   memset(&sa, 0x0, sizeof(sa));
   socklen_t sock_len = sizeof(sa);
 
-  int ret = ::getsockname(sockfd, reinterpret_cast<sockaddr*>(&sa), &sock_len);
-  if (unlikely(ret != 0)) {
-    PLOG_ERROR << "getsockname failed";
-    assert(false);
-  }
+  int err = ::getsockname(sockfd, reinterpret_cast<sockaddr*>(&sa), &sock_len);
+  PLOG_WARNING_IF(err) << "getsockname failed";
   return NetAddress(sa);
 }
 
@@ -100,11 +94,8 @@ NetAddress NetAddress::GetPeerAddr(int sockfd) {
   memset(&sa, 0x0, sizeof(sa));
   socklen_t sock_len = sizeof(sa);
 
-  int ret = ::getpeername(sockfd, reinterpret_cast<sockaddr*>(&sa), &sock_len);
-  if (unlikely(ret != 0)) {
-    PLOG_ERROR << "getpeername failed";
-    assert(false);
-  }
+  int err = ::getpeername(sockfd, reinterpret_cast<sockaddr*>(&sa), &sock_len);
+  PLOG_WARNING_IF(err) << "getpeername failed";
   return NetAddress(sa);
 }
 }
