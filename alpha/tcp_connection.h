@@ -16,9 +16,9 @@
 #include <memory>
 #include <functional>
 #include <boost/any.hpp>
-#include "compiler.h"
-#include "net_address.h"
-#include "tcp_connection_buffer.h"
+#include <alpha/compiler.h>
+#include <alpha/net_address.h>
+#include <alpha/tcp_connection_buffer.h>
 
 namespace alpha {
 class Channel;
@@ -59,7 +59,9 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
   }
 
   void SetContext(const Context& ctx) { ctx_ = ctx; }
-  bool HasContext() const { return !ctx_.empty(); };
+  bool HasContext() const {
+    return !ctx_.empty();
+  };
   void ClearContext() { ctx_ = Context(); }
   Context GetContext() const { return ctx_; }
   template <typename T>
@@ -76,8 +78,13 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
   EventLoop* loop() const { return loop_; }
   State state() const { return state_; }
 
-  NetAddress LocalAddr() const { return *local_addr_; }
-  NetAddress PeerAddr() const { return *peer_addr_; }
+  bool LocalAddr(NetAddress* addr);
+  bool PeerAddr(NetAddress* addr);
+
+  /* Deprecated, use previous *Addr functions Instead */
+  NetAddress LocalAddr();
+  NetAddress PeerAddr();
+
   TcpConnectionBuffer* ReadBuffer() { return &read_buffer_; }
   TcpConnectionBuffer* WriteBuffer() { return &write_buffer_; }
   size_t BytesCanWrite() const;
@@ -88,7 +95,6 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
   void WriteToPeer();
   void ConnectedToPeer();
   void HandleError();
-  void GetAddressInfo();
 
   void InitConnected();
   void Init();

@@ -170,19 +170,6 @@ void TcpConnection::HandleError() {
   }
 }
 
-void TcpConnection::GetAddressInfo() {
-  assert(state_ == State::kConnected);
-  assert(!local_addr_);
-
-  local_addr_.reset(new NetAddress(NetAddress::GetLocalAddr(fd_)));
-  auto peer_addr = NetAddress::GetPeerAddr(fd_);
-  if (peer_addr_) {
-    assert(*peer_addr_ == peer_addr);
-  } else {
-    SetPeerAddr(NetAddress::GetPeerAddr(fd_));
-  }
-}
-
 size_t TcpConnection::BytesCanWrite() const {
   return write_buffer_.SpaceBeforeFull();
 }
@@ -197,6 +184,51 @@ void TcpConnection::Init() {
   channel_->set_write_callback(std::bind(&TcpConnection::WriteToPeer, this));
   channel_->set_error_callback(std::bind(&TcpConnection::HandleError, this));
   channel_->EnableReading();
-  GetAddressInfo();
+  // Try to get both sides address
+  NetAddress addr;
+  LocalAddr(&addr);
+  PeerAddr(&addr);
+}
+
+NetAddress TcpConnection::LocalAddr() {
+  NetAddress addr;
+  if (LocalAddr(&addr)) {
+    return addr;
+  }
+  return NetAddress("0.0.0.0", 0);
+}
+
+NetAddress TcpConnection::PeerAddr() {
+  NetAddress addr;
+  if (PeerAddr(&addr)) {
+    return addr;
+  }
+  return NetAddress("0.0.0.0", 0);
+}
+
+bool TcpConnection::LocalAddr(NetAddress* addr) {
+  if (!local_addr_) {
+    bool ok = NetAddress::GetLocalAddr(fd_, addr);
+    if (!ok) {
+      return false;
+    }
+    local_addr_ = alpha::make_unique<NetAddress>(*addr);
+  } else {
+    *addr = *local_addr_;
+  }
+  return true;
+}
+
+bool TcpConnection::PeerAddr(NetAddress* addr) {
+  if (!peer_addr_) {
+    bool ok = NetAddress::GetLocalAddr(fd_, addr);
+    if (!ok) {
+      return false;
+    }
+    peer_addr_ = alpha::make_unique<NetAddress>(*addr);
+  } else {
+    *addr = *peer_addr_;
+  }
+  return true;
 }
 }

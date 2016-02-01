@@ -35,8 +35,12 @@ class NetAddress {
   sockaddr_in ToSockAddr() const;
 
   /* Get local/peer addr from connected sockfd */
+  /* Deprecated, use bool Get*Addr(int sockfd, NetAddress*) instead */
   static NetAddress GetLocalAddr(int sockfd);
   static NetAddress GetPeerAddr(int sockfd);
+
+  static bool GetLocalAddr(int sockfd, NetAddress* addr);
+  static bool GetPeerAddr(int sockfd, NetAddress* addr);
 
  private:
   std::string ip_;

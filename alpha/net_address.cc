@@ -80,22 +80,44 @@ sockaddr_in NetAddress::ToSockAddr() const {
 }
 
 NetAddress NetAddress::GetLocalAddr(int sockfd) {
+  NetAddress addr;
+  bool ok = GetLocalAddr(sockfd, &addr);
+  (void)ok;
+  return addr;
+}
+
+NetAddress NetAddress::GetPeerAddr(int sockfd) {
+  NetAddress addr;
+  bool ok = GetPeerAddr(sockfd, &addr);
+  (void)ok;
+  return addr;
+}
+
+bool NetAddress::GetLocalAddr(int sockfd, NetAddress* addr) {
   sockaddr_in sa;
   memset(&sa, 0x0, sizeof(sa));
   socklen_t sock_len = sizeof(sa);
 
   int err = ::getsockname(sockfd, reinterpret_cast<sockaddr*>(&sa), &sock_len);
-  PLOG_WARNING_IF(err) << "getsockname failed";
-  return NetAddress(sa);
+  if (err) {
+    return false;
+  } else {
+    *addr = NetAddress(sa);
+    return true;
+  }
 }
 
-NetAddress NetAddress::GetPeerAddr(int sockfd) {
+bool NetAddress::GetPeerAddr(int sockfd, NetAddress* addr) {
   sockaddr_in sa;
   memset(&sa, 0x0, sizeof(sa));
   socklen_t sock_len = sizeof(sa);
 
   int err = ::getpeername(sockfd, reinterpret_cast<sockaddr*>(&sa), &sock_len);
-  PLOG_WARNING_IF(err) << "getpeername failed";
-  return NetAddress(sa);
+  if (err) {
+    return false;
+  } else {
+    *addr = NetAddress(sa);
+    return true;
+  }
 }
 }
