@@ -131,8 +131,9 @@ void MysticSalesmanSvrdApp::HandleHTTPMessage(
   bad_request.status(400, "Bad Request");
   if (message.Method() == "GET") {
     unsigned uin = 0;
-    auto it = message.Params().find("uin");
-    if (it != message.Params().end()) {
+    auto params = message.Params();
+    auto it = params.find("uin");
+    if (it != params.end()) {
       try {
         uin = std::stoul(it->second);
       }
