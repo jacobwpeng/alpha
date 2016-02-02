@@ -23,33 +23,33 @@ int main(int argc, char* argv[]) {
   alpha::Logger::Init(argv[0]);
   alpha::EventLoop loop;
   loop.TrapSignal(SIGINT, [&] { loop.Quit(); });
-  alpha::SimpleHTTPServer http_server(&loop,
-                                      alpha::NetAddress("0.0.0.0", 8080));
-  http_server.SetCallback(
-      [](alpha::TcpConnectionPtr conn, const alpha::HTTPMessage& message) {
-        LOG_INFO << "Client ip = " << message.ClientIp()
-                 << ", port = " << message.ClientPort()
-                 << ", method = " << message.Method()
-                 << ", path = " << message.Path()
-                 << ", query string = " << message.QueryString();
-        message.Headers().Foreach(
-            [](const std::string& name,
-               const std::string& val) { LOG_INFO << name << ": " << val; });
-        if (!message.Body().empty()) {
-          LOG_INFO << "Body size: " << message.Body().size();
-        }
+  alpha::SimpleHTTPServer http_server(&loop);
+  http_server.SetCallback([](alpha::TcpConnectionPtr conn,
+                             const alpha::HTTPMessage& message) {
+    LOG_INFO << "Client ip = " << message.ClientIp()
+             << ", port = " << message.ClientPort()
+             << ", method = " << message.Method()
+             << ", path = " << message.Path()
+             << ", query string = " << message.QueryString();
+    message.Headers().Foreach([](
+        const std::string& name,
+        const std::string& val) { LOG_INFO << name << ": " << val; });
+    if (!message.Body().empty()) {
+      LOG_INFO << "Body size: " << message.Body().size();
+    }
 
-        for (auto& p : message.Params()) {
-          LOG_INFO << p.first << ": " << p.second;
-        }
-        const auto& payloads = message.payloads();
-        for (auto payload : payloads) {
-          DLOG_INFO << "Payload size: " << payload.size();
-        }
-        alpha::HTTPResponseBuilder builder(conn);
-        builder.status(201, "Created").SendWithEOM();
-      });
-  if (http_server.Run()) {
+    for (auto& p : message.Params()) {
+      LOG_INFO << p.first << ": " << p.second;
+    }
+    const auto& payloads = message.payloads();
+    for (auto payload : payloads) {
+      DLOG_INFO << "Payload size: " << payload.size();
+    }
+    alpha::HTTPResponseBuilder builder(conn);
+    builder.status(201, "Created").SendWithEOM();
+  });
+  int port = std::stoul(argv[1]);
+  if (http_server.Run(alpha::NetAddress("0.0.0.0", port))) {
     loop.Run();
     return EXIT_SUCCESS;
   }
