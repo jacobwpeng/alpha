@@ -2,12 +2,21 @@ cmake_minimum_required(VERSION 3.0)
 project(alpha CXX)
 
 include_directories(${PROJECT_SOURCE_DIR})
-set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra -Werror -ggdb -D_FILE_OFFSET_BITS=64")
+set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra -Werror -ggdb -fPIC -D_FILE_OFFSET_BITS=64")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-reorder-blocks")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
 
 include(CheckCXXCompilerFlag)
+
+check_cxx_compiler_flag(-Og FLAG_SUPPORT_DEBUG_OPTIMIZE)
+if (FLAG_SUPPORT_DEBUG_OPTIMIZE)
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og")
+endif()
+
+check_cxx_compiler_flag(-fno-reorder-blocks FLAG_SUPPORT_NO_REORDER_BLOCKS)
+if (FLAG_SUPPORT_NO_REORDER_BLOCKS)
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-reorder-blocks")
+endif()
 
 check_cxx_compiler_flag(-Wunused-parameter FLAG_SUPPORT_UNUSED_PARAMETER)
 if(FLAG_SUPPORT_UNUSED_PARAMETER)
