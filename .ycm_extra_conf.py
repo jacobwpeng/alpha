@@ -38,10 +38,6 @@ flags = [
 '-Wall',
 '-Wextra',
 '-Werror',
-'-Wc++98-compat',
-'-Wno-long-long',
-'-Wno-variadic-macros',
-'-fexceptions',
 # You 100% do NOT need -DUSE_CLANG_COMPLETER in your flags; only the YCM
 # source code needs it.
 #'-DUSE_CLANG_COMPLETER',
