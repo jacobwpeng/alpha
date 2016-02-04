@@ -1,7 +1,7 @@
 /*
  * ==============================================================================
  *
- *       Filename:  unittest-skiplist.cc
+ *       Filename:  SkipListTest.cc
  *        Created:  06/05/15 22:06:13
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
@@ -34,8 +34,8 @@ class SkipListTest : public ::testing::Test {
 
 TEST_F(SkipListTest, Create) {
   ASSERT_NE(list_, nullptr);
-  EXPECT_EQ(list_->size(), 0);
-  EXPECT_NE(list_->max_size(), 0);
+  EXPECT_EQ(list_->size(), 0u);
+  EXPECT_NE(list_->max_size(), 0u);
   EXPECT_TRUE(list_->empty());
   EXPECT_EQ(list_->begin(), list_->end());
 }
