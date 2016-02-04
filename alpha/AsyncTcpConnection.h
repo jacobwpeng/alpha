@@ -37,17 +37,13 @@ class AsyncTcpConnection {
   size_t Read(IOBuffer* buf, size_t buf_len, size_t bytes = 0);
   std::string Read(size_t bytes = 0, int timeout = kNoTimeout);
   std::string ReadCached(size_t bytes = 0);
-  alpha::Slice PeekCached() const;
+  char* PeekCached(size_t* length) const;
   void Close();
   // Coroutine* co() { return co_; }
   bool HasCachedData() const;
   size_t CachedDataSize() const;
-  Status status() const {
-    return status_;
-  };
-  bool closed() const {
-    return status_ == Status::kClosed;
-  };
+  Status status() const { return status_; };
+  bool closed() const { return status_ == Status::kClosed; };
 
  private:
   friend class AsyncTcpClient;

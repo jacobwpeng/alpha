@@ -32,6 +32,8 @@ class TcpConnectionBuffer {
   bool Append(const void* data, size_t size);
   size_t SpaceBeforeFull() const;
 
+  char* Read(size_t* length);
+  const char* Read(size_t* length) const;
   alpha::Slice Read() const;
   size_t ReadAndClear(void* buf, size_t len);
   void ConsumeBytes(size_t len);

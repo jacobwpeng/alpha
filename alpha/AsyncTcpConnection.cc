@@ -111,8 +111,8 @@ std::string AsyncTcpConnection::ReadCached(size_t bytes) {
   return result;
 }
 
-alpha::Slice AsyncTcpConnection::PeekCached() const {
-  return conn_->ReadBuffer()->Read();
+char* AsyncTcpConnection::PeekCached(size_t* length) const {
+  return conn_->ReadBuffer()->Read(length);
 }
 
 void AsyncTcpConnection::Close() {

@@ -13,7 +13,8 @@
 #include "tcp_connection_buffer.h"
 #include <cassert>
 #include <cstring>
-#include "compiler.h"
+#include <alpha/compiler.h>
+#include <alpha/logger.h>
 
 namespace alpha {
 const size_t TcpConnectionBuffer::kMaxBufferSize = 1 << 20;  // 1MiB
@@ -53,6 +54,20 @@ bool TcpConnectionBuffer::Append(const void* data, size_t size) {
 
 size_t TcpConnectionBuffer::SpaceBeforeFull() const {
   return kMaxBufferSize - internal_buffer_.size() + GetContiguousSpace();
+}
+
+char* TcpConnectionBuffer::Read(size_t* length) {
+  return const_cast<char*>(
+      static_cast<const TcpConnectionBuffer*>(this)->Read(length));
+}
+
+const char* TcpConnectionBuffer::Read(size_t* length) const {
+  CheckIndex();
+  if (write_index_ == read_index_) {
+    return nullptr;
+  }
+  *length = write_index_ - read_index_;
+  return &internal_buffer_[read_index_];
 }
 
 alpha::Slice TcpConnectionBuffer::Read() const {
@@ -96,7 +111,7 @@ bool TcpConnectionBuffer::EnsureSpace(size_t n) {
 }
 
 void TcpConnectionBuffer::CheckIndex() const {
-  assert(read_index_ <= write_index_);
-  assert(write_index_ <= internal_buffer_.size());
+  CHECK(read_index_ <= write_index_);
+  CHECK(write_index_ <= internal_buffer_.size());
 }
 }

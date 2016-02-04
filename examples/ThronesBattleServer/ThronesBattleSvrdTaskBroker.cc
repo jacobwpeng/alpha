@@ -52,12 +52,10 @@ void TaskBroker::Wait() {
       }
       WaitAllTasks();
       if (non_acked_tasks_.empty()) break;
-    }
-    catch (alpha::AsyncTcpConnectionOperationTimeout& e) {
+    } catch (alpha::AsyncTcpConnectionOperationTimeout& e) {
       LOG_WARNING << "Operation timeout, try reestablish connection";
       ReconnectToRemote();
-    }
-    catch (alpha::AsyncTcpConnectionException& e) {
+    } catch (alpha::AsyncTcpConnectionException& e) {
       LOG_WARNING << "TaskBroker::Wait failed, " << e.what();
       ReconnectToRemote();
       DLOG_INFO << "After ReconnectToRemote, index = " << index
@@ -140,16 +138,16 @@ bool TaskBroker::HandleReplyFrame(const NetSvrdFrame* frame) {
 
 void TaskBroker::HandleCachedReplyData() {
   do {
-    auto cached_data = conn_->PeekCached();
-    auto header =
-        NetSvrdFrame::CastHeaderOnly(cached_data.data(), cached_data.size());
+    size_t length;
+    auto cached_data = conn_->PeekCached(&length);
+    auto header = NetSvrdFrame::CastHeaderOnly(cached_data, length);
     if (header == nullptr) {
       break;
     }
-    if (cached_data.size() < header->size()) {
+    if (length < header->size()) {
       break;
     }
-    auto frame = reinterpret_cast<const NetSvrdFrame*>(cached_data.data());
+    auto frame = reinterpret_cast<const NetSvrdFrame*>(cached_data);
     HandleReplyFrame(frame);
     // Maybe use DropCached instead
     auto data = conn_->ReadCached(frame->size());
