@@ -13,21 +13,20 @@
 #include "tcp_connection.h"
 
 #include <sys/uio.h>
-#include <cassert>
-#include "compiler.h"
-#include "logger.h"
-#include "channel.h"
-#include "event_loop.h"
-#include "socket_ops.h"
+#include <alpha/compiler.h>
+#include <alpha/logger.h>
+#include <alpha/channel.h>
+#include <alpha/event_loop.h>
+#include <alpha/socket_ops.h>
 
 namespace alpha {
 TcpConnection::TcpConnection(EventLoop* loop, int fd,
                              TcpConnection::State state)
     : loop_(loop), fd_(fd), state_(state) {
-  assert(loop_);
-  assert(fd_);
+  DCHECK(loop_);
+  DCHECK(fd_);
   channel_.reset(new Channel(loop, fd));
-  assert(state_ == State::kConnected);
+  DCHECK(state_ == State::kConnected);
   Init();
 }
 
@@ -53,7 +52,7 @@ bool TcpConnection::Write(const alpha::Slice& data) {
 }
 
 void TcpConnection::Close() {
-  assert(state_ != State::kDisconnected);
+  DCHECK(state_ != State::kDisconnected);
   if (state_ == State::kConnected) {
     channel_->DisableReading();
     SocketOps::DisableReading(fd_);
@@ -68,7 +67,7 @@ void TcpConnection::Close() {
 }
 
 void TcpConnection::CloseByPeer() {
-  assert(state_ == State::kConnected);
+  DCHECK(state_ == State::kConnected);
   channel_->DisableReading();
   channel_->DisableWriting();
   state_ = State::kDisconnected;
@@ -88,7 +87,7 @@ void TcpConnection::ReadFromPeer() {
 
   size_t contiguous_space_in_buffer = read_buffer_.GetContiguousSpace();
   auto space_before_full = read_buffer_.SpaceBeforeFull();
-  assert(space_before_full >= contiguous_space_in_buffer);
+  DCHECK(space_before_full >= contiguous_space_in_buffer);
   iov[0].iov_base = read_buffer_.WriteBegin();
   iov[0].iov_len = contiguous_space_in_buffer;
   iov[1].iov_base = local_buffer;
@@ -113,7 +112,7 @@ void TcpConnection::ReadFromPeer() {
       size_t local_buffer_bytes = bytes - contiguous_space_in_buffer;
       alpha::Slice data(local_buffer, local_buffer_bytes);
       bool ok = read_buffer_.Append(data);
-      assert(ok);
+      DCHECK(ok);
       (void)ok;
     }
     DLOG_INFO << "Read " << bytes << " bytes from " << *peer_addr_;
@@ -175,7 +174,7 @@ size_t TcpConnection::BytesCanWrite() const {
 }
 
 void TcpConnection::SetPeerAddr(const alpha::NetAddress& addr) {
-  assert(!peer_addr_);
+  DCHECK(!peer_addr_);
   peer_addr_.reset(new NetAddress(addr));
 }
 

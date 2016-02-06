@@ -10,28 +10,35 @@
  * =============================================================================
  */
 
-#ifndef __TCP_CONNECTION_BUFFER_H__
-#define __TCP_CONNECTION_BUFFER_H__
+#pragma once
 
-#include "slice.h"
 #include <vector>
+#include <alpha/slice.h>
 
 namespace alpha {
-class TcpConnectionBuffer {
+class TcpConnectionBuffer final {
  public:
-  TcpConnectionBuffer();
+  static const size_t kDefaultBufferSize;
+  static const size_t kMaxBufferSize;
+
+  TcpConnectionBuffer(size_t default_size = kDefaultBufferSize);
   ~TcpConnectionBuffer();
+
+  size_t max_size() const;
+  size_t capacity() const;
 
   //不触发扩容的写
   size_t GetContiguousSpace() const;
   char* WriteBegin();
-  void AddBytes(size_t len);
+  bool AddBytes(size_t n);
+  bool EnsureSpace(size_t n);
 
   //写入(可能会扩容, 超限返回false)
-  bool Append(const alpha::Slice& data);
+  bool Append(alpha::Slice s);
   bool Append(const void* data, size_t size);
   size_t SpaceBeforeFull() const;
 
+  size_t BytesToRead() const;
   char* Read(size_t* length);
   const char* Read(size_t* length) const;
   alpha::Slice Read() const;
@@ -39,15 +46,9 @@ class TcpConnectionBuffer {
   void ConsumeBytes(size_t len);
 
  private:
-  bool EnsureSpace(size_t n);
   void CheckIndex() const;
-
-  static const size_t kDefaultBufferSize = 1 << 16;  // 64KiB
-  static const size_t kMaxBufferSize;
+  size_t read_index_;
+  size_t write_index_;
   std::vector<char> internal_buffer_;
-  size_t read_index_ = 0;
-  size_t write_index_ = 0;
 };
 }
-
-#endif /* ----- #ifndef __TCP_CONNECTION_BUFFER_H__  ----- */

@@ -11,21 +11,29 @@
  */
 
 #include "tcp_connection_buffer.h"
-#include <cassert>
 #include <cstring>
 #include <alpha/compiler.h>
 #include <alpha/logger.h>
 
 namespace alpha {
-const size_t TcpConnectionBuffer::kMaxBufferSize = 1 << 20;  // 1MiB
-TcpConnectionBuffer::TcpConnectionBuffer()
-    : internal_buffer_(kDefaultBufferSize) {}
+
+const size_t TcpConnectionBuffer::kDefaultBufferSize = 1 << 16;
+const size_t TcpConnectionBuffer::kMaxBufferSize = 1 << 20;
+
+TcpConnectionBuffer::TcpConnectionBuffer(size_t default_size)
+    : read_index_(0), write_index_(0), internal_buffer_(default_size) {
+  CHECK(default_size <= kMaxBufferSize);
+}
 
 TcpConnectionBuffer::~TcpConnectionBuffer() = default;
 
+size_t TcpConnectionBuffer::max_size() const { return kMaxBufferSize; }
+
+size_t TcpConnectionBuffer::capacity() const { return internal_buffer_.size(); }
+
 size_t TcpConnectionBuffer::GetContiguousSpace() const {
   CheckIndex();
-  return internal_buffer_.size() - write_index_;
+  return capacity() - write_index_;
 }
 
 char* TcpConnectionBuffer::WriteBegin() {
@@ -33,20 +41,24 @@ char* TcpConnectionBuffer::WriteBegin() {
   return &internal_buffer_[write_index_];
 }
 
-void TcpConnectionBuffer::AddBytes(size_t len) {
-  write_index_ += len;
+bool TcpConnectionBuffer::AddBytes(size_t n) {
+  if (write_index_ + n > internal_buffer_.size()) {
+    return false;
+  };
+  write_index_ += n;
   CheckIndex();
+  return true;
 }
 
-bool TcpConnectionBuffer::Append(const alpha::Slice& data) {
-  return Append(data.data(), data.size());
+bool TcpConnectionBuffer::Append(alpha::Slice s) {
+  return Append(s.data(), s.size());
 }
 
 bool TcpConnectionBuffer::Append(const void* data, size_t size) {
   if (unlikely(!EnsureSpace(size))) {
     return false;
   }
-  assert(GetContiguousSpace() >= size);
+  DCHECK(GetContiguousSpace() >= size);
   ::memcpy(WriteBegin(), data, size);
   AddBytes(size);
   return true;
@@ -56,6 +68,11 @@ size_t TcpConnectionBuffer::SpaceBeforeFull() const {
   return kMaxBufferSize - internal_buffer_.size() + GetContiguousSpace();
 }
 
+size_t TcpConnectionBuffer::BytesToRead() const {
+  CheckIndex();
+  return write_index_ - read_index_;
+}
+
 char* TcpConnectionBuffer::Read(size_t* length) {
   return const_cast<char*>(
       static_cast<const TcpConnectionBuffer*>(this)->Read(length));
@@ -63,11 +80,8 @@ char* TcpConnectionBuffer::Read(size_t* length) {
 
 const char* TcpConnectionBuffer::Read(size_t* length) const {
   CheckIndex();
-  if (write_index_ == read_index_) {
-    return nullptr;
-  }
-  *length = write_index_ - read_index_;
-  return &internal_buffer_[read_index_];
+  *length = BytesToRead();
+  return *length ? &internal_buffer_[read_index_] : nullptr;
 }
 
 alpha::Slice TcpConnectionBuffer::Read() const {
