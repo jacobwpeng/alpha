@@ -29,6 +29,7 @@ class RingBuffer {
   DISABLE_COPY_ASSIGNMENT(RingBuffer);
 
  public:
+  static const int kMinByteSize;
   static const int kMaxBufferBodyLength = 1 << 16;  // 64KB
 
  public:
@@ -38,7 +39,7 @@ class RingBuffer {
   bool Push(const char* buf, int len);
   char* Pop(int* len);
 
-  int space_left() const;
+  int SpaceLeft() const;
   bool empty() const;
 
  private:

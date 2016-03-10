@@ -20,14 +20,16 @@ namespace detail {
 static __thread char local_buf[RingBuffer::kMaxBufferBodyLength];
 }
 
+const int RingBuffer::kMinByteSize =
+    sizeof(RingBuffer::OffsetData) + RingBuffer::kExtraSpace;
+
 RingBuffer::RingBuffer() : start_(NULL), end_(NULL), offset_(NULL) {}
 
 std::unique_ptr<RingBuffer> RingBuffer::RestoreFrom(void *start, size_t len) {
+  if (start == nullptr || len < kMinByteSize) return nullptr;
   std::unique_ptr<RingBuffer> rb(new RingBuffer);
   void *mem = start;
   rb->offset_ = reinterpret_cast<OffsetData *>(mem);
-
-  assert(len >= sizeof(OffsetData) + kExtraSpace);
 
   rb->start_ = static_cast<char *>(start) + sizeof(OffsetData);
   rb->end_ = static_cast<char *>(start) + len;
@@ -35,11 +37,10 @@ std::unique_ptr<RingBuffer> RingBuffer::RestoreFrom(void *start, size_t len) {
 }
 
 std::unique_ptr<RingBuffer> RingBuffer::CreateFrom(void *start, size_t len) {
+  if (start == nullptr || len < kMinByteSize) return nullptr;
   std::unique_ptr<RingBuffer> rb(new RingBuffer);
   void *mem = start;
   rb->offset_ = reinterpret_cast<OffsetData *>(mem);
-
-  assert(len >= sizeof(OffsetData) + kExtraSpace);
 
   rb->start_ = static_cast<char *>(start) + sizeof(OffsetData);
   rb->end_ = static_cast<char *>(start) + len;
@@ -49,11 +50,10 @@ std::unique_ptr<RingBuffer> RingBuffer::CreateFrom(void *start, size_t len) {
 }
 
 bool RingBuffer::Push(const char *buf, int len) {
-  assert(buf != NULL);
-  assert(len > 0);
+  if (buf == nullptr || len == 0) return false;
 
   if (len > kMaxBufferBodyLength) return false;
-  if (len > space_left()) return false;
+  if (len > SpaceLeft()) return false;
 
   this->Write(buf, len);
   return true;
@@ -70,14 +70,16 @@ char *RingBuffer::Pop(int *plen) {
   }
 }
 
-int RingBuffer::space_left() const {
+int RingBuffer::SpaceLeft() const {
   char *front = get_front();
   char *back = get_back();
+  int result;
   if (back >= front) {
-    return end_ - back + front - start_ - kExtraSpace - sizeof(int32_t);
+    result = end_ - back + front - start_ - kExtraSpace - sizeof(int32_t);
   } else {
-    return front - back - kExtraSpace - sizeof(int32_t);
+    result = front - back - kExtraSpace - sizeof(int32_t);
   }
+  return result < 0 ? 0 : result;
 }
 
 bool RingBuffer::empty() const { return get_front() == get_back(); }
