@@ -39,7 +39,7 @@ TEST_F(RingBufferTest, CreateFrom) {
   EXPECT_EQ(buffer, nullptr);
 
   char buf[kBufferSize];
-  ASSERT_GE(sizeof(buf), alpha::RingBuffer::kMinByteSize);
+  ASSERT_GE(sizeof(buf), (size_t)alpha::RingBuffer::kMinByteSize);
   buffer =
       alpha::RingBuffer::CreateFrom(buf, alpha::RingBuffer::kMinByteSize - 1);
   EXPECT_EQ(buffer, nullptr);
