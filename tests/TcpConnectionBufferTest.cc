@@ -72,9 +72,10 @@ TEST(TcpConnectionBufferTest, GetContiguousSpace) {
 
 TEST(TcpConnectionBufferTest, ReadNullTerminatedString) {
   alpha::TcpConnectionBuffer buffer;
-  size_t length;
+  size_t length = 1;  // no default 0
   auto p = buffer.Read(&length);
   EXPECT_EQ(p, nullptr);
+  EXPECT_EQ(length, 0u);
 
   const std::string s = "The answer is 42";
   auto ok = buffer.Append(s);
@@ -92,7 +93,7 @@ TEST(TcpConnectionBufferTest, ReadRawBytes) {
   auto ok = buffer.Append(bytes.data(), bytes.size());
   ASSERT_TRUE(ok);
 
-  size_t length;
+  size_t length = 1;
   auto p = buffer.Read(&length);
   ASSERT_NE(p, nullptr);
   ASSERT_EQ(length, bytes.size());
@@ -197,4 +198,16 @@ TEST(TcpConnectionBufferTest, ReadAndWrite) {
   last = std::next(first, 20);
   it = std::find_if(first, last, [](char c) { return c != 0x6f; });
   EXPECT_TRUE(it == last);
+}
+
+TEST(TcpConnectionBufferTest, Capacity) {
+  alpha::TcpConnectionBuffer buffer;
+  // 写满capactiy才会重新分配内存
+  auto capacity = buffer.capacity();
+  bool ok = buffer.AddBytes(capacity);
+  EXPECT_TRUE(ok);
+  EXPECT_EQ(capacity, buffer.capacity());
+
+  ok = buffer.Append("\n");
+  EXPECT_NE(capacity, buffer.capacity());
 }
