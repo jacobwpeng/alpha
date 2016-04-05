@@ -21,13 +21,7 @@ bool operator==(const RankVectorUnit& lhs, const RankVectorUnit& rhs) {
 }
 
 bool operator>(const RankVectorUnit& lhs, const RankVectorUnit& rhs) {
-  if (lhs.val > rhs.val) {
-    return true;
-  } else if (lhs.val < rhs.val) {
-    return false;
-  } else {
-    return lhs.uin < rhs.uin;
-  }
+  return lhs.val > rhs.val;
 }
 
 RankVector::RankVector(size_t max) : max_(max) {}
