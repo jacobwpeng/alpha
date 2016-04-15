@@ -15,11 +15,12 @@
 #endif
 
 #include "RegionBasedHelper.h"
+#include <cassert>
 #include <algorithm>
 
-#define VectorType                                                        \
-  RegionBasedVector<T, typename std::enable_if < std::is_pod<T>::value && \
-                           !std::is_pointer<T>::value>::type >
+#define VectorType                                                          \
+  RegionBasedVector < T, typename std::enable_if < std::is_pod<T>::value && \
+                             !std::is_pointer<T>::value > ::type >
 
 namespace alpha {
 template <typename T>

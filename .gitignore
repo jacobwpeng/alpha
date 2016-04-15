@@ -6,3 +6,4 @@ GTAGS
 *.pyc
 *.swp
 *.pb.*
+*pb2.py
