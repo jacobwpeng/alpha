@@ -1,0 +1,54 @@
+package SectServer;
+
+message MessageWrapper {
+  optional uint32 cmd = 1;
+  optional uint32 ctx = 2;
+  optional bytes payload = 3;
+  optional uint32 err = 4;
+}
+
+message UserSectInfo {
+  optional uint32 uin = 1;
+  optional uint32 sect = 2;
+  optional uint32 rank = 3;
+}
+
+// 查询玩家门派信息
+message QueryUserRequest {
+  optional uint32 uin = 1;
+}
+
+message QueryUserResponse {
+  optional UserSectInfo user = 1;
+}
+
+// 设置玩家门派信息
+message SetUserRequest {
+  optional uint32 uin = 1;
+  optional uint32 sect = 2;
+  optional uint32 rank = 3;
+}
+
+message SetUserResponse {
+}
+
+// 获取所有门派非门众的信息
+message QueryRankedUserRequest {
+}
+
+message QueryRankedUserResponse {
+  repeated UserSectInfo ranked_user = 1;
+}
+
+// 获取某门派内某个等级段附近的玩家
+message QueryUserByLevelRequest {
+  optional uint32 sect = 1;
+  optional uint32 user_level = 2;
+  optional uint32 level_range = 3;
+  optional uint32 expect_num = 4;
+}
+
+message QueryUserByLevelResponse {
+  optional uint32 sect = 1;
+  repeated UserSectInfo user = 2;
+}
