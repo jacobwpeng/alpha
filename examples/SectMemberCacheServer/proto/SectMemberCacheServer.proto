@@ -1,0 +1,30 @@
+package SectMemberCacheServerApi;
+
+enum MessageType {
+  REPORT = 1;
+  PICK_MEMBER = 2;
+}
+
+message Message {
+  optional uint32 ctx = 1;
+  optional uint32 cmd = 2;
+  optional uint32 uin = 3;
+  optional int32 err = 4;
+  optional bytes payload = 5;
+}
+
+message ReportSectMember {
+  optional uint32 sect = 1;
+  optional uint32 level = 2;
+}
+
+message PickMemberRequest {
+  optional uint32 sect = 1;
+  optional uint32 user_level = 2;
+}
+
+message PickMemberResponse {
+  optional uint32 member_uin = 1;
+  optional uint32 member_level = 2;
+  optional uint32 member_update_time = 3;
+}
