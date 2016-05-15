@@ -91,9 +91,10 @@ alpha::Slice TcpConnectionBuffer::Read() const {
 }
 
 size_t TcpConnectionBuffer::ReadAndClear(void* buf, size_t len) {
-  alpha::Slice data = Read();
-  size_t n = std::min(len, data.size());
-  ::memcpy(buf, data.data(), n);
+  size_t length;
+  auto p = Read(&length);
+  size_t n = std::min(len, length);
+  ::memcpy(buf, p, n);
   ConsumeBytes(n);
   return n;
 }

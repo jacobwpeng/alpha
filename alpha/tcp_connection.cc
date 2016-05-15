@@ -123,9 +123,8 @@ void TcpConnection::ReadFromPeer() {
 }
 
 void TcpConnection::WriteToPeer() {
-  alpha::Slice data = write_buffer_.Read();
-  const char* buffer = data.data();
-  size_t bytes = data.size();
+  size_t bytes;
+  auto buffer = write_buffer_.Read(&bytes);
 
   while (bytes != 0) {
     // TODO: 使用writev调整Buffer写入策略，同时快速递送消息

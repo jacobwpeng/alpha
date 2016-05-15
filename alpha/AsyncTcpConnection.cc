@@ -47,11 +47,11 @@ void AsyncTcpConnection::Write(alpha::Slice data) {
 }
 
 void AsyncTcpConnection::WaitWriteDone() {
-  auto data = conn_->WriteBuffer()->Read();
-  if (data.empty()) {
-    return;
-  }
-  DLOG_INFO << data.size() << " bytes to send";
+  size_t length;
+  auto p = conn_->WriteBuffer()->Read(&length);
+  if (!p) return;
+
+  DLOG_INFO << length << " bytes to send";
   SetWaitingWriteDone();
   co_->Yield();
 }
@@ -64,12 +64,13 @@ std::string AsyncTcpConnection::Read(size_t bytes, int timeout) {
   auto buffer = conn_->ReadBuffer();
   std::string result;
   do {
-    auto data = buffer->Read();
-    if (!data.empty()) {
-      if (bytes <= result.size() + data.size()) {  // Read from buffer
+    size_t length;
+    auto p = buffer->Read(&length);
+    if (p) {
+      if (bytes <= result.size() + length) {  // Read from buffer
         CHECK(result.size() < bytes || bytes == 0);
-        auto sz = (bytes == 0 ? data.size() : bytes - result.size());
-        result += data.subslice(0, sz).ToString();
+        auto sz = (bytes == 0 ? length : bytes - result.size());
+        result.append(p, sz);
         buffer->ConsumeBytes(sz);
         CHECK(result.size() == bytes || (bytes == 0 && !result.empty()))
             << "bytes: " << bytes << ", result.size(): " << result.size()
@@ -77,8 +78,8 @@ std::string AsyncTcpConnection::Read(size_t bytes, int timeout) {
         SetIdle();
         return result;
       } else {
-        result.append(data.data(), data.size());
-        buffer->ConsumeBytes(data.size());
+        result.append(p, length);
+        buffer->ConsumeBytes(length);
       }
     }
     SetWaitingMessage();
@@ -100,13 +101,16 @@ std::string AsyncTcpConnection::Read(size_t bytes, int timeout) {
 
 std::string AsyncTcpConnection::ReadCached(size_t bytes) {
   auto buffer = conn_->ReadBuffer();
-  auto data = buffer->Read();
-  if (bytes == 0) {
-    buffer->ConsumeBytes(data.size());
-    return data.ToString();
+  size_t length;
+  auto p = buffer->Read(&length);
+  if (!p) return "";
+  if (bytes == 0) {  // Read all
+    std::string result(p, length);
+    buffer->ConsumeBytes(length);
+    return result;
   }
-  auto sz = std::min(bytes, data.size());
-  std::string result = data.subslice(0, sz).ToString();
+  auto sz = std::min(bytes, length);
+  std::string result = std::string(p, sz);
   buffer->ConsumeBytes(sz);
   return result;
 }
@@ -126,6 +130,8 @@ void AsyncTcpConnection::Close() {
 bool AsyncTcpConnection::HasCachedData() const { return CachedDataSize() != 0; }
 
 size_t AsyncTcpConnection::CachedDataSize() const {
-  return conn_->ReadBuffer()->Read().size();
+  size_t length;
+  conn_->ReadBuffer()->Read(&length);
+  return length;
 }
 }
