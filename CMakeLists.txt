@@ -5,6 +5,7 @@ include_directories(${PROJECT_SOURCE_DIR})
 set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra -Werror -ggdb -fPIC -D_FILE_OFFSET_BITS=64")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--start-group")
 
 include(CheckCXXCompilerFlag)
 
@@ -35,6 +36,7 @@ endif()
 
 option(STATIC_LINK_LIBSTDC++ "Static link to libstdc++" OFF)
 if (STATIC_LINK_LIBSTDC++)
+  message(STATUS "Static link libstdc++")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
 endif()
 
