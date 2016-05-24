@@ -110,8 +110,7 @@ void TcpConnection::ReadFromPeer() {
     } else {
       read_buffer_.AddBytes(contiguous_space_in_buffer);
       size_t local_buffer_bytes = bytes - contiguous_space_in_buffer;
-      alpha::Slice data(local_buffer, local_buffer_bytes);
-      bool ok = read_buffer_.Append(data);
+      bool ok = read_buffer_.Append(local_buffer, local_buffer_bytes);
       DCHECK(ok);
       (void)ok;
     }
