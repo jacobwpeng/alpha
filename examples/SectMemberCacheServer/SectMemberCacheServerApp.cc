@@ -146,7 +146,7 @@ int SectMemberCacheServerApp::HandlePickMember(unsigned uin,
             << ", level: " << req.user_level();
   auto it = sect_map_.find(req.sect());
   if (it == sect_map_.end()) {
-    return kServerUnknownSect;
+    return kServerNoMatchedMember;
   }
   auto userinfo = PickFromMemberMap(uin, req.user_level(), it->second);
   if (userinfo == NULL) {
