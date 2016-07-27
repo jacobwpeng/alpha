@@ -218,7 +218,7 @@ bool TcpConnection::LocalAddr(NetAddress* addr) {
 
 bool TcpConnection::PeerAddr(NetAddress* addr) {
   if (!peer_addr_) {
-    bool ok = NetAddress::GetLocalAddr(fd_, addr);
+    bool ok = NetAddress::GetPeerAddr(fd_, addr);
     if (!ok) {
       return false;
     }
