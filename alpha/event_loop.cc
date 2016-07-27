@@ -92,6 +92,11 @@ void EventLoop::Run() {
   LOG_INFO << "EventLoop exiting...";
 }
 
+int EventLoop::RunForever() {
+  Run();
+  return 0;
+}
+
 void EventLoop::Quit() { quit_ = true; }
 
 void EventLoop::UpdateChannel(Channel* channel) {
