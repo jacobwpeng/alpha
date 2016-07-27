@@ -54,6 +54,8 @@ void TcpClient::OnConnected(int fd) {
   TcpConnection::State state = TcpConnection::State::kConnected;
   TcpConnectionPtr conn = std::make_shared<TcpConnection>(loop_, fd, state);
   DLOG_INFO << "Create connection, fd: " << fd;
+  DLOG_INFO << "Local address: " << conn->LocalAddr().FullAddress()
+            << ", peer address: " << conn->PeerAddr().FullAddress();
 
   using namespace std::placeholders;
   conn->SetOnClose(std::bind(&TcpClient::OnClose, this, _1));
@@ -83,17 +85,17 @@ void TcpClient::OnConnectError(const NetAddress& addr) {
 }
 
 void TcpClient::MaybeReconnect(const NetAddress& addr) {
-  if (auto_reconnect_addresses_.find(addr) != auto_reconnect_addresses_.end()) {
-    DLOG_INFO << "Connect to " << addr << " failed, try to reconnect";
-    auto timer_id =
-        loop_->RunAfter(reconnect_interval_,
-                        std::bind(&TcpClient::ConnectTo, this, addr, true));
-    auto it = auto_reconnect_timer_ids_.find(addr);
-    if (it == auto_reconnect_timer_ids_.end()) {
-      auto_reconnect_timer_ids_.insert(std::make_pair(addr, timer_id));
-    } else {
-      it->second = timer_id;
-    }
+  if (auto_reconnect_addresses_.find(addr) == auto_reconnect_addresses_.end()) {
+    return;
+  }
+  DLOG_INFO << "Try reconnect to " << addr;
+  auto timer_id = loop_->RunAfter(
+      reconnect_interval_, std::bind(&TcpClient::ConnectTo, this, addr, true));
+  auto it = auto_reconnect_timer_ids_.find(addr);
+  if (it == auto_reconnect_timer_ids_.end()) {
+    auto_reconnect_timer_ids_.insert(std::make_pair(addr, timer_id));
+  } else {
+    it->second = timer_id;
   }
 }
 
