@@ -49,7 +49,7 @@ class File {
   int Write(const void* data, int size);
   bool Flush();
 
-  int64_t GetLength();
+  int64_t GetLength() const;
   bool SetLength(int64_t length);
 
   void Lock();

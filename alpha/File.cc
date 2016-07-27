@@ -150,7 +150,7 @@ bool File::Flush() {
   return rc != -1;
 }
 
-int64_t File::GetLength() {
+int64_t File::GetLength() const {
   assert(Valid());
   struct stat buf;
   fstat(fd_, &buf);
