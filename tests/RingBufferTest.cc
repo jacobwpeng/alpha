@@ -13,13 +13,16 @@
 #include <string>
 #include <memory>
 #include <gtest/gtest.h>
+#include <alpha/logger.h>
+#include <alpha/compiler.h>
 #include <alpha/RingBuffer.h>
 
 class RingBufferTest : public ::testing::Test {
  protected:
   virtual void SetUp() override {
-    buffer_ = alpha::RingBuffer::CreateFrom(underlying_buffer_, kBufferSize);
-    ASSERT_NE(buffer_, nullptr);
+    buffer_ = alpha::make_unique<alpha::RingBuffer>();
+    bool ok = buffer_->CreateFrom(underlying_buffer_, kBufferSize);
+    CHECK(ok);
   }
 
   virtual void TearDown() override {
@@ -34,18 +37,17 @@ class RingBufferTest : public ::testing::Test {
 
 TEST_F(RingBufferTest, CreateFrom) {
   ASSERT_GT(alpha::RingBuffer::kMinByteSize, 0);
-  auto buffer =
-      alpha::RingBuffer::CreateFrom(nullptr, alpha::RingBuffer::kMinByteSize);
-  EXPECT_EQ(buffer, nullptr);
+  alpha::RingBuffer buffer;
+  bool ok = buffer.CreateFrom(nullptr, alpha::RingBuffer::kMinByteSize);
+  EXPECT_FALSE(ok);
 
   char buf[kBufferSize];
   ASSERT_GE(sizeof(buf), (size_t)alpha::RingBuffer::kMinByteSize);
-  buffer =
-      alpha::RingBuffer::CreateFrom(buf, alpha::RingBuffer::kMinByteSize - 1);
-  EXPECT_EQ(buffer, nullptr);
+  ok = buffer.CreateFrom(buf, alpha::RingBuffer::kMinByteSize - 1);
+  EXPECT_FALSE(ok);
 
-  buffer = alpha::RingBuffer::CreateFrom(buf, alpha::RingBuffer::kMinByteSize);
-  EXPECT_NE(buffer, nullptr);
+  ok = buffer.CreateFrom(buf, alpha::RingBuffer::kMinByteSize);
+  EXPECT_TRUE(ok);
 }
 
 TEST_F(RingBufferTest, RestoreFrom) {
@@ -53,10 +55,11 @@ TEST_F(RingBufferTest, RestoreFrom) {
   bool ok = buffer_->Push(msg.data(), msg.size());
   ASSERT_TRUE(ok);
 
-  auto buffer = alpha::RingBuffer::RestoreFrom(underlying_buffer_, kBufferSize);
-  EXPECT_NE(buffer, nullptr);
+  alpha::RingBuffer buffer;
+  ok = buffer.RestoreFrom(underlying_buffer_, kBufferSize);
+  EXPECT_TRUE(ok);
   int len;
-  char* data = buffer_->Pop(&len);
+  void* data = buffer.Pop(&len);
   EXPECT_NE(data, nullptr);
   EXPECT_EQ((size_t)len, msg.size());
   EXPECT_EQ(memcmp(msg.data(), data, len), 0);
@@ -79,7 +82,7 @@ TEST_F(RingBufferTest, Push) {
 
 TEST_F(RingBufferTest, Pop) {
   int len = -1;
-  char* data = buffer_->Pop(&len);
+  void* data = buffer_->Pop(&len);
   EXPECT_EQ(data, nullptr);
   EXPECT_EQ(len, 0);
 
@@ -95,16 +98,43 @@ TEST_F(RingBufferTest, Pop) {
   EXPECT_EQ((size_t)len, msg1.size());
   EXPECT_EQ(memcmp(data, msg1.data(), len), 0);
 
-  char* data2 = buffer_->Pop(&len);
+  void* data2 = buffer_->Pop(&len);
   EXPECT_EQ((size_t)len, msg2.size());
   EXPECT_EQ(memcmp(data2, msg2.data(), len), 0);
 
-  // Pop的结果有效周期只能到下一次Pop操作/RingBuffer析构
+  // Peek/Pop的结果有效周期只能到下一次Peek/Pop操作/RingBuffer析构
   EXPECT_NE(memcmp(data, msg1.data(), msg1.size()), 0);
 
   data = buffer_->Pop(&len);
   EXPECT_EQ(data, nullptr);
   EXPECT_EQ(len, 0);
+}
+
+TEST_F(RingBufferTest, Peek) {
+  int len = -1;
+  void* data = buffer_->Pop(&len);
+  EXPECT_EQ(data, nullptr);
+  EXPECT_EQ(len, 0);
+
+  std::string msg1 = "Long live the queen!";
+  std::string msg2 = "The quick brown fox jumps over the lazy dog";
+
+  bool ok = buffer_->Push(msg1.data(), msg1.size());
+  ASSERT_TRUE(ok);
+  ok = buffer_->Push(msg2.data(), msg2.size());
+  ASSERT_TRUE(ok);
+
+  data = buffer_->Peek(&len);
+  EXPECT_EQ((size_t)len, msg1.size());
+  EXPECT_EQ(memcmp(data, msg1.data(), len), 0);
+
+  void* data2 = buffer_->Pop(&len);
+  EXPECT_EQ((size_t)len, msg1.size());
+  EXPECT_EQ(memcmp(data2, msg1.data(), len), 0);
+
+  data = buffer_->Pop(&len);
+  EXPECT_NE(data, nullptr);
+  EXPECT_EQ(len, msg2.size());
 }
 
 TEST_F(RingBufferTest, empty) {
@@ -140,8 +170,8 @@ TEST_F(RingBufferTest, TestFulfil) {
   }
 
   int len;
-  while (char* data = buffer_->Pop(&len)) {
-    EXPECT_EQ(*data, c);
+  while (void* data = buffer_->Pop(&len)) {
+    EXPECT_EQ(*reinterpret_cast<char*>(data), c);
     --num;
   }
 

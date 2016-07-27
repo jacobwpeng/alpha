@@ -10,12 +10,11 @@
  * ==============================================================================
  */
 
-#ifndef __ALPHA_RING_BUFFER_H__
-#define __ALPHA_RING_BUFFER_H__
+#pragma once
 
 #include <memory>
 #include <cstddef>
-#include "compiler.h"
+#include <alpha/compiler.h>
 
 namespace alpha {
 class RingBuffer {
@@ -25,43 +24,46 @@ class RingBuffer {
     ptrdiff_t back_offset;
   };
 
-  RingBuffer();
-  DISABLE_COPY_ASSIGNMENT(RingBuffer);
-
  public:
   static const int kMinByteSize;
   static const int kMaxBufferBodyLength = 1 << 16;  // 64KB
 
  public:
-  static std::unique_ptr<RingBuffer> RestoreFrom(void* start, size_t len);
-  static std::unique_ptr<RingBuffer> CreateFrom(void* start, size_t len);
+  RingBuffer();
+  DISABLE_COPY_ASSIGNMENT(RingBuffer);
 
-  bool Push(const char* buf, int len);
-  char* Pop(int* len);
+  RingBuffer(RingBuffer&& other);
+  RingBuffer& operator=(RingBuffer&& other);
+
+  bool CreateFrom(void* start, int64_t len);
+  bool RestoreFrom(void* start, int64_t len);
+  bool Push(const void* buf, int len);
+  void* Pop(int* len);
+  void* Peek(int* len);
+  void swap(RingBuffer& other);
 
   int SpaceLeft() const;
   bool empty() const;
+  operator bool() const;
 
  private:
-  char* get_front() const;
-  char* get_back() const;
+  uint8_t* get_front() const;
+  uint8_t* get_back() const;
 
-  void set_front(char* front);
-  void set_back(char* back);
+  void set_front(uint8_t* front);
+  void set_back(uint8_t* back);
 
   int NextBufferLength() const;
-  void Write(const char* buf, int len);
-  char* Read(int* plen);
+  void Write(const uint8_t* buf, int len);
+  uint8_t* Read(int* plen, uint8_t** new_front);
 
  private:
-  static const size_t kBufferHeaderLength = sizeof(int);
-  static const size_t kMaxBufferLength =
+  static const int64_t kBufferHeaderLength = sizeof(int);
+  static const int64_t kMaxBufferLength =
       kBufferHeaderLength + kMaxBufferBodyLength;
-  static const size_t kExtraSpace = 1;
-  char* start_;
-  char* end_;
+  static const int64_t kExtraSpace = 1;
+  uint8_t* data_start_;
+  uint8_t* end_;
   volatile OffsetData* offset_;
 };
 }
-
-#endif /* ----- #ifndef __ALPHA_RING_BUFFER_H__  ----- */

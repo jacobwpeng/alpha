@@ -10,46 +10,51 @@
  * ==============================================================================
  */
 
-#ifndef __ALPHA_PROCESS_BUS_H__
-#define __ALPHA_PROCESS_BUS_H__
+#pragma once
 
 #include <memory>
-#include "RingBuffer.h"
-#include "MMapFile.h"
+#include <alpha/RingBuffer.h>
+#include <alpha/MemoryMappedFile.h>
 
 namespace alpha {
 class ProcessBus {
- private:
-  struct Header {
-    const static int64_t kMagicNumber = 7316964413220353303;
-    int64_t magic_number;
-  };
-  const static size_t kHeaderSize = sizeof(Header);
-
- private:
-  ProcessBus();
-
  public:
-  static std::unique_ptr<ProcessBus> RestoreOrCreate(alpha::Slice filepath,
-                                                     size_t size,
-                                                     bool force = false);
-  static std::unique_ptr<ProcessBus> RestoreFrom(alpha::Slice filepath);
-  static std::unique_ptr<ProcessBus> CreateFrom(alpha::Slice filepath,
-                                                size_t size);
   static const size_t kMaxBufferBodyLength = RingBuffer::kMaxBufferBodyLength;
+  enum class QueueOrder {
+    kReadFirst = 0,
+    kWriteFirst = 1
+  };
 
-  bool Write(const char* buf, int len);
-  char* Read(int* plen);
+  ProcessBus() = default;
 
-  bool empty() const;
+  ProcessBus(ProcessBus&& other);
+
+  ProcessBus& operator=(ProcessBus&& other);
+
+  bool CreateFrom(alpha::Slice filepath, int64_t size, QueueOrder order);
+
+  bool RestoreFrom(alpha::Slice filepath, QueueOrder order);
+
+  bool RestoreOrCreate(alpha::Slice filepath, int64_t size, QueueOrder order,
+                       bool force = false);
+
+  bool Write(const void* buf, int len);
+
+  void* Read(int* plen);
+
+  void* Peek(int* plen);
+
+  void swap(ProcessBus& other);
+
+  operator bool() const;
+
+  // bool empty() const;
+
   std::string filepath() const;
 
  private:
-  std::string filepath_;
-  Header* header_;
-  std::unique_ptr<MMapFile> file_;
-  std::unique_ptr<RingBuffer> buf_;
+  alpha::MemoryMappedFile mmaped_file_;
+  alpha::RingBuffer read_queue_;
+  alpha::RingBuffer write_queue_;
 };
 }
-
-#endif /* ----- #ifndef __ALPHA_PROCESS_BUS_H__  ----- */

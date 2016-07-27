@@ -177,6 +177,9 @@ void MysticSalesmanSvrdApp::HandleHTTPMessage(
   while (std::getline(iss, line)) {
     ++lineno;
     boost::trim(line);
+    if (line.empty()) {
+      continue;
+    }
     UserSalesInfo info;
     uint32_t uin;
     int num = sscanf(line.c_str(), "%u  %u  %u  %u", &uin, &info.group,

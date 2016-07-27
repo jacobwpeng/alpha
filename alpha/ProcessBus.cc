@@ -10,82 +10,120 @@
  * ==============================================================================
  */
 
-#include "ProcessBus.h"
+#include <alpha/ProcessBus.h>
+
 #include <cassert>
+#include <alpha/logger.h>
 
 namespace alpha {
-ProcessBus::ProcessBus() : header_(nullptr) {}
 
-std::unique_ptr<ProcessBus> ProcessBus::RestoreFrom(alpha::Slice filepath) {
-  std::unique_ptr<ProcessBus> bus(new ProcessBus);
-  bus->file_ = std::move(MMapFile::Open(filepath));
-  if (bus->file_ == nullptr) {
-    return nullptr;
-  }
+ProcessBus::ProcessBus(ProcessBus&& other) { swap(other); }
 
-  if (bus->file_->size() < kHeaderSize) {
-    return nullptr;
-  }
-
-  ProcessBus::Header* header =
-      reinterpret_cast<ProcessBus::Header*>(bus->file_->start());
-  if (header->magic_number != ProcessBus::Header::kMagicNumber) {
-    return nullptr;
-  }
-
-  bus->header_ = header;
-  void* start = static_cast<char*>(bus->file_->start()) + kHeaderSize;
-  assert(bus->file_->size() > kHeaderSize);
-  bus->buf_ = std::move(
-      alpha::RingBuffer::RestoreFrom(start, bus->file_->size() - kHeaderSize));
-  bus->filepath_ = filepath.ToString();
-  return bus;
+ProcessBus& ProcessBus::operator=(ProcessBus&& other) {
+  swap(other);
+  return *this;
 }
 
-std::unique_ptr<ProcessBus> ProcessBus::CreateFrom(alpha::Slice filepath,
-                                                   size_t size) {
-  if (size < kHeaderSize) {
-    return nullptr;
+bool ProcessBus::CreateFrom(alpha::Slice filepath, int64_t size,
+                            QueueOrder order) {
+  MemoryMappedFile mapped_file;
+  if (!mapped_file.Init(filepath, size,
+                        MemoryMappedFlags::kCreateIfNotExists)) {
+    return false;
   }
 
-  std::unique_ptr<ProcessBus> bus(new ProcessBus);
-  bus->file_ = MMapFile::Open(filepath, size, MMapFile::kCreateIfNotExists |
-                                                  MMapFile::kTruncate |
-                                                  MMapFile::kZeroClear);
+  int64_t read_queue_size = size / 2;
+  void* read_queue_start = mapped_file.mapped_start();
+  int64_t write_queue_size = size - read_queue_size;
+  void* write_queue_start =
+      reinterpret_cast<uint8_t*>(mapped_file.mapped_start()) + read_queue_size;
 
-  if (bus->file_ == nullptr) {
-    return nullptr;
+  if (order == QueueOrder::kWriteFirst) {
+    std::swap(read_queue_size, write_queue_size);
+    std::swap(read_queue_start, write_queue_start);
+  }
+  RingBuffer read_queue, write_queue;
+  if (!read_queue.CreateFrom(read_queue_start, read_queue_size)) {
+    return false;
+  }
+  if (!write_queue.CreateFrom(write_queue_start, write_queue_size)) {
+    return false;
+  }
+  mmaped_file_ = std::move(mapped_file);
+  read_queue_ = std::move(read_queue);
+  write_queue_ = std::move(write_queue);
+  return true;
+}
+
+bool ProcessBus::RestoreFrom(alpha::Slice filepath, QueueOrder order) {
+  MemoryMappedFile mapped_file;
+  if (!mapped_file.Init(filepath, 0, MemoryMappedFlags::kCreateIfNotExists)) {
+    return false;
   }
 
-  ProcessBus::Header* header =
-      reinterpret_cast<ProcessBus::Header*>(bus->file_->start());
-  header->magic_number = ProcessBus::Header::kMagicNumber;
-  bus->header_ = header;
-  void* start = static_cast<char*>(bus->file_->start()) + kHeaderSize;
-  assert(bus->file_->size() > kHeaderSize);
-  bus->buf_ = std::move(
-      RingBuffer::CreateFrom(start, bus->file_->size() - kHeaderSize));
-  bus->filepath_ = filepath.ToString();
-  return bus;
-}
+  const int64_t size = mapped_file.size();
+  int64_t read_queue_size = size / 2;
+  void* read_queue_start = mapped_file.mapped_start();
+  int64_t write_queue_size = size - read_queue_size;
+  void* write_queue_start =
+      reinterpret_cast<uint8_t*>(mapped_file.mapped_start()) + read_queue_size;
 
-std::unique_ptr<ProcessBus> ProcessBus::RestoreOrCreate(alpha::Slice filepath,
-                                                        size_t size,
-                                                        bool force) {
-  auto bus = RestoreFrom(filepath);
-  if (!bus && force) {
-    bus = CreateFrom(filepath, size);
+  if (order == QueueOrder::kWriteFirst) {
+    std::swap(read_queue_size, write_queue_size);
+    std::swap(read_queue_start, write_queue_start);
   }
-  return bus;
+  RingBuffer read_queue, write_queue;
+  if (!read_queue.RestoreFrom(read_queue_start, read_queue_size)) {
+    return false;
+  }
+  if (!write_queue.RestoreFrom(write_queue_start, write_queue_size)) {
+    return false;
+  }
+
+  mmaped_file_ = std::move(mapped_file);
+  read_queue_ = std::move(read_queue);
+  write_queue_ = std::move(write_queue);
+  return true;
 }
 
-bool ProcessBus::Write(const char* buf, int len) {
-  return buf_->Push(buf, len);
+bool ProcessBus::RestoreOrCreate(alpha::Slice filepath, int64_t size,
+                                 QueueOrder order, bool force) {
+  if (RestoreFrom(filepath, order)) {
+    return true;
+  } else if (force) {
+    return CreateFrom(filepath, size, order);
+  } else {
+    return false;
+  }
 }
 
-char* ProcessBus::Read(int* plen) { return buf_->Pop(plen); }
+bool ProcessBus::Write(const void* buf, int len) {
+  DCHECK(write_queue_);
+  return write_queue_.Push(buf, len);
+}
 
-bool ProcessBus::empty() const { return buf_->empty(); }
+void* ProcessBus::Read(int* plen) {
+  DCHECK(read_queue_);
+  return read_queue_.Pop(plen);
+}
 
-std::string ProcessBus::filepath() const { return filepath_; }
+void* ProcessBus::Peek(int* plen) {
+  DCHECK(read_queue_);
+  return read_queue_.Peek(plen);
+}
+
+void ProcessBus::swap(ProcessBus& other) {
+  std::swap(mmaped_file_, other.mmaped_file_);
+  std::swap(read_queue_, other.read_queue_);
+  std::swap(write_queue_, other.write_queue_);
+}
+
+ProcessBus::operator bool() const { return mmaped_file_; }
+
+// bool ProcessBus::empty() const {
+//  DCHECK(ring_buffer_);
+//  return ring_buffer_.empty();
+//}
+
+std::string ProcessBus::filepath() const { return mmaped_file_.filepath(); }
 }

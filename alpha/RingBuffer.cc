@@ -17,65 +17,88 @@
 namespace alpha {
 
 namespace detail {
-static __thread char local_buf[RingBuffer::kMaxBufferBodyLength];
+static __thread uint8_t local_buf[RingBuffer::kMaxBufferBodyLength];
 }
 
 const int RingBuffer::kMinByteSize =
     sizeof(RingBuffer::OffsetData) + RingBuffer::kExtraSpace;
 
-RingBuffer::RingBuffer() : start_(NULL), end_(NULL), offset_(NULL) {}
+RingBuffer::RingBuffer()
+    : data_start_(nullptr), end_(nullptr), offset_(nullptr) {}
 
-std::unique_ptr<RingBuffer> RingBuffer::RestoreFrom(void *start, size_t len) {
-  if (start == nullptr || len < kMinByteSize) return nullptr;
-  std::unique_ptr<RingBuffer> rb(new RingBuffer);
-  void *mem = start;
-  rb->offset_ = reinterpret_cast<OffsetData *>(mem);
+RingBuffer::RingBuffer(RingBuffer &&other) { swap(other); }
 
-  rb->start_ = static_cast<char *>(start) + sizeof(OffsetData);
-  rb->end_ = static_cast<char *>(start) + len;
-  return rb;
+RingBuffer &RingBuffer::operator=(RingBuffer &&other) {
+  swap(other);
+  return *this;
 }
 
-std::unique_ptr<RingBuffer> RingBuffer::CreateFrom(void *start, size_t len) {
-  if (start == nullptr || len < kMinByteSize) return nullptr;
-  std::unique_ptr<RingBuffer> rb(new RingBuffer);
-  void *mem = start;
-  rb->offset_ = reinterpret_cast<OffsetData *>(mem);
-
-  rb->start_ = static_cast<char *>(start) + sizeof(OffsetData);
-  rb->end_ = static_cast<char *>(start) + len;
-  rb->set_front(rb->start_);
-  rb->set_back(rb->start_);
-  return rb;
+bool RingBuffer::CreateFrom(void *start, int64_t len) {
+  if (start == nullptr || len < kMinByteSize) return false;
+  offset_ = reinterpret_cast<OffsetData *>(start);
+  data_start_ = reinterpret_cast<uint8_t *>(start) + sizeof(OffsetData);
+  end_ = reinterpret_cast<uint8_t *>(start) + len;
+  set_front(data_start_);
+  set_back(data_start_);
+  return true;
 }
 
-bool RingBuffer::Push(const char *buf, int len) {
+bool RingBuffer::RestoreFrom(void *start, int64_t len) {
+  if (start == nullptr || len < kMinByteSize) return nullptr;
+  offset_ = reinterpret_cast<OffsetData *>(start);
+  data_start_ = reinterpret_cast<uint8_t *>(start) + sizeof(OffsetData);
+  end_ = reinterpret_cast<uint8_t *>(start) + len;
+  return true;
+}
+
+bool RingBuffer::Push(const void *buf, int len) {
   if (buf == nullptr || len == 0) return false;
 
   if (len > kMaxBufferBodyLength) return false;
   if (len > SpaceLeft()) return false;
 
-  this->Write(buf, len);
+  this->Write(reinterpret_cast<const uint8_t *>(buf), len);
   return true;
 }
 
-char *RingBuffer::Pop(int *plen) {
+void *RingBuffer::Pop(int *plen) {
   assert(plen);
   if (empty()) {
     *plen = 0;
-    return NULL;
+    return nullptr;
   } else {
-    char *buf = Read(plen);
+    uint8_t *new_front;
+    uint8_t *buf = Read(plen, &new_front);
+    set_front(new_front);
     return buf;
   }
 }
 
+void *RingBuffer::Peek(int *plen) {
+  assert(plen);
+  if (empty()) {
+    *plen = 0;
+    return nullptr;
+  } else {
+    uint8_t *new_front;
+    uint8_t *buf = Read(plen, &new_front);
+    (void)new_front;
+    return buf;
+  }
+}
+
+void RingBuffer::swap(RingBuffer &other) {
+  std::swap(data_start_, other.data_start_);
+  std::swap(end_, other.end_);
+  std::swap(offset_, other.offset_);
+}
+
 int RingBuffer::SpaceLeft() const {
-  char *front = get_front();
-  char *back = get_back();
+  uint8_t *front = get_front();
+  uint8_t *back = get_back();
   int result;
   if (back >= front) {
-    result = end_ - back + front - start_ - kExtraSpace - sizeof(int32_t);
+    result = end_ - back + front - data_start_ - kExtraSpace - sizeof(int32_t);
   } else {
     result = front - back - kExtraSpace - sizeof(int32_t);
   }
@@ -84,23 +107,28 @@ int RingBuffer::SpaceLeft() const {
 
 bool RingBuffer::empty() const { return get_front() == get_back(); }
 
-char *RingBuffer::get_front() const { return offset_->front_offset + start_; }
+RingBuffer::operator bool() const { return data_start_ != nullptr; }
 
-char *RingBuffer::get_back() const { return offset_->back_offset + start_; }
-
-void RingBuffer::set_front(char *front) {
-  assert(front >= start_);
-  offset_->front_offset = front - start_;
+uint8_t *RingBuffer::get_front() const {
+  return offset_->front_offset + data_start_;
 }
 
-void RingBuffer::set_back(char *back) {
-  assert(back >= start_);
-  offset_->back_offset = back - start_;
+uint8_t *RingBuffer::get_back() const {
+  return offset_->back_offset + data_start_;
 }
 
-void RingBuffer::Write(const char *buf, int len) {
-  // char * front = get_front();
-  char *back = get_back();
+void RingBuffer::set_front(uint8_t *front) {
+  assert(front >= data_start_);
+  offset_->front_offset = front - data_start_;
+}
+
+void RingBuffer::set_back(uint8_t *back) {
+  assert(back >= data_start_);
+  offset_->back_offset = back - data_start_;
+}
+
+void RingBuffer::Write(const uint8_t *buf, int len) {
+  uint8_t *back = get_back();
   assert(end_ >= back);
   if (back + len + sizeof(len) <= end_) {
     // enough space
@@ -115,14 +143,14 @@ void RingBuffer::Write(const char *buf, int len) {
       back += sizeof(len);
       int first = end_ - back;
       memcpy(back, buf, first);
-      memcpy(start_, buf + first, len - first);
-      back = start_ + len - first;
+      memcpy(data_start_, buf + first, len - first);
+      back = data_start_ + len - first;
     } else {
-      char *len_addr = reinterpret_cast<char *>(&len);
+      uint8_t *len_addr = reinterpret_cast<uint8_t *>(&len);
       int first = end_ - back;
       memcpy(back, &len, first);
-      memcpy(start_, len_addr + first, sizeof(len) - first);
-      back = start_ + sizeof(len) - first;
+      memcpy(data_start_, len_addr + first, sizeof(len) - first);
+      back = data_start_ + sizeof(len) - first;
 
       memcpy(back, buf, len);
       back += len;
@@ -131,41 +159,41 @@ void RingBuffer::Write(const char *buf, int len) {
   set_back(back);
 }
 
-char *RingBuffer::Read(int *plen) {
+uint8_t *RingBuffer::Read(int *plen, uint8_t **new_front) {
   assert(plen);
-  char *front = get_front();
+  auto *front = get_front();
 
   if (empty()) {
     *plen = 0;
-    return NULL;
+    return nullptr;
   }
 
   const int buffer_len = NextBufferLength();
   assert(buffer_len > 0);
   assert(buffer_len <= RingBuffer::kMaxBufferBodyLength);
   *plen = buffer_len;
-  char *buf = detail::local_buf;
-  char *content = front + RingBuffer::kBufferHeaderLength;
+  auto *buf = detail::local_buf;
+  uint8_t *content = front + RingBuffer::kBufferHeaderLength;
 
   if (content > end_) {
     ptrdiff_t offset = content - end_;
-    memcpy(buf, start_ + offset, buffer_len);
-    front = start_ + offset + buffer_len;
+    memcpy(buf, data_start_ + offset, buffer_len);
+    front = data_start_ + offset + buffer_len;
   } else if (content + buffer_len > end_) {
     ptrdiff_t tail_length = end_ - content;
     memcpy(buf, content, tail_length);
-    memcpy(buf + tail_length, start_, buffer_len - tail_length);
-    front = start_ + buffer_len - tail_length;
+    memcpy(buf + tail_length, data_start_, buffer_len - tail_length);
+    front = data_start_ + buffer_len - tail_length;
   } else {
     memcpy(buf, content, buffer_len);
     front = content + buffer_len;
   }
-  set_front(front);
-  return buf;
+  *new_front = front;
+  return reinterpret_cast<uint8_t *>(buf);
 }
 
 int RingBuffer::NextBufferLength() const {
-  char *front = get_front();
+  auto *front = get_front();
 
   assert(not empty());
   int len = 0;
@@ -173,9 +201,10 @@ int RingBuffer::NextBufferLength() const {
     len = *(reinterpret_cast<int *>(front));
   } else {
     ptrdiff_t offset = end_ - front;
-    char *len_addr = reinterpret_cast<char *>(&len);
+    auto *len_addr = reinterpret_cast<uint8_t *>(&len);
     memcpy(len_addr, front, offset);
-    memcpy(len_addr + offset, start_, RingBuffer::kBufferHeaderLength - offset);
+    memcpy(len_addr + offset, data_start_,
+           RingBuffer::kBufferHeaderLength - offset);
   }
   return len;
 }
