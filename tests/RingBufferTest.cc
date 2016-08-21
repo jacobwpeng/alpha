@@ -134,7 +134,7 @@ TEST_F(RingBufferTest, Peek) {
 
   data = buffer_->Pop(&len);
   EXPECT_NE(data, nullptr);
-  EXPECT_EQ(len, msg2.size());
+  EXPECT_EQ((size_t)len, msg2.size());
 }
 
 TEST_F(RingBufferTest, empty) {
