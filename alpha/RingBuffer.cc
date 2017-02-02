@@ -44,7 +44,7 @@ bool RingBuffer::CreateFrom(void *start, int64_t len) {
 }
 
 bool RingBuffer::RestoreFrom(void *start, int64_t len) {
-  if (start == nullptr || len < kMinByteSize) return nullptr;
+  if (start == nullptr || len < kMinByteSize) return false;
   offset_ = reinterpret_cast<OffsetData *>(start);
   data_start_ = reinterpret_cast<uint8_t *>(start) + sizeof(OffsetData);
   end_ = reinterpret_cast<uint8_t *>(start) + len;
