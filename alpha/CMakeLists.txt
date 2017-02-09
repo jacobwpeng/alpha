@@ -1,4 +1,9 @@
-file(GLOB SRCS "*.cc")
+file(GLOB LIB_ALPHA_SRCS "*.cc")
+set(ALPHA "alpha")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DALPHA_STRIP_LOG=2")
 include_directories(${PROJECT_SOURCE_DIR})
-add_library("alpha" STATIC ${SRCS})
+add_library(${ALPHA} STATIC ${LIB_ALPHA_SRCS})
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/alpha
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.h")
+install(TARGETS ${ALPHA} ARCHIVE DESTINATION lib)
