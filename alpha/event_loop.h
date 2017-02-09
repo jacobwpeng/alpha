@@ -28,10 +28,7 @@ class Channel;
 
 class EventLoop {
  public:
-  enum ServerStatus {
-    kIdle = 0,
-    kBusy = 1
-  };
+  enum ServerStatus { kIdle = 0, kBusy = 1 };
   using CronFunctor = std::function<int(uint64_t)>;
   using Functor = std::function<void(void)>;
 
@@ -49,13 +46,13 @@ class EventLoop {
 
   template <typename F, typename... Args>
   typename std::enable_if<sizeof...(Args) != 0, TimerManager::TimerId>::type
-      RunAt(alpha::TimeStamp ts, F&& f, Args&&... args);
+  RunAt(alpha::TimeStamp ts, F&& f, Args&&... args);
   template <typename F, typename... Args>
   typename std::enable_if<sizeof...(Args) != 0, TimerManager::TimerId>::type
-      RunAfter(uint32_t milliseconds, F&& f, Args&&... args);
+  RunAfter(uint32_t milliseconds, F&& f, Args&&... args);
   template <typename F, typename... Args>
   typename std::enable_if<sizeof...(Args) != 0, TimerManager::TimerId>::type
-      RunEvery(uint32_t milliseconds, F&& f, Args&&... args);
+  RunEvery(uint32_t milliseconds, F&& f, Args&&... args);
   TimerManager::TimerId RunAt(alpha::TimeStamp ts, const Functor& f);
   TimerManager::TimerId RunAfter(uint32_t milliseconds, const Functor& f);
   TimerManager::TimerId RunEvery(uint32_t milliseconds, const Functor& f);
@@ -63,16 +60,18 @@ class EventLoop {
   bool Expired(TimerManager::TimerId) const;
   bool TrapSignal(int signal, const Functor& cb);
 
-  void set_wait_time(int wait_time) { wait_time_ = wait_time; }
-  void set_idle_wait_time(int idle_time) { idle_time_ = idle_time; }
+  void set_busy_timeout(int time) { busy_timeout_ms_ = time; }
+  void set_idle_timeout(int idle_time) { idle_timeout_ms_ = idle_time; }
+  void set_next_max_timeout(int timeoutms);
   void set_cron_functor(const CronFunctor& functor) { cron_functor_ = functor; }
 
  private:
   std::unique_ptr<Poller> poller_;
   bool quit_;
   uint64_t iteration_;
-  int wait_time_;
-  int idle_time_;
+  int busy_timeout_ms_;
+  int idle_timeout_ms_;
+  int next_timeout_ms_;
   CronFunctor cron_functor_;
   std::unique_ptr<TimerManager> timer_manager_;
   std::vector<Functor> queued_functors_;

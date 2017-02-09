@@ -10,15 +10,14 @@
  * =====================================================================================
  */
 
-#include "event_loop.h"
+#include <alpha/event_loop.h>
 
 #include <cassert>
 #include <type_traits>
 #include <algorithm>
-#include "logger.h"
-#include "channel.h"
-#include "poller.h"
-#include "logger.h"
+#include <alpha/logger.h>
+#include <alpha/channel.h>
+#include <alpha/poller.h>
 
 namespace alpha {
 static_assert(
@@ -28,8 +27,14 @@ __thread sig_atomic_t signal_num = 0;
 
 static void signal_handler(int signo) { signal_num = signo; }
 
+static const int kDefaultBusyTimeoutMS = 20;
+static const int kDefaultIdleTimeoutMS = 100;
 EventLoop::EventLoop()
-    : quit_(false), iteration_(0), wait_time_(20), idle_time_(100) {
+    : quit_(false),
+      iteration_(0),
+      busy_timeout_ms_(kDefaultBusyTimeoutMS),
+      idle_timeout_ms_(kDefaultIdleTimeoutMS),
+      next_timeout_ms_(busy_timeout_ms_) {
   poller_.reset(new Poller);
   timer_manager_.reset(new TimerManager);
 }
@@ -41,12 +46,13 @@ void EventLoop::Run() {
   ChannelList channels;
 
   static const int kMaxLoopBeforeIdle = 100;
-  int timeout = wait_time_;  // ms
+  next_timeout_ms_ = busy_timeout_ms_;
   unsigned idle = 0;
 
   int status = kIdle;
   while (likely(not quit_)) {
-    alpha::TimeStamp now = poller_->Poll(timeout, &channels);
+    alpha::TimeStamp now = poller_->Poll(next_timeout_ms_, &channels);
+    next_timeout_ms_ = idle_timeout_ms_;
     //先处理信号
     if (unlikely(signal_num != 0)) {
       auto it = signal_handlers_.find(signal_num);
@@ -65,8 +71,9 @@ void EventLoop::Run() {
     std::swap(queued_functors, queued_functors_);
 
     //再处理网络消息
-    std::for_each(channels.begin(), channels.end(),
-                  [](Channel* channel) { channel->HandleEvents(); });
+    std::for_each(channels.begin(), channels.end(), [](Channel* channel) {
+      channel->HandleEvents();
+    });
     idle = channels.empty() ? idle + 1 : 0;
     channels.clear();
 
@@ -76,18 +83,21 @@ void EventLoop::Run() {
     }
 
     //再处理延时调用函数
-    std::for_each(queued_functors.begin(), queued_functors.end(),
+    std::for_each(queued_functors.begin(),
+                  queued_functors.end(),
                   [](const Functor& f) { f(); });
 
     auto timer_functors = timer_manager_->Step(now);
     //最后处理定时器
-    std::for_each(timer_functors.begin(), timer_functors.end(),
+    std::for_each(timer_functors.begin(),
+                  timer_functors.end(),
                   [](const Functor& f) { f(); });
 
-    timeout = wait_time_;
+    int timeoutms = busy_timeout_ms_;
     if (idle >= kMaxLoopBeforeIdle && status == kIdle) {
-      timeout = idle_time_;
+      timeoutms = idle_timeout_ms_;
     }
+    set_next_max_timeout(timeoutms);
   }
   LOG_INFO << "EventLoop exiting...";
 }
@@ -148,5 +158,14 @@ bool EventLoop::TrapSignal(int signal, const Functor& cb) {
 
 void EventLoop::QueueInLoop(const EventLoop::Functor& functor) {
   queued_functors_.push_back(functor);
+}
+
+void EventLoop::set_next_max_timeout(int timeoutms) {
+  CHECK(timeoutms >= 0);
+  if (next_timeout_ms_ < 0) {
+    next_timeout_ms_ = timeoutms;
+  } else {
+    next_timeout_ms_ = std::min(next_timeout_ms_, timeoutms);
+  }
 }
 }
