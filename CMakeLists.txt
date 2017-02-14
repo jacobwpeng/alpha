@@ -40,6 +40,8 @@ if (STATIC_LINK_LIBSTDC++)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
 endif()
 
+option(ALPHA_LOG_LEVEL "Library internal logging level")
+
 add_subdirectory(alpha)
 option(BUILD_EXAMPLES "Build examples" OFF)
 if (BUILD_EXAMPLES)
