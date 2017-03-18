@@ -7,6 +7,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--start-group")
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+
 include(CheckCXXCompilerFlag)
 
 check_cxx_compiler_flag(-Og FLAG_SUPPORT_DEBUG_OPTIMIZE)
@@ -34,10 +37,10 @@ if(FLAG_SUPPORT_UNUSED_PRIVATE_FIELD)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-private-field")
 endif()
 
-option(STATIC_LINK_LIBSTDC++ "Static link to libstdc++" OFF)
-if (STATIC_LINK_LIBSTDC++)
-  message(STATUS "Static link libstdc++")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
+option(STATIC_LINK "Static link all libs" OFF)
+if (STATIC_LINK)
+  message(STATUS "Static link all libs")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 endif()
 
 option(ALPHA_LOG_LEVEL "Library internal logging level")
