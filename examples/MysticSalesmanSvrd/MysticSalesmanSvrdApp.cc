@@ -20,7 +20,8 @@
 #include <alpha/HTTPResponseBuilder.h>
 #include "proto/MysticSalesmanSvrd.pb.h"
 
-MysticSalesmanSvrdApp::MysticSalesmanSvrdApp(int udp_port, int http_port,
+MysticSalesmanSvrdApp::MysticSalesmanSvrdApp(int udp_port,
+                                             int http_port,
                                              const char* mmap_file_path)
     : udp_port_(udp_port),
       http_port_(http_port),
@@ -36,23 +37,22 @@ int MysticSalesmanSvrdApp::Run() {
     return err;
   }
 
-  auto flags = alpha::MMapFile::kCreateIfNotExists;
-  mmap_file_ =
-      alpha::MMapFile::Open(mmap_file_path_.c_str(), kMMapFileSize, flags);
-  if (mmap_file_ == nullptr) {
+  auto flags = alpha::kCreateIfNotExists;
+  mmap_file_.Init(mmap_file_path_, kMMapFileSize, flags);
+  if (!mmap_file_) {
     LOG_ERROR << "Open mmap file failed, path: " << mmap_file_path_.c_str();
     return EXIT_FAILURE;
   }
 
-  auto start = reinterpret_cast<char*>(mmap_file_->start());
-  if (mmap_file_->newly_created()) {
-    user_group_map_ = UserGroupMap::Create(start, mmap_file_->size());
+  auto start = reinterpret_cast<char*>(mmap_file_.mapped_start());
+  if (mmap_file_.newly_created()) {
+    user_group_map_ = UserGroupMap::Create(start, mmap_file_.size());
   } else {
-    user_group_map_ = UserGroupMap::Restore(start, mmap_file_->size());
+    user_group_map_ = UserGroupMap::Restore(start, mmap_file_.size());
   }
 
   if (user_group_map_ == nullptr) {
-    const char* op = mmap_file_->newly_created() ? "Create" : "Restore";
+    const char* op = mmap_file_.newly_created() ? "Create" : "Restore";
     LOG_ERROR << op << " user group map from mmap file failed";
     return EXIT_FAILURE;
   }
@@ -136,8 +136,7 @@ void MysticSalesmanSvrdApp::HandleHTTPMessage(
     if (it != params.end()) {
       try {
         uin = std::stoul(it->second);
-      }
-      catch (std::exception& e) {
+      } catch (std::exception& e) {
         LOG_INFO << "Invalid uin: " << it->second;
       }
     }
@@ -182,8 +181,12 @@ void MysticSalesmanSvrdApp::HandleHTTPMessage(
     }
     UserSalesInfo info;
     uint32_t uin;
-    int num = sscanf(line.c_str(), "%u  %u  %u  %u", &uin, &info.group,
-                     &info.from, &info.to);
+    int num = sscanf(line.c_str(),
+                     "%u  %u  %u  %u",
+                     &uin,
+                     &info.group,
+                     &info.from,
+                     &info.to);
     if (num != 4 || info.from == 0 || info.to == 0) {
       std::ostringstream oss;
       oss << "Invalid line in file, line num: " << lineno << ", line: " << line;
