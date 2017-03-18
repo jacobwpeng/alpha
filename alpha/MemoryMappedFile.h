@@ -42,7 +42,8 @@ class MemoryMappedFile {
 
   DISABLE_COPY_ASSIGNMENT(MemoryMappedFile);
 
-  bool Init(alpha::Slice filepath, int64_t size,
+  bool Init(alpha::Slice filepath,
+            int64_t size,
             unsigned flags = MemoryMappedFlags::kDefault);
 
   void swap(MemoryMappedFile& other);
@@ -54,6 +55,8 @@ class MemoryMappedFile {
   operator bool() const;
 
   std::string filepath() const;
+
+  bool newly_created() const { return newly_created_; }
 
  private:
   bool newly_created_{false};
