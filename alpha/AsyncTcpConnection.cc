@@ -56,29 +56,33 @@ void AsyncTcpConnection::WaitWriteDone() {
   co_->Yield();
 }
 
-std::string AsyncTcpConnection::Read(size_t bytes, int timeout) {
+size_t AsyncTcpConnection::ReadFull(IOBuffer* io_buffer,
+                                    size_t buffer_size,
+                                    int timeout) {
   if (closed()) {
     throw AsyncTcpConnectionClosed("Read");
   }
+  if (buffer_size == 0) {
+    return 0;
+  }
 
+  size_t nread = 0;
   auto buffer = conn_->ReadBuffer();
-  std::string result;
   do {
     size_t length;
     auto p = buffer->Read(&length);
     if (p) {
-      if (bytes <= result.size() + length) {  // Read from buffer
-        CHECK(result.size() < bytes || bytes == 0);
-        auto sz = (bytes == 0 ? length : bytes - result.size());
-        result.append(p, sz);
+      if (buffer_size <= nread + length) {  // Read from buffer
+        CHECK(nread <= buffer_size);
+        auto sz = buffer_size - nread;
+        memcpy(io_buffer->data() + nread, p, sz);
         buffer->ConsumeBytes(sz);
-        CHECK(result.size() == bytes || (bytes == 0 && !result.empty()))
-            << "bytes: " << bytes << ", result.size(): " << result.size()
-            << ", sz: " << sz;
+        nread += sz;
         SetIdle();
-        return result;
+        return nread;
       } else {
-        result.append(p, length);
+        memcpy(io_buffer->data() + nread, p, length);
+        nread += length;
         buffer->ConsumeBytes(length);
       }
     }
@@ -92,11 +96,11 @@ std::string AsyncTcpConnection::Read(size_t bytes, int timeout) {
       throw alpha::AsyncTcpConnectionOperationTimeout();
     }
     if (closed()) {
-      throw AsyncTcpConnectionClosed("Read");
+      return nread;
     }
   } while (1);
   SetIdle();
-  return result;
+  return nread;
 }
 
 std::string AsyncTcpConnection::ReadCached(size_t bytes) {

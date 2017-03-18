@@ -34,8 +34,9 @@ class AsyncTcpConnection {
   void Write(alpha::Slice data);
   void WaitWriteDone();
 
-  size_t Read(IOBuffer* buf, size_t buf_len, size_t bytes = 0);
-  std::string Read(size_t bytes = 0, int timeout = kNoTimeout);
+  size_t ReadFull(IOBuffer* buffer,
+                  size_t buffer_size,
+                  int timeout = kNoTimeout);
   std::string ReadCached(size_t bytes = 0);
   char* PeekCached(size_t* length) const;
   void Close();
