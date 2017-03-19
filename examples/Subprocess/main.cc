@@ -10,24 +10,31 @@
  * =============================================================================
  */
 
+#include <iostream>
 #include <alpha/logger.h>
 #include <alpha/Subprocess.h>
-#include <iostream>
 
 int main(int argc, char* argv[]) {
   alpha::Logger::Init(argv[0]);
   alpha::Logger::set_logtostderr(true);
 
-  std::vector<std::string> args = {"/usr/bin/sleep", "100"};
+  std::vector<std::string> args = {"/usr/bin/sleep", "3"};
   alpha::Subprocess sub(args);
 
   pid_t pid = sub.pid();
-  auto rc = sub.Poll();
-  if (rc.KilledBySignal()) {
-    DLOG_INFO << "Child " << pid << " killed by signal " << rc.SignalReceived();
-  } else if (rc.TerminatedNormally()) {
-    DLOG_INFO << "Child " << pid << " exit with code " << rc.ExitCode();
-  } else {
-    DLOG_INFO << "Child is still running";
+  DLOG_INFO << "Subproces id: " << pid;
+  while (1) {
+    auto rc = sub.Poll();
+    if (rc.KilledBySignal()) {
+      DLOG_INFO << "Child " << pid << " killed by signal "
+                << rc.SignalReceived();
+      break;
+    } else if (rc.TerminatedNormally()) {
+      DLOG_INFO << "Child " << pid << " exit with code " << rc.ExitCode();
+      break;
+    } else {
+      DLOG_INFO << "Child is still running";
+    }
+    ::usleep(1000 * 300);
   }
 }

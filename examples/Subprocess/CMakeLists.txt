@@ -1,4 +1,4 @@
-set(PROG "subprocess")
-list(APPEND SUBPROCESS_PROG_SRCS "main.cc")
-add_executable(${PROG} ${SUBPROCESS_PROG_SRCS})
+set(PROG "example_subprocess")
+list(APPEND EXAMPLE_SUBPROCESS_SRCS "main.cc")
+add_executable(${PROG} ${EXAMPLE_SUBPROCESS_SRCS})
 target_link_libraries(${PROG} "alpha")
