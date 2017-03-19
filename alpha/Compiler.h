@@ -2,8 +2,8 @@
  * ==============================================================================
  *       Filename:  Compiler.h
  *        Created:  15:07:46 Dec 23, 2014
- *         Author:  jacobwpeng
- *          Email:  jacobwpeng@tencent.com
+ *         Author:  Peng Wang
+ *          Email:  pw2191195@gmail.com
  *    Description:  compiler optimization tools
  *
  * ==============================================================================

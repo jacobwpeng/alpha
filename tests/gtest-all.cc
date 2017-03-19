@@ -2,8 +2,8 @@
  * =====================================================================================
  *       Filename:  gtest-all.cc
  *        Created:  10:39:48 Apr 22, 2014
- *         Author:  jacobwpeng
- *          Email:  jacobwpeng@tencent.com
+ *         Author:  Peng Wang
+ *          Email:  pw2191195@gmail.com
  *    Description:
  *
  * =====================================================================================
