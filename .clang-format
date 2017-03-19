@@ -1,0 +1,8 @@
+BasedOnStyle: Google
+SortIncludes: false
+IndentWidth: 2
+PointerAlignment: Left
+ColumnLimit: 80
+BinPackArguments: false
+BinPackParameters: false
+AlignTrailingComments: true
