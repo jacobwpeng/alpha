@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __CONNECTIONCLOSEFSM_H__
-#define __CONNECTIONCLOSEFSM_H__
+#pragma once
 
 #include "FSM.h"
 #include "MethodPayloadCodec.h"
@@ -43,4 +42,3 @@ class ConnectionCloseFSM final : public FSM {
 };
 }
 
-#endif /* ----- #ifndef __CONNECTIONCLOSEFSM_H__  ----- */

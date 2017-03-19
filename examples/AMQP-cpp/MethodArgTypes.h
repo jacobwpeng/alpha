@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __METHODARGTYPES_H__
-#define __METHODARGTYPES_H__
+#pragma once
 
 #include "FieldTable.h"
 
@@ -41,4 +40,3 @@ class ShortString {
 };
 }
 
-#endif /* ----- #ifndef __METHODARGTYPES_H__  ----- */

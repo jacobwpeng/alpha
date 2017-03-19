@@ -10,8 +10,7 @@
  * ==============================================================================
  */
 
-#ifndef __LOGGER_STREAMBUF_H__
-#define __LOGGER_STREAMBUF_H__
+#pragma once
 
 #include <streambuf>
 
@@ -30,4 +29,3 @@ class LoggerStreambuf : public std::streambuf {
 };
 }
 
-#endif /* ----- #ifndef __LOGGER_STREAMBUF_H__  ----- */

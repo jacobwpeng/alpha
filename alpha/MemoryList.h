@@ -10,8 +10,7 @@
  * ==============================================================================
  */
 
-#ifndef __MEMORY_LIST_H__
-#define __MEMORY_LIST_H__
+#pragma once
 
 #include <cstring>
 #include <cassert>
@@ -68,4 +67,3 @@ class MemoryList<T,
 #include <alpha/MemoryList-inl.h>
 }
 
-#endif /* ----- #ifndef __MEMORY_LIST_H__  ----- */

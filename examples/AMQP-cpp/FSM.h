@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __FSM_H__
-#define __FSM_H__
+#pragma once
 
 #include <functional>
 #include "Frame.h"
@@ -43,4 +42,3 @@ class FSM {
 };
 }
 
-#endif /* ----- #ifndef __FSM_H__  ----- */

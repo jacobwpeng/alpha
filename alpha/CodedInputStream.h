@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __ALPHA_CODED_INPUT_STREAM_H__
-#define __ALPHA_CODED_INPUT_STREAM_H__
+#pragma once
 
 #include <alpha/Slice.h>
 
@@ -41,4 +40,3 @@ class CodedInputStream {
 };
 }
 
-#endif /* ----- #ifndef __ALPHA_CODED_INPUT_STREAM_H__  ----- */

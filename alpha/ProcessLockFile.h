@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __PROCESS_LOCK_FILE_H__
-#define __PROCESS_LOCK_FILE_H__
+#pragma once
 
 #include <string>
 #include <alpha/Slice.h>
@@ -28,4 +27,3 @@ class ProcessLockFile {
 };
 }
 
-#endif /* ----- #ifndef __PROCESS_LOCK_FILE_H__  ----- */

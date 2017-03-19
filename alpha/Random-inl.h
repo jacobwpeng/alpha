@@ -10,10 +10,6 @@
  * =============================================================================
  */
 
-#ifndef __RANDOM_H__
-#error This file should only be included from alpha/Random.h
-#endif
-
 #include <alpha/Random.h>
 #include <set>
 #include <algorithm>

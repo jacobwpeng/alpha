@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __CODECENV_H__
-#define __CODECENV_H__
+#pragma once
 
 #include <alpha/Slice.h>
 #include "EncodeUnit.h"
@@ -32,4 +31,3 @@ class CodecEnv {
 const CodecEnv* GetCodecEnv(alpha::Slice product);
 }
 
-#endif /* ----- #ifndef __CODECENV_H__  ----- */

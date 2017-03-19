@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __TCP_ACCEPTOR_H__
-#define __TCP_ACCEPTOR_H__
+#pragma once
 
 #include <memory>
 #include <functional>
@@ -47,4 +46,3 @@ class TcpAcceptor {
 };
 }
 
-#endif /* ----- #ifndef __TCP_ACCEPTOR_H__  ----- */

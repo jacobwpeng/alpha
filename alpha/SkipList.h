@@ -10,8 +10,7 @@
  * ==============================================================================
  */
 
-#ifndef __SKIP_LIST_H__
-#define __SKIP_LIST_H__
+#pragma once
 
 #include <cstdlib>
 #include <random>
@@ -677,4 +676,3 @@ SkipListType::Iterator::Iterator(SkipList* l, NodeId node_id)
 #undef IteratorBaseType
 }
 
-#endif /* ----- #ifndef __SKIP_LIST_H__  ----- */

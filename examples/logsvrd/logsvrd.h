@@ -10,8 +10,7 @@
  * ==============================================================================
  */
 
-#ifndef __LOGSVRD_H__
-#define __LOGSVRD_H__
+#pragma once
 
 #include <memory>
 #include <atomic>
@@ -41,4 +40,3 @@ class LogServer {
 };
 }
 
-#endif /* ----- #ifndef __LOGSVRD_H__  ----- */

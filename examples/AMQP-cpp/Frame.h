@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __FRAME_H__
-#define __FRAME_H__
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -44,4 +43,3 @@ static const uint8_t kFrameEnd = 0xCE;
 using FramePtr = std::unique_ptr<Frame>;
 }
 
-#endif /* ----- #ifndef __FRAME_H__  ----- */

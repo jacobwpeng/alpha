@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __BASICAUTHORIZATION_H__
-#define __BASICAUTHORIZATION_H__
+#pragma once
 
 #include <string>
 
@@ -22,4 +21,3 @@ struct PlainAuthorization {
 };
 }
 
-#endif /* ----- #ifndef __BASICAUTHORIZATION_H__  ----- */

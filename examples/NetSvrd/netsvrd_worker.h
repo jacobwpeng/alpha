@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __NETSVRD_WORKER_H__
-#define __NETSVRD_WORKER_H__
+#pragma once
 
 #include <memory>
 #include <alpha/Compiler.h>
@@ -40,4 +39,3 @@ class NetSvrdWorker final {
 };
 using NetSvrdWorkerPtr = std::unique_ptr<NetSvrdWorker>;
 
-#endif /* ----- #ifndef __NETSVRD_WORKER_H__  ----- */

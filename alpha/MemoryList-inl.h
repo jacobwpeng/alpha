@@ -10,10 +10,6 @@
  * ==============================================================================
  */
 
-#ifndef __MEMORY_LIST_H__
-#error This file should only be included from alpha/MemoryList.h
-#endif
-
 #include <alpha/MemoryList.h>
 
 #define MemoryListType                                        \

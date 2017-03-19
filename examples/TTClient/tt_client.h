@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __TT_CLIENT_H__
-#define __TT_CLIENT_H__
+#pragma once
 
 #include <alpha/Slice.h>
 #include <alpha/TcpConnection.h>
@@ -156,4 +155,3 @@ int Client::GetForwardMatchKeys(alpha::Slice prefix,
 }
 }
 
-#endif /* ----- #ifndef __TT_CLIENT_H__  ----- */

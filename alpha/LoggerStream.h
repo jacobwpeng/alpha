@@ -10,8 +10,7 @@
  * ==============================================================================
  */
 
-#ifndef __LOGGER_STREAM_H__
-#define __LOGGER_STREAM_H__
+#pragma once
 
 #include <ostream>
 #include <alpha/LoggerStreambuf.h>
@@ -46,4 +45,3 @@ std::ostream& operator<<(
 }
 }
 
-#endif /* ----- #ifndef __LOGGER_STREAM_H__  ----- */

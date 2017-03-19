@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __CODEDOUTPUTSTREAM_H__
-#define __CODEDOUTPUTSTREAM_H__
+#pragma once
 
 #include <cstdint>
 
@@ -34,4 +33,3 @@ class CodedOutputStream {
 };
 }
 
-#endif /* ----- #ifndef __CODEDOUTPUTSTREAM_H__  ----- */

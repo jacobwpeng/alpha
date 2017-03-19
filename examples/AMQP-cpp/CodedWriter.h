@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __CODEDWRITER_H__
-#define __CODEDWRITER_H__
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -51,4 +50,3 @@ class MemoryStringWriter final : public CodedWriterBase {
 };
 }
 
-#endif /* ----- #ifndef __CODEDWRITER_H__  ----- */

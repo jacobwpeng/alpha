@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __TIMER_MANAGER_H__
-#define __TIMER_MANAGER_H__
+#pragma once
 
 #include <alpha/TimeUtil.h>
 #include <vector>
@@ -41,4 +40,3 @@ class TimerManager {
 };
 }
 
-#endif /* ----- #ifndef __TIMER_MANAGER_H__  ----- */

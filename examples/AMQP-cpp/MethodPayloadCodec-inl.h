@@ -10,10 +10,6 @@
  * =============================================================================
  */
 
-#ifndef __METHODPAYLOADCODEC_H__
-#error This file may only be included from MethodPayloadCodec.h.
-#endif
-
 #include <algorithm>
 #include <boost/preprocessor.hpp>
 #include <alpha/Logger.h>

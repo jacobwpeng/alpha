@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __SOCKET_OPS_H__
-#define __SOCKET_OPS_H__
+#pragma once
 
 namespace alpha {
 namespace SocketOps {
@@ -24,4 +23,3 @@ void DisableWriting(int fd);
 void DisableReadingAndWriting(int fd);
 }
 }
-#endif /* ----- #ifndef __SOCKET_OPS_H__  ----- */

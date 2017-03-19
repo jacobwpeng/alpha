@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __FIELDVALUE_H__
-#define __FIELDVALUE_H__
+#pragma once
 
 #include <string>
 #include <alpha/Slice.h>
@@ -129,4 +128,3 @@ class FieldValue {
 std::ostream& operator<<(std::ostream& os, const FieldValue& v);
 }
 
-#endif /* ----- #ifndef __FIELDVALUE_H__  ----- */

@@ -10,8 +10,7 @@
  * =====================================================================================
  */
 
-#ifndef __POLLER_H__
-#define __POLLER_H__
+#pragma once
 
 #include <map>
 #include <vector>
@@ -49,4 +48,3 @@ class Poller {
 };
 }
 
-#endif /* ----- #ifndef __POLLER_H__  ----- */

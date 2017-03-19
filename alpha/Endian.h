@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __ALPHA_ENDIAN_H__
-#define __ALPHA_ENDIAN_H__
+#pragma once
 
 #include <byteswap.h>
 #include <cassert>
@@ -72,4 +71,3 @@ typename std::enable_if<std::is_integral<T>::value, T>::type LittleEndianToHost(
 }
 }
 
-#endif /* ----- #ifndef __ENDIAN_H__  ----- */

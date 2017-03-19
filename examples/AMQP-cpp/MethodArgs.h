@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __METHODARGS_H__
-#define __METHODARGS_H__
+#pragma once
 
 #include <cstdint>
 #include <map>
@@ -130,4 +129,3 @@ struct MethodExchangeDeclareOkArgs {
 };
 }
 
-#endif /* ----- #ifndef __METHODARGS_H__  ----- */

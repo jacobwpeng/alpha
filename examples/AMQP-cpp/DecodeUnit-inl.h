@@ -10,10 +10,6 @@
  * =============================================================================
  */
 
-#ifndef __DECODEUNIT_H__
-#error This file may only be included from DecodeUnit.h.
-#endif
-
 #include <alpha/Compiler.h>
 #include <alpha/Logger.h>
 

@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __NETSVRD_VIRTUAL_SERVER_H__
-#define __NETSVRD_VIRTUAL_SERVER_H__
+#pragma once
 
 #include <map>
 #include <vector>
@@ -104,4 +103,3 @@ class NetSvrdVirtualServer final {
   std::map<uint64_t, alpha::TcpConnection*> connections_;
 };
 
-#endif /* ----- #ifndef __NETSVRD_VIRTUAL_SERVER_H__  ----- */

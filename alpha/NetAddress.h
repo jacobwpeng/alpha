@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __NET_ADDRESS_H__
-#define __NET_ADDRESS_H__
+#pragma once
 
 #include <iosfwd>
 #include <string>
@@ -52,4 +51,3 @@ bool operator==(const NetAddress& lhs, const NetAddress& rhs);
 bool operator<(const NetAddress& lhs, const NetAddress& rhs);
 }
 
-#endif /* ----- #ifndef __NET_ADDRESS_H__  ----- */

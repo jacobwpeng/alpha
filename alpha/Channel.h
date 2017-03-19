@@ -10,8 +10,7 @@
  * =====================================================================================
  */
 
-#ifndef __CHANNEL_H__
-#define __CHANNEL_H__
+#pragma once
 
 #include <vector>
 #include <string>
@@ -85,4 +84,3 @@ class Channel {
 typedef std::vector<Channel*> ChannelList;
 }
 
-#endif /* ----- #ifndef __CHANNEL_H__  ----- */

@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __ALPHA_REGION_BASED_ALLOCATOR_H__
-#define __ALPHA_REGION_BASED_ALLOCATOR_H__
+#pragma once
 
 #include <memory>
 #include <type_traits>
@@ -63,4 +62,3 @@ class RegionBasedAllocator<
 
 #include "RegionBasedAllocator-inl.h"
 
-#endif /* ----- #ifndef __ALPHA_REGION_BASED_ALLOCATOR_H__  ----- */

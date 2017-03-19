@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __FRAMECODEC_H__
-#define __FRAMECODEC_H__
+#pragma once
 
 #include <functional>
 #include <alpha/Slice.h>
@@ -71,4 +70,3 @@ class FrameReader {
 };
 }
 
-#endif /* ----- #ifndef __FRAMECODEC_H__  ----- */

@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __CHANNEL_H__
-#define __CHANNEL_H__
+#pragma once
 
 #include <queue>
 #include <memory>
@@ -52,4 +51,3 @@ class Channel final : public std::enable_shared_from_this<Channel> {
 };
 }
 
-#endif /* ----- #ifndef __CHANNEL_H__  ----- */

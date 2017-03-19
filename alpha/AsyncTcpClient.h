@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __ASYNCTCPCLIENT_H__
-#define __ASYNCTCPCLIENT_H__
+#pragma once
 
 #include <vector>
 #include <alpha/TcpClient.h>
@@ -59,4 +58,3 @@ class AsyncTcpClient {
 };
 }
 
-#endif /* ----- #ifndef __ASYNCTCPCLIENT_H__  ----- */

@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __CONNECTION_H__
-#define __CONNECTION_H__
+#pragma once
 
 #include <map>
 #include <alpha/AsyncTcpConnection.h>
@@ -87,4 +86,3 @@ void Connection::WriteMethod(ChannelID channel_id, Args&& args) {
 }
 }
 
-#endif /* ----- #ifndef __CONNECTION_H__  ----- */

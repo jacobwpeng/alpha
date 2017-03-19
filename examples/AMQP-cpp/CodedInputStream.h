@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __CODEDINPUTSTREAM_H__
-#define __CODEDINPUTSTREAM_H__
+#pragma once
 
 #include <alpha/Slice.h>
 #include "MethodArgTypes.h"
@@ -41,4 +40,3 @@ class CodedInputStream {
 };
 }
 
-#endif /* ----- #ifndef __CODEDINPUTSTREAM_H__  ----- */

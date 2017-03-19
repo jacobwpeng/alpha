@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __TCP_SERVER_H__
-#define __TCP_SERVER_H__
+#pragma once
 
 #include <map>
 #include <memory>
@@ -59,4 +58,3 @@ class TcpServer {
 };
 }
 
-#endif /* ----- #ifndef __TCP_SERVER_H__  ----- */

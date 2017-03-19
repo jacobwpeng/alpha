@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __CONNECTIONPARAMETERS_H__
-#define __CONNECTIONPARAMETERS_H__
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -31,4 +30,3 @@ struct ConnectionParameters {
 };
 }
 
-#endif /* ----- #ifndef __CONNECTIONPARAMETERS_H__  ----- */

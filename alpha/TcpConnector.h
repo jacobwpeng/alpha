@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __TCP_CONNECTOR_H__
-#define __TCP_CONNECTOR_H__
+#pragma once
 
 #include <map>
 #include <memory>
@@ -58,4 +57,3 @@ class TcpConnector {
 };
 }
 
-#endif /* ----- #ifndef __TCP_CONNECTOR_H__  ----- */

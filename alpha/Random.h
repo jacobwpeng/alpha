@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __RANDOM_H__
-#define __RANDOM_H__
+#pragma once
 
 #include <random>
 #include <algorithm>
@@ -150,4 +149,3 @@ class Random {
 
 #include <alpha/Random-inl.h>
 
-#endif /* ----- #ifndef __RANDOM_H__  ----- */

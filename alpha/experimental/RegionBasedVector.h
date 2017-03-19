@@ -9,8 +9,7 @@
  *
  * =============================================================================
  */
-#ifndef __ALPHA_REGION_BASED_VECTOR_H__
-#define __ALPHA_REGION_BASED_VECTOR_H__
+#pragma once
 
 #include <cstring>
 #include <memory>
@@ -80,4 +79,3 @@ class RegionBasedVector<
 
 #include "RegionBasedVector-inl.h"
 
-#endif /* ----- #ifndef __ALPHA_REGION_BASED_VECTOR_H__  ----- */

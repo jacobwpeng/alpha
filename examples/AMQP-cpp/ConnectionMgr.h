@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __CONNECTIONMGR_H__
-#define __CONNECTIONMGR_H__
+#pragma once
 
 #include <map>
 #include <functional>
@@ -92,4 +91,3 @@ void ConnectionMgr::AddFramePacker(alpha::TcpConnection* conn, Args&&... args) {
 #endif
 }
 
-#endif /* ----- #ifndef __CONNECTIONMGR_H__  ----- */

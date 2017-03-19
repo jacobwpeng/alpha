@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __FIELDTABLE_H__
-#define __FIELDTABLE_H__
+#pragma once
 
 #include <map>
 #include "FieldValue.h"
@@ -34,4 +33,3 @@ class FieldTable {
 };
 }
 
-#endif /* ----- #ifndef __FIELDTABLE_H__  ----- */

@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __ENCODEUNIT_H__
-#define __ENCODEUNIT_H__
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -140,4 +139,3 @@ class FieldTableEncodeUnit final : public EncodeUnit {
 };
 }
 
-#endif /* ----- #ifndef __ENCODEUNIT_H__  ----- */

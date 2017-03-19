@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __CONNECTIONESTABLISHFSM_H__
-#define __CONNECTIONESTABLISHFSM_H__
+#pragma once
 
 #include <memory>
 #include <vector>
@@ -80,4 +79,3 @@ void ConnectionEstablishState::add_encoder(Args&& args) {
 }
 }
 
-#endif /* ----- #ifndef __CONNECTIONESTABLISHFSM_H__  ----- */

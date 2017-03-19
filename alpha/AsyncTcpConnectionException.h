@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __ASYNCTCPCONNECTIONEXCEPTION_H__
-#define __ASYNCTCPCONNECTIONEXCEPTION_H__
+#pragma once
 
 #include <stdexcept>
 
@@ -32,4 +31,3 @@ class AsyncTcpConnectionClosed : public AsyncTcpConnectionException {
 };
 }
 
-#endif /* ----- #ifndef __ASYNCTCPCONNECTIONEXCEPTION_H__  ----- */

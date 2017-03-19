@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __DECODEUNIT_H__
-#define __DECODEUNIT_H__
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -158,4 +157,3 @@ class FieldTableDecodeUnit final : public DecodeUnit {
 }
 
 #include "DecodeUnit-inl.h"
-#endif /* ----- #ifndef __DECODEUNIT_H__  ----- */

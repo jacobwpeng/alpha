@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __METHODPAYLOADCODEC_H__
-#define __METHODPAYLOADCODEC_H__
+#pragma once
 
 #include <memory>
 #include <vector>
@@ -99,4 +98,3 @@ struct RequestToResponseHelper;
 
 #include "MethodPayloadCodec-inl.h"
 
-#endif /* ----- #ifndef __METHODPAYLOADCODEC_H__  ----- */

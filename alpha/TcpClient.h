@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __TCP_CLIENT_H__
-#define __TCP_CLIENT_H__
+#pragma once
 
 #include <map>
 #include <set>
@@ -65,4 +64,3 @@ class TcpClient {
 };
 }
 
-#endif /* ----- #ifndef __TCP_CLIENT_H__  ----- */

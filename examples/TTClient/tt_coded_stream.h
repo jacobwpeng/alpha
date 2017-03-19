@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __TT_CODED_STREAM_H__
-#define __TT_CODED_STREAM_H__
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -55,4 +54,3 @@ class CodedOutputStream final {
 };
 }
 
-#endif /* ----- #ifndef __TT_CODED_STREAM_H__  ----- */

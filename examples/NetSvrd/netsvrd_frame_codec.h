@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __NETSVRD_FRAME_CODEC_H__
-#define __NETSVRD_FRAME_CODEC_H__
+#pragma once
 
 #include <memory>
 #include <functional>
@@ -29,4 +28,3 @@ class NetSvrdFrameCodec final {
   NetSvrdFrame::UniquePtr frame_;
 };
 
-#endif /* ----- #ifndef __NETSVRD_FRAME_CODEC_H__  ----- */

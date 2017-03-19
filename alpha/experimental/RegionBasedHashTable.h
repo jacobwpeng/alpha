@@ -9,8 +9,7 @@
  *
  * =============================================================================
  */
-#ifndef __ALPHA_REGION_BASED_HASH_TABLE_H__
-#define __ALPHA_REGION_BASED_HASH_TABLE_H__
+#pragma once
 
 #include <type_traits>
 #include "RegionBasedVector.h"
@@ -171,4 +170,3 @@ class RegionBasedHashTable<
 
 #include "RegionBasedHashTable-inl.h"
 
-#endif /* ----- #ifndef __ALPHA_REGION_BASED_HASH_TABLE_H__  ----- */

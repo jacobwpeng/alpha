@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __NETSVRD_APP_H__
-#define __NETSVRD_APP_H__
+#pragma once
 
 #include <memory>
 #include <alpha/Compiler.h>
@@ -41,4 +40,3 @@ class NetSvrdApp {
   std::vector<NetSvrdVirtualServerPtr> servers_;
 };
 
-#endif /* ----- #ifndef __NETSVRD_APP_H__  ----- */

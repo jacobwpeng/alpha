@@ -10,8 +10,7 @@
  * =============================================================================
  */
 
-#ifndef __TT_PROTOCOL_CODEC_H__
-#define __TT_PROTOCOL_CODEC_H__
+#pragma once
 
 #include <cstdint>
 #include <map>
@@ -316,4 +315,3 @@ class ProtocolCodec {
 };
 }
 
-#endif /* ----- #ifndef __TT_PROTOCOL_CODEC_H__  ----- */

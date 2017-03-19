@@ -10,8 +10,7 @@
  * ==============================================================================
  */
 
-#ifndef __FORMAT_H__
-#define __FORMAT_H__
+#pragma once
 
 #include <alpha/Slice.h>
 
@@ -19,4 +18,3 @@ namespace alpha {
 std::string HexDump(alpha::Slice data);
 }
 
-#endif /* ----- #ifndef __FORMAT_H__  ----- */

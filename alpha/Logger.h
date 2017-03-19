@@ -10,8 +10,7 @@
  * ==============================================================================
  */
 
-#ifndef __LOGGER_H__
-#define __LOGGER_H__
+#pragma once
 
 #include <memory>
 #include <vector>
@@ -192,4 +191,3 @@ class LogMessage final {
 #define PLOG_ERROR_IF(cond) alpha::NullStream()
 #endif
 
-#endif /* ----- #ifndef __LOGGER_H__  ----- */

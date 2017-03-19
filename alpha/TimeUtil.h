@@ -10,8 +10,7 @@
  * ==============================================================================
  */
 
-#ifndef __TIME_UTIL_H__
-#define __TIME_UTIL_H__
+#pragma once
 
 #include <ctime>
 #include <cstdint>
@@ -33,4 +32,3 @@ time_t to_time_t(TimeStamp ts);
 bool InSameHour(TimeStamp lhs, TimeStamp rhs);
 }
 
-#endif /* ----- #ifndef __TIME_UTIL_H__  ----- */
