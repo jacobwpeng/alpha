@@ -1,7 +1,7 @@
 /*
  * =============================================================================
  *
- *       Filename:  echo_server.cc
+ *       Filename:  main.cc
  *        Created:  04/05/15 16:00:06
  *         Author:  Peng Wang
  *          Email:  pw2191195@gmail.com
@@ -42,14 +42,11 @@ class EchoServer {
 
   void OnRead(alpha::TcpConnectionPtr conn,
               alpha::TcpConnectionBuffer* buffer) {
-    alpha::Slice data = buffer->Read();
-    DLOG_INFO << "Receive from " << conn->PeerAddr()
-              << ", data.size() = " << data.size();
-    std::vector<char> input(data.size());
-    size_t n = buffer->ReadAndClear(input.data(), input.size());
-    assert(n == input.size());
-    (void)n;
-    conn->Write(alpha::Slice(input.data(), input.size()));
+    size_t length;
+    const char* data = buffer->Read(&length);
+    LOG_INFO << "Receive " << length << " bytes from " << conn->PeerAddr();
+    conn->Write(data, length);
+    buffer->ConsumeBytes(length);
     UpdateTimer(conn);
   }
 
@@ -83,6 +80,7 @@ class EchoServer {
 
 int main(int argc, char* argv[]) {
   alpha::Logger::Init(argv[0]);
+  alpha::Logger::set_logtostderr(true);
   alpha::EventLoop loop;
   alpha::NetAddress addr("127.0.0.1", 7890);
   EchoServer echo_server(&loop, addr);

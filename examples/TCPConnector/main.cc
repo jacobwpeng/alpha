@@ -18,15 +18,14 @@
 
 int main(int argc, char* argv[]) {
   if (argc != 3) {
-    ::fprintf(stderr, "Usage: %s ip port\n", argv[0]);
+    fprintf(stderr, "Usage: %s ip port\n", argv[0]);
     return EXIT_FAILURE;
   }
-  alpha::Logger::set_logtostderr(true);
   alpha::Logger::Init(argv[0]);
+  alpha::Logger::set_logtostderr(true);
   alpha::EventLoop loop;
   alpha::TcpConnector connector(&loop);
-  int port = std::stoi(argv[2]);
-  alpha::NetAddress addr(argv[1], port);
+  alpha::NetAddress addr(argv[1], std::stoi(argv[2]));
   connector.SetOnConnected([addr, &loop](int fd) {
     alpha::ScopedFD scoped_fd(fd);
     LOG_INFO << "Connected to " << addr << ", fd: " << fd;

@@ -17,37 +17,23 @@
 #include <alpha/Random.h>
 
 int main(int argc, char* argv[]) {
-  std::vector<char> buf(1 << 27);
   alpha::Logger::Init(argv[0]);
+  alpha::Logger::set_logtostderr(true);
   using MapType = alpha::SkipList<uint32_t, uint32_t>;
+  std::vector<char> buf(1 << 20);
   auto m = MapType::Create(buf.data(), buf.size());
-  std::map<uint32_t, uint32_t> benchmark;
+  CHECK(m);
 
-  uint64_t loops = 0;
-  while (1) {
-    auto op = alpha::Random::Rand32(3);
-    auto key = alpha::Random::Rand32(m->max_size());
-    if (op == 0 && m->size() != m->max_size()) {
-      auto val = alpha::Random::Rand32();
-      auto p = std::make_pair(key, val);
-      auto res = m->insert(p);
-      auto benchmark_res = benchmark.insert(p);
-      if (unlikely(res.second != benchmark_res.second)) {
-        LOG_ERROR << "Insert failed";
-        return EXIT_FAILURE;
-      }
-    } else if (op == 1) {
-      if (unlikely((m->find(key) == m->end()) !=
-                   (benchmark.find(key) == benchmark.end()))) {
-        LOG_ERROR << "Find failed";
-        return EXIT_FAILURE;
-      }
-    } else {
-      if (unlikely(m->erase(key) != benchmark.erase(key))) {
-        LOG_ERROR << "Erase failed";
-        return EXIT_FAILURE;
-      }
-    }
-    LOG_INFO_IF(++loops % 1000000 == 0) << loops;
-  }
+  auto p = m->insert(std::make_pair(1024, 1));
+  CHECK(p.second);
+  CHECK(p.first->second == 1);
+
+  auto it = m->find(1024);
+  CHECK(it != m->end());
+  CHECK(it->first == 1024);
+  CHECK(it->second == 1);
+
+  m->erase(it);
+
+  LOG_INFO << "After erase, size: " << m->size();
 }

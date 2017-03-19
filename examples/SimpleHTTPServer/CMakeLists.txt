@@ -1,4 +1,4 @@
-#file(GLOB TOKYO_TYRANT_CLIENT_EXAMPLE_SRCS "*.cc")
-list(APPEND SIMPLE_HTTP_SERVER_EXAMPLE_SRCS "main.cc")
-add_executable("simple_http_server" ${SIMPLE_HTTP_SERVER_EXAMPLE_SRCS})
-target_link_libraries("simple_http_server" "alpha")
+set(PROG "example_simple_http_server")
+list(APPEND SRCS "main.cc")
+add_executable(${PROG} ${SRCS})
+target_link_libraries(${PROG} "alpha")

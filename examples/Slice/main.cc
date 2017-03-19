@@ -10,24 +10,15 @@
  * ==============================================================================
  */
 
-#include <cassert>
-#include <iostream>
-#include <type_traits>
+#include <cstdio>
 #include <alpha/Slice.h>
 
-struct PODType {
-  int val;
-};
+void PrintSlice(alpha::Slice s) { std::printf("%s\n", s.data()); }
 
 int main() {
-  static_assert(std::is_pod<PODType>::value, "Invalid PODType");
-  PODType obj;
-  alpha::Slice data(&obj);
-  assert(reinterpret_cast<intptr_t>(data.data()) ==
-         reinterpret_cast<intptr_t>(&obj));
-  assert(data.size() == sizeof(obj));
+  std::string s = "HELLO";
+  const char* s2 = "WORLD";
 
-  auto pobj = data.as<PODType>();
-  assert(pobj == &obj);
-  (void)pobj;
+  PrintSlice(s);
+  PrintSlice(s2);
 }

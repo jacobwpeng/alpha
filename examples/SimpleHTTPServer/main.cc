@@ -18,11 +18,20 @@
 #include <alpha/HTTPMessage.h>
 #include <alpha/HTTPResponseBuilder.h>
 
+int Usage(const char* argv0) {
+  printf("Usage: %s PORT\n", argv0);
+  return EXIT_FAILURE;
+}
+
 int main(int argc, char* argv[]) {
-  alpha::Logger::set_logtostderr(true);
   alpha::Logger::Init(argv[0]);
+  alpha::Logger::set_logtostderr(true);
+  if (argc != 2) {
+    return Usage(argv[0]);
+  }
   alpha::EventLoop loop;
   loop.TrapSignal(SIGINT, [&] { loop.Quit(); });
+
   alpha::SimpleHTTPServer http_server(&loop);
   http_server.SetCallback(
       [](alpha::TcpConnectionPtr conn, const alpha::HTTPMessage& message) {
@@ -44,11 +53,12 @@ int main(int argc, char* argv[]) {
         }
         const auto& payloads = message.payloads();
         for (auto payload : payloads) {
-          DLOG_INFO << "Payload size: " << payload.size();
+          LOG_INFO << "Payload size: " << payload.size();
         }
         alpha::HTTPResponseBuilder builder(conn);
-        builder.status(201, "Created").SendWithEOM();
+        builder.status(404, "Not Found").SendWithEOM();
       });
+
   int port = std::stoul(argv[1]);
   if (http_server.Run(alpha::NetAddress("0.0.0.0", port))) {
     loop.Run();
