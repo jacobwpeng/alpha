@@ -19,8 +19,12 @@
 namespace alpha {
 
 using NodeID = uint32_t;
-template <typename Key, typename T, typename Hash, typename Pred,
-          typename KeyOfValue, class Enable = void>
+template <typename Key,
+          typename T,
+          typename Hash,
+          typename Pred,
+          typename KeyOfValue,
+          class Enable = void>
 class RegionBasedHashTable;
 
 template <typename T>
@@ -29,11 +33,17 @@ struct HashTableNode {
   T val;
 };
 
-template <typename Key, typename T, typename Hash, typename Pred,
+template <typename Key,
+          typename T,
+          typename Hash,
+          typename Pred,
           typename KeyOfValue>
 class HashTableConstIterator;
 
-template <typename Key, typename T, typename Hash, typename Pred,
+template <typename Key,
+          typename T,
+          typename Hash,
+          typename Pred,
           typename KeyOfValue>
 class HashTableIterator : public std::iterator<std::forward_iterator_tag, T> {
  public:
@@ -56,7 +66,10 @@ class HashTableIterator : public std::iterator<std::forward_iterator_tag, T> {
   _HashTableNode* node_;
 };
 
-template <typename Key, typename T, typename Hash, typename Pred,
+template <typename Key,
+          typename T,
+          typename Hash,
+          typename Pred,
           typename KeyOfValue>
 class HashTableConstIterator
     : public std::iterator<std::forward_iterator_tag, const T> {
@@ -80,10 +93,17 @@ class HashTableConstIterator
   const _HashTableNode* node_;
 };
 
-template <typename Key, typename T, typename Hash, typename Pred,
+template <typename Key,
+          typename T,
+          typename Hash,
+          typename Pred,
           typename KeyOfValue>
 class RegionBasedHashTable<
-    Key, T, Hash, Pred, KeyOfValue,
+    Key,
+    T,
+    Hash,
+    Pred,
+    KeyOfValue,
     typename std::enable_if<std::is_pod<T>::value &&
                             !std::is_pointer<T>::value>::type> {
  public:

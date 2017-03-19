@@ -10,7 +10,7 @@
  * =============================================================================
  */
 
-#include "HTTPResponseBuilder.h"
+#include <alpha/HTTPResponseBuilder.h>
 #include <cassert>
 
 namespace alpha {
@@ -42,9 +42,12 @@ HTTPResponseBuilder& HTTPResponseBuilder::AddHeader(Slice name, Slice value) {
 void HTTPResponseBuilder::SendWithEOM() {
   char buf[64];
   const char* CRLF = "\r\n";
-  auto nbytes =
-      snprintf(buf, sizeof(buf), "HTTP/1.0 %d %s%s", message_.Status(),
-               message_.StatusString().c_str(), CRLF);
+  auto nbytes = snprintf(buf,
+                         sizeof(buf),
+                         "HTTP/1.0 %d %s%s",
+                         message_.Status(),
+                         message_.StatusString().c_str(),
+                         CRLF);
   assert(nbytes < static_cast<ssize_t>(sizeof(buf)));
   conn_->Write(alpha::Slice(buf, nbytes));
   message_.Headers().Foreach(

@@ -14,8 +14,8 @@
 
 #include <memory>
 #include <functional>
-#include <alpha/compiler.h>
-#include <alpha/net_address.h>
+#include <alpha/Compiler.h>
+#include <alpha/NetAddress.h>
 #include <alpha/UDPSocket.h>
 
 namespace alpha {
@@ -24,8 +24,8 @@ class EventLoop;
 
 class UDPServer final {
  public:
-  using MessageCallback = std::function<
-      void(UDPSocket*, IOBuffer*, size_t buf_len, const NetAddress&)>;
+  using MessageCallback = std::function<void(
+      UDPSocket*, IOBuffer*, size_t buf_len, const NetAddress&)>;
 
   explicit UDPServer(alpha::EventLoop* loop);
   ~UDPServer();

@@ -10,13 +10,13 @@
  * =============================================================================
  */
 
-#include "UDPSocket.h"
+#include <alpha/UDPSocket.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/ip.h>
-#include <alpha/logger.h>
-#include <alpha/socket_ops.h>
+#include <alpha/Logger.h>
+#include <alpha/SocketOps.h>
 
 namespace alpha {
 UDPSocket::UDPSocket() = default;
@@ -36,8 +36,8 @@ int UDPSocket::Connect(const NetAddress& addr) {
   CHECK(socket_ != kInvalidSocket);
   sockaddr_in sock_addr = addr.ToSockAddr();
   socklen_t addr_len = sizeof(sock_addr);
-  int rc = ::connect(socket_, reinterpret_cast<struct sockaddr*>(&sock_addr),
-                     addr_len);
+  int rc = ::connect(
+      socket_, reinterpret_cast<struct sockaddr*>(&sock_addr), addr_len);
   if (rc == -1) {
     return -1;
   } else {
@@ -136,30 +136,40 @@ int UDPSocket::SendTo(IOBuffer* buf, size_t buf_len, const NetAddress& addr) {
 int UDPSocket::DoBind(const NetAddress& addr) {
   sockaddr_in sock_addr = addr.ToSockAddr();
   socklen_t addr_len = sizeof(sock_addr);
-  return ::bind(socket_, reinterpret_cast<struct sockaddr*>(&sock_addr),
-                addr_len);
+  return ::bind(
+      socket_, reinterpret_cast<struct sockaddr*>(&sock_addr), addr_len);
 }
 
-int UDPSocket::SendOrWrite(IOBuffer* buf, size_t buf_len,
+int UDPSocket::SendOrWrite(IOBuffer* buf,
+                           size_t buf_len,
                            const NetAddress* addr) {
   CHECK(socket_ != kInvalidSocket);
   if (!addr) {
     return ::sendto(socket_, buf->data(), buf_len, 0, nullptr, 0);
   } else {
     sockaddr_in sock_addr = addr->ToSockAddr();
-    return ::sendto(socket_, buf->data(), buf_len, 0,
+    return ::sendto(socket_,
+                    buf->data(),
+                    buf_len,
+                    0,
                     reinterpret_cast<struct sockaddr*>(&sock_addr),
                     sizeof(sock_addr));
   }
 }
 
 int UDPSocket::SetReceiveBufferSize(int32_t size) {
-  return setsockopt(socket_, SOL_SOCKET, SO_SNDBUF,
-                    reinterpret_cast<const char*>(&size), sizeof(size));
+  return setsockopt(socket_,
+                    SOL_SOCKET,
+                    SO_SNDBUF,
+                    reinterpret_cast<const char*>(&size),
+                    sizeof(size));
 }
 
 int UDPSocket::SetSendBufferSize(int32_t size) {
-  return setsockopt(socket_, SOL_SOCKET, SO_RCVBUF,
-                    reinterpret_cast<const char*>(&size), sizeof(size));
+  return setsockopt(socket_,
+                    SOL_SOCKET,
+                    SO_RCVBUF,
+                    reinterpret_cast<const char*>(&size),
+                    sizeof(size));
 }
 }

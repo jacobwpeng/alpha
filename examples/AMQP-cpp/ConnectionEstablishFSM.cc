@@ -11,7 +11,7 @@
  */
 
 #include "ConnectionEstablishFSM.h"
-#include <alpha/compiler.h>
+#include <alpha/Compiler.h>
 #include "CodedWriter.h"
 #include "CodecEnv.h"
 
@@ -23,10 +23,12 @@ bool ConnectionEstablishState::HandleFrame(FramePtr&& frame,
                                            SendReplyFunc send_reply_func) {
   int rc = decoder_->Decode(frame->payload());
   if (rc == DecodeState::kDone) {
-    std::for_each(encoders_.begin(), encoders_.end(),
+    std::for_each(encoders_.begin(),
+                  encoders_.end(),
                   [&send_reply_func](std::unique_ptr<EncoderBase>& encoder) {
-      send_reply_func(0, Frame::Type::kMethod, std::move(encoder));
-    });
+                    send_reply_func(
+                        0, Frame::Type::kMethod, std::move(encoder));
+                  });
     return true;
   } else if (rc == DecodeState::kNeedsMore) {
     return false;
@@ -38,7 +40,8 @@ bool ConnectionEstablishState::HandleFrame(FramePtr&& frame,
 }
 
 ConnectionEstablishFSM::ConnectionEstablishFSM(
-    const CodecEnv* codec_env, const PlainAuthorization& auth,
+    const CodecEnv* codec_env,
+    const PlainAuthorization& auth,
     const ConnectionParameters& params)
     : FSM(codec_env),
       state_(State::kWaitingStart),

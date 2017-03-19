@@ -13,10 +13,10 @@
 #pragma once
 
 #include <map>
-#include "slice.h"
-#include "net_address.h"
-#include "tcp_connection.h"
-#include "HTTPMessageCodec.h"
+#include <alpha/Slice.h>
+#include <alpha/NetAddress.h>
+#include <alpha/TcpConnection.h>
+#include <alpha/HTTPMessageCodec.h>
 
 namespace alpha {
 class EventLoop;
@@ -28,16 +28,19 @@ class SimpleHTTPServer {
   using HTTPHeader = HTTPMessageCodec::HTTPHeader;
   using Callback =
       std::function<void(TcpConnectionPtr, const HTTPMessage& message)>;
-  using RequestCallback = std::function<
-      void(TcpConnectionPtr, Slice path, const HTTPHeader& header, Slice data)>;
+  using RequestCallback = std::function<void(
+      TcpConnectionPtr, Slice path, const HTTPHeader& header, Slice data)>;
   SimpleHTTPServer(EventLoop* loop);
   ~SimpleHTTPServer();
   bool Run(const NetAddress& addr);
   void SetCallback(const Callback& cb) { callback_ = cb; }
 
  private:
-  void DefaultRequestCallback(TcpConnectionPtr, Slice method, Slice path,
-                              const HTTPHeader& header, Slice data);
+  void DefaultRequestCallback(TcpConnectionPtr,
+                              Slice method,
+                              Slice path,
+                              const HTTPHeader& header,
+                              Slice data);
   void OnMessage(TcpConnectionPtr conn, TcpConnectionBuffer* buffer);
   void OnConnected(TcpConnectionPtr conn);
   void OnClose(TcpConnectionPtr conn);

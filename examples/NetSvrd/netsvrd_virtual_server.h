@@ -16,9 +16,9 @@
 #include <map>
 #include <vector>
 #include <string>
-#include <alpha/compiler.h>
-#include <alpha/tcp_connection.h>
-#include <alpha/timer_manager.h>
+#include <alpha/Compiler.h>
+#include <alpha/TcpConnection.h>
+#include <alpha/TimerManager.h>
 #include <alpha/Subprocess.h>
 #include "netsvrd_frame_codec.h"
 #include "netsvrd_worker.h"
@@ -60,9 +60,11 @@ struct NetSvrdConnectionContext {
 
 class NetSvrdVirtualServer final {
  public:
-  NetSvrdVirtualServer(uint64_t net_server_id, alpha::EventLoop* loop,
+  NetSvrdVirtualServer(uint64_t net_server_id,
+                       alpha::EventLoop* loop,
                        const std::string& bus_dir,
-                       const std::string& worker_path, unsigned max_worker_num);
+                       const std::string& worker_path,
+                       unsigned max_worker_num);
   ~NetSvrdVirtualServer();
   DISABLE_COPY_ASSIGNMENT(NetSvrdVirtualServer);
 
@@ -78,8 +80,10 @@ class NetSvrdVirtualServer final {
   void OnMessage(alpha::TcpConnectionPtr conn,
                  alpha::TcpConnectionBuffer* buffer);
   void OnClose(alpha::TcpConnectionPtr conn);
-  void OnUDPMessage(alpha::UDPSocket* socket, alpha::IOBuffer* buf,
-                    size_t buf_len, const alpha::NetAddress& address);
+  void OnUDPMessage(alpha::UDPSocket* socket,
+                    alpha::IOBuffer* buf,
+                    size_t buf_len,
+                    const alpha::NetAddress& address);
   void OnFrame(uint64_t connection_id, NetSvrdFrame::UniquePtr&& frame);
   void StartMonitorWorkers();
   void StopMonitorWorkers();

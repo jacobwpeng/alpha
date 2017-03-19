@@ -13,7 +13,7 @@
 #ifndef __CODEDINPUTSTREAM_H__
 #define __CODEDINPUTSTREAM_H__
 
-#include <alpha/slice.h>
+#include <alpha/Slice.h>
 #include "MethodArgTypes.h"
 
 namespace amqp {

@@ -10,14 +10,14 @@
  * ==============================================================================
  */
 
-#include "SimpleHTTPServer.h"
-#include "compiler.h"
-#include "logger.h"
-#include "format.h"
-#include "net_address.h"
-#include "event_loop.h"
-#include "tcp_server.h"
-#include "HTTPMessageCodec.h"
+#include <alpha/SimpleHTTPServer.h>
+#include <alpha/Compiler.h>
+#include <alpha/Logger.h>
+#include <alpha/Format.h>
+#include <alpha/NetAddress.h>
+#include <alpha/EventLoop.h>
+#include <alpha/TcpServer.h>
+#include <alpha/HTTPMessageCodec.h>
 
 namespace alpha {
 SimpleHTTPServer::SimpleHTTPServer(EventLoop* loop) : loop_(loop) {}
@@ -35,7 +35,8 @@ bool SimpleHTTPServer::Run(const NetAddress& addr) {
 }
 
 void SimpleHTTPServer::DefaultRequestCallback(TcpConnectionPtr conn,
-                                              Slice method, Slice path,
+                                              Slice method,
+                                              Slice path,
                                               const HTTPHeader& header,
                                               Slice data) {
   LOG_INFO << "New request from " << conn->PeerAddr();

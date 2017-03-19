@@ -13,7 +13,7 @@
 #ifndef __CODECENV_H__
 #define __CODECENV_H__
 
-#include <alpha/slice.h>
+#include <alpha/Slice.h>
 #include "EncodeUnit.h"
 #include "DecodeUnit.h"
 

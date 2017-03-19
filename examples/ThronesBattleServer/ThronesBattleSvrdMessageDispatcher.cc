@@ -11,11 +11,12 @@
  */
 
 #include "ThronesBattleSvrdMessageDispatcher.h"
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 
 namespace ThronesBattle {
 int32_t MessageDispatcher::Dispatch(
-    UinType uin, const google::protobuf::Message* m,
+    UinType uin,
+    const google::protobuf::Message* m,
     ThronesBattleServerProtocol::ResponseWrapper* response_wrapper) {
   auto it = callbacks_.find(m->GetDescriptor());
   if (it != callbacks_.end()) {

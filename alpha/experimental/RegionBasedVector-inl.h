@@ -18,13 +18,15 @@
 #include <cassert>
 #include <algorithm>
 
-#define VectorType                                                          \
-  RegionBasedVector < T, typename std::enable_if < std::is_pod<T>::value && \
-                             !std::is_pointer<T>::value > ::type >
+#define VectorType                                                   \
+  RegionBasedVector<T,                                               \
+                    typename std::enable_if<std::is_pod<T>::value && \
+                                            !std::is_pointer<T>::value>::type>
 
 namespace alpha {
 template <typename T>
-std::unique_ptr<VectorType> VectorType::Create(char* data, size_t size,
+std::unique_ptr<VectorType> VectorType::Create(char* data,
+                                               size_t size,
                                                Header* header) {
   if (CheckAligned(data) == false) {
     return nullptr;
@@ -49,7 +51,8 @@ std::unique_ptr<VectorType> VectorType::Create(char* data, size_t size,
 }
 
 template <typename T>
-std::unique_ptr<VectorType> VectorType::Restore(char* data, size_t size,
+std::unique_ptr<VectorType> VectorType::Restore(char* data,
+                                                size_t size,
                                                 Header* header) {
   if (CheckAligned(data) == false) {
     return nullptr;

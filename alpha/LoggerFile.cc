@@ -10,16 +10,17 @@
  * ==============================================================================
  */
 
-#include "LoggerFile.h"
+#include <alpha/LoggerFile.h>
 #include <limits.h>
 #include <cstdio>
 #include <cstring>
 
-#include "compiler.h"
-#include "logger.h"
+#include <alpha/Compiler.h>
+#include <alpha/Logger.h>
 
 namespace alpha {
-LoggerFile::LoggerFile(const std::string& path, const std::string& prog_name,
+LoggerFile::LoggerFile(const std::string& path,
+                       const std::string& prog_name,
                        const std::string& log_level_name)
     : path_(path), prog_name_(prog_name), log_level_name_(log_level_name) {}
 
@@ -55,9 +56,16 @@ void LoggerFile::MaybeChangeLogFile() {
   }
 
   char path[PATH_MAX];
-  ::snprintf(path, sizeof(path), "%s/%s.%4d%02d%02d%02d.%s.log", path_.c_str(),
-             prog_name_.c_str(), result.tm_year + 1900, result.tm_mon + 1,
-             result.tm_mday, result.tm_hour, log_level_name_.c_str());
+  ::snprintf(path,
+             sizeof(path),
+             "%s/%s.%4d%02d%02d%02d.%s.log",
+             path_.c_str(),
+             prog_name_.c_str(),
+             result.tm_year + 1900,
+             result.tm_mon + 1,
+             result.tm_mday,
+             result.tm_hour,
+             log_level_name_.c_str());
   int open_flags = O_WRONLY | O_APPEND | O_CREAT;
   File new_file(path, open_flags);
   if (!new_file) {
@@ -77,8 +85,12 @@ void LoggerFile::UpdateSymLinkFile(const char* file) {
 
 std::string LoggerFile::SymLinkPath() const {
   char path[PATH_MAX];
-  ::snprintf(path, sizeof(path), "%s/%s.%s.log", path_.c_str(),
-             prog_name_.c_str(), log_level_name_.c_str());
+  ::snprintf(path,
+             sizeof(path),
+             "%s/%s.%s.log",
+             path_.c_str(),
+             prog_name_.c_str(),
+             log_level_name_.c_str());
   return path;
 }
 }

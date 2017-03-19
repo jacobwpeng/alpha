@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include <alpha/slice.h>
-#include <alpha/tcp_connection.h>
+#include <alpha/Slice.h>
+#include <alpha/TcpConnection.h>
 #include <alpha/HTTPMessage.h>
 
 namespace alpha {

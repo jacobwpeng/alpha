@@ -14,8 +14,8 @@
 #define __NETSVRD_APP_H__
 
 #include <memory>
-#include <alpha/compiler.h>
-#include <alpha/tcp_server.h>
+#include <alpha/Compiler.h>
+#include <alpha/TcpServer.h>
 #include <alpha/File.h>
 
 class NetSvrdVirtualServer;

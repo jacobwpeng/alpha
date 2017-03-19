@@ -11,10 +11,10 @@
  */
 
 #include "FrameCodec.h"
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include <alpha/AsyncTcpConnection.h>
 #include "Frame.h"
-#include "CodedInputStream.h"
+#include <alpha/CodedInputStream.h>
 #include "CodedWriter.h"
 #include "MethodPayloadCodec.h"
 #include "CodedOutputStream.h"
@@ -73,15 +73,15 @@ FramePtr FrameReader::Read() {
   stream.ReadUInt8(&frame_type);
   stream.ReadBigEndianUInt16(&frame_channel);
   stream.ReadBigEndianUInt32(&payload_size);
-  CHECK(Frame::ValidType(frame_type))
-      << "Invalid frame type: " << static_cast<int>(frame_type);
+  CHECK(Frame::ValidType(frame_type)) << "Invalid frame type: "
+                                      << static_cast<int>(frame_type);
   auto payload = conn_->Read(payload_size);
   CodedInputStream frame_end_stream(conn_->Read(1));
   uint8_t frame_end;
   frame_end_stream.ReadUInt8(&frame_end);
-  CHECK(frame_end == kFrameEnd)
-      << "Invalid frame end: " << static_cast<int>(frame_end);
-  return alpha::make_unique<Frame>(static_cast<Frame::Type>(frame_type),
-                                   frame_channel, std::move(payload));
+  CHECK(frame_end == kFrameEnd) << "Invalid frame end: "
+                                << static_cast<int>(frame_end);
+  return alpha::make_unique<Frame>(
+      static_cast<Frame::Type>(frame_type), frame_channel, std::move(payload));
 }
 }

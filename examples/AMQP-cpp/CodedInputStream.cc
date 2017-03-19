@@ -10,9 +10,9 @@
  * =============================================================================
  */
 
-#include "CodedInputStream.h"
+#include <alpha/CodedInputStream.h>
 #include <arpa/inet.h>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 
 namespace amqp {
 CodedInputStream::CodedInputStream(alpha::Slice data)

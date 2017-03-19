@@ -15,7 +15,7 @@
 
 #include <memory>
 #include <functional>
-#include <alpha/tcp_connection.h>
+#include <alpha/TcpConnection.h>
 #include "netsvrd_frame.h"
 
 class NetSvrdFrameCodec final {

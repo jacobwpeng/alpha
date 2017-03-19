@@ -10,7 +10,7 @@
  * =============================================================================
  */
 
-#include "File.h"
+#include <alpha/File.h>
 #include <sys/file.h>
 #include <alpha/ScopedGeneric.h>
 
@@ -79,8 +79,8 @@ int File::ReadAt(int64_t offset, void* data, int size) {
   int rc = 0;
   auto p = reinterpret_cast<uintptr_t>(data);
   do {
-    rc = pread(fd_, reinterpret_cast<void*>(p + nread), size - nread,
-               offset + nread);
+    rc = pread(
+        fd_, reinterpret_cast<void*>(p + nread), size - nread, offset + nread);
     if (rc <= 0) {
       // I/O operations on disk devices are not interrupted by signals.
       // so no EINTR here.
@@ -114,8 +114,10 @@ int File::WriteAt(int64_t offset, const void* data, int size) {
   int rc = 0;
   auto p = reinterpret_cast<uintptr_t>(data);
   do {
-    rc = pwrite(fd_, reinterpret_cast<const void*>(p + nwritten),
-                size - nwritten, offset + nwritten);
+    rc = pwrite(fd_,
+                reinterpret_cast<const void*>(p + nwritten),
+                size - nwritten,
+                offset + nwritten);
     if (rc <= 0) {
       // I/O operations on disk devices are not interrupted by signals.
       // so no EINTR here.
@@ -132,8 +134,8 @@ int File::Write(const void* data, int size) {
   int rc = 0;
   auto p = reinterpret_cast<uintptr_t>(data);
   do {
-    rc = write(fd_, reinterpret_cast<const void*>(p + nwritten),
-               size - nwritten);
+    rc = write(
+        fd_, reinterpret_cast<const void*>(p + nwritten), size - nwritten);
     if (rc <= 0) {
       // I/O operations on disk devices are not interrupted by signals.
       // so no EINTR here.

@@ -10,14 +10,15 @@
  * ==============================================================================
  */
 
-#include "TimeUtil.h"
+#include <alpha/TimeUtil.h>
 #include <chrono>
 
 namespace alpha {
 TimeStamp Now() {
   auto now = std::chrono::system_clock::now();
   return std::chrono::duration_cast<std::chrono::milliseconds>(
-      now.time_since_epoch()).count();
+             now.time_since_epoch())
+      .count();
 }
 
 TimeStamp NowInSeconds() { return Now() / kMilliSecondsPerSecond; }

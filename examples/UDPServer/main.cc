@@ -10,8 +10,8 @@
  * =============================================================================
  */
 
-#include <alpha/logger.h>
-#include <alpha/event_loop.h>
+#include <alpha/Logger.h>
+#include <alpha/EventLoop.h>
 #include <alpha/UDPSocket.h>
 #include <alpha/UDPServer.h>
 #include <alpha/IOBuffer.h>

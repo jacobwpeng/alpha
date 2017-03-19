@@ -24,7 +24,8 @@ class CodedWriterBase;
 class CodecEnv;
 
 using SendReplyFunc =
-    std::function<void(ChannelID channel_id, Frame::Type type,
+    std::function<void(ChannelID channel_id,
+                       Frame::Type type,
                        std::unique_ptr<EncoderBase>&& encoder)>;
 class FSM {
  public:

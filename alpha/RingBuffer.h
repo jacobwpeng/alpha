@@ -14,7 +14,7 @@
 
 #include <memory>
 #include <cstddef>
-#include <alpha/compiler.h>
+#include <alpha/Compiler.h>
 
 namespace alpha {
 class RingBuffer {

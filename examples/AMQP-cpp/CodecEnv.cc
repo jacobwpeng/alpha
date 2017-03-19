@@ -14,7 +14,7 @@
 
 #include <cstring>
 #include <algorithm>
-#include <alpha/compiler.h>
+#include <alpha/Compiler.h>
 #include "DecodeUnit.h"
 #include "FieldValue.h"
 
@@ -51,10 +51,12 @@ std::unique_ptr<FieldValueDecodeUnit> RabbitMQCodecEnv::NewDecodeUnit(
     case 'I':
       return FieldValueDecodeUnit::Create<LongDecodeUnit, int32_t, uint32_t>();
     case 'l':
-      return FieldValueDecodeUnit::Create<LongLongDecodeUnit, int64_t,
+      return FieldValueDecodeUnit::Create<LongLongDecodeUnit,
+                                          int64_t,
                                           uint64_t>();
     case 'T':
-      return FieldValueDecodeUnit::Create<LongLongDecodeUnit, uint64_t,
+      return FieldValueDecodeUnit::Create<LongLongDecodeUnit,
+                                          uint64_t,
                                           uint64_t>();
     case 'S':
       return FieldValueDecodeUnit::Create<LongStringDecodeUnit, std::string>(

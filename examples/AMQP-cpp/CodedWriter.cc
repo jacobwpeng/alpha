@@ -11,7 +11,7 @@
  */
 
 #include "CodedWriter.h"
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include <alpha/AsyncTcpConnection.h>
 
 namespace amqp {

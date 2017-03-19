@@ -14,12 +14,12 @@
 #include <cassert>
 #include <cstdio>
 #include <functional>
-#include "slice.h"
-#include "logger.h"
-#include "event_loop.h"
-#include "tcp_connection_buffer.h"
-#include "tcp_connection.h"
-#include "tcp_server.h"
+#include <alpha/Slice.h>
+#include <alpha/Logger.h>
+#include <alpha/EventLoop.h>
+#include <alpha/TcpConnectionBuffer.h>
+#include <alpha/TcpConnection.h>
+#include <alpha/TcpServer.h>
 
 class EchoServer {
  public:
@@ -59,8 +59,9 @@ class EchoServer {
       loop_->RemoveTimer(*timerid);
     }
     auto timer_id = loop_->RunAfter(
-        kDefaultTimeout, std::bind(&EchoServer::KickOff, this,
-                                   alpha::TcpConnectionWeakPtr(conn)));
+        kDefaultTimeout,
+        std::bind(
+            &EchoServer::KickOff, this, alpha::TcpConnectionWeakPtr(conn)));
     conn->SetContext(timer_id);
   }
 

@@ -14,8 +14,8 @@
 
 #include <map>
 #include <alpha/TimeUtil.h>
-#include <alpha/slice.h>
-#include <alpha/net_address.h>
+#include <alpha/Slice.h>
+#include <alpha/NetAddress.h>
 #include <alpha/HTTPHeaders.h>
 
 namespace alpha {

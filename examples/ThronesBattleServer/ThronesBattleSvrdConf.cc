@@ -11,9 +11,9 @@
  */
 
 #include "ThronesBattleSvrdConf.h"
-#include <alpha/logger.h>
-#include <alpha/compiler.h>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
+#include <alpha/Compiler.h>
+#include <alpha/Logger.h>
 #include <boost/foreach.hpp>
 #include <boost/date_time.hpp>
 #include <boost/typeof/typeof.hpp>
@@ -25,8 +25,8 @@ namespace detail {
 Reward ReadReward(const boost::property_tree::ptree& pt) {
   BOOST_AUTO(opt_battle_point, pt.get_optional<uint32_t>("<xmlattr>.point"));
   Reward reward = Reward::Create(opt_battle_point.get_value_or(0));
-  BOOST_FOREACH(const boost::property_tree::ptree::value_type & child,
-                pt.get_child("")) {
+  BOOST_FOREACH (const boost::property_tree::ptree::value_type& child,
+                 pt.get_child("")) {
     if (child.first != "Goods") continue;
     uint32_t goods_id = child.second.get<uint32_t>("<xmlattr>.id");
     uint32_t goods_num = child.second.get<uint32_t>("<xmlattr>.num");
@@ -36,7 +36,8 @@ Reward ReadReward(const boost::property_tree::ptree& pt) {
   return reward;
 }
 
-void ReadFileOption(const boost::property_tree::ptree& pt, std::string* path,
+void ReadFileOption(const boost::property_tree::ptree& pt,
+                    std::string* path,
                     uint32_t* size) {
   *path = pt.get<std::string>("<xmlattr>.file");
   *size = pt.get<uint32_t>("<xmlattr>.size") << 20;  // MiB
@@ -91,10 +92,10 @@ const ZoneConf* ServerConf::GetZoneConf(const Zone* zone) {
 }
 
 const ZoneConf* ServerConf::GetZoneConf(uint16_t zone_id) {
-  auto it = std::find_if(zones_.begin(), zones_.end(),
-                         [zone_id](const ZoneConf& zone_conf) {
-    return zone_conf.zone_id() == zone_id;
-  });
+  auto it = std::find_if(
+      zones_.begin(), zones_.end(), [zone_id](const ZoneConf& zone_conf) {
+        return zone_conf.zone_id() == zone_id;
+      });
   CHECK(it != zones_.end());
   return &*it;
 }
@@ -133,7 +134,7 @@ bool ServerConf::InitFromFile(const char* file) {
     reward_time_finish_offset_ =
         pt.get<unsigned>("Time.RewardTime.<xmlattr>.finish");
     new_season_time_offset_ = pt.get<unsigned>("Time.NewSeason.<xmlattr>.time");
-    BOOST_FOREACH(const ptree::value_type & child, pt.get_child("Time")) {
+    BOOST_FOREACH (const ptree::value_type& child, pt.get_child("Time")) {
       if (child.first != "Fight") continue;
       uint16_t round = child.second.get<uint16_t>("<xmlattr>.round");
       unsigned t = child.second.get<unsigned>("<xmlattr>.start");
@@ -150,24 +151,28 @@ bool ServerConf::InitFromFile(const char* file) {
     daemonize_ = pt.get<bool>("Server.Daemonize.<xmlattr>.val");
 
     detail::ReadFileOption(pt.get_child("Server.BattleData"),
-                           &battle_data_file_, &battle_data_file_size_);
+                           &battle_data_file_,
+                           &battle_data_file_size_);
     detail::ReadFileOption(pt.get_child("Server.WarriorsData"),
-                           &warriors_data_file_, &warriors_data_file_size_);
+                           &warriors_data_file_,
+                           &warriors_data_file_size_);
     detail::ReadFileOption(pt.get_child("Server.RewardData"),
-                           &rewards_data_file_, &rewards_data_file_size_);
-    detail::ReadFileOption(pt.get_child("Server.RankData"), &rank_data_file_,
+                           &rewards_data_file_,
+                           &rewards_data_file_size_);
+    detail::ReadFileOption(pt.get_child("Server.RankData"),
+                           &rank_data_file_,
                            &rank_data_file_size_);
     lucky_warrior_reward_ =
         detail::ReadReward(pt.get_child("LuckyWarriorReward"));
-    BOOST_FOREACH(const ptree::value_type & child, pt.get_child("Zones")) {
+    BOOST_FOREACH (const ptree::value_type& child, pt.get_child("Zones")) {
       if (child.first != "Zone") continue;
       BOOST_AUTO(pt_zone, child.second);
       ZoneConf zone(pt_zone.get<uint16_t>("<xmlattr>.id"),
                     pt_zone.get<unsigned>("<xmlattr>.max_camp_warriors_num"),
                     pt_zone.get<unsigned>("<xmlattr>.max_level"),
                     pt_zone.get<std::string>("<xmlattr>.name"));
-      BOOST_FOREACH(const ptree::value_type & grandchild,
-                    pt_zone.get_child("Rewards")) {
+      BOOST_FOREACH (const ptree::value_type& grandchild,
+                     pt_zone.get_child("Rewards")) {
         BOOST_AUTO(pt_reward, grandchild.second);
         if (grandchild.first == "RoundReward") {
           zone.AddRoundReward(pt_reward.get<std::string>("<xmlattr>.game_log"),
@@ -183,8 +188,7 @@ bool ServerConf::InitFromFile(const char* file) {
       zones_.push_back(zone);
     }
     return true;
-  }
-  catch (ptree_error& e) {
+  } catch (ptree_error& e) {
     LOG_ERROR << "InitFromFile failed, file: " << file << ", " << e.what();
     return false;
   }

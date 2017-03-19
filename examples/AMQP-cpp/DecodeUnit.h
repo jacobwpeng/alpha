@@ -17,7 +17,7 @@
 #include <string>
 #include <map>
 #include <memory>
-#include <alpha/slice.h>
+#include <alpha/Slice.h>
 #include "MethodArgTypes.h"
 #include "FieldTable.h"
 #include "FieldValue.h"
@@ -121,7 +121,8 @@ class TimeStampDecodeUnit final : public DecodeUnit {
 class FieldValueDecodeUnit : public DecodeUnit {
  public:
   // Create Trivial Type DecodeUnit
-  template <typename UnderlyingDecodeUnitType, typename ValueCppType,
+  template <typename UnderlyingDecodeUnitType,
+            typename ValueCppType,
             typename DecodeUnitArgType>
   static std::unique_ptr<FieldValueDecodeUnit> Create();
 

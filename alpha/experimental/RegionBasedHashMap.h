@@ -35,8 +35,13 @@ PODPair<First, Second> make_pod_pair(const First& first, const Second& second) {
   return {.first = first, .second = second};
 }
 
-template <class Key, class T, class Hash = std::hash<Key>,
+template <class Key,
+          class T,
+          class Hash = std::hash<Key>,
           class Pred = std::equal_to<Key>>
-using RegionBasedHashMap = RegionBasedHashTable<
-    Key, PODPair<Key, T>, Hash, Pred, Select1st<PODPair<Key, T>>>;
+using RegionBasedHashMap = RegionBasedHashTable<Key,
+                                                PODPair<Key, T>,
+                                                Hash,
+                                                Pred,
+                                                Select1st<PODPair<Key, T>>>;
 }

@@ -14,8 +14,8 @@
 #define __FRAMECODEC_H__
 
 #include <functional>
-#include <alpha/slice.h>
-#include <alpha/tcp_connection.h>
+#include <alpha/Slice.h>
+#include <alpha/TcpConnection.h>
 #include "MethodArgTypes.h"
 #include "Frame.h"
 

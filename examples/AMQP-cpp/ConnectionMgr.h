@@ -15,10 +15,10 @@
 
 #include <map>
 #include <functional>
-#include <alpha/event_loop.h>
-#include <alpha/slice.h>
-#include <alpha/tcp_connection.h>
-#include <alpha/tcp_client.h>
+#include <alpha/EventLoop.h>
+#include <alpha/Slice.h>
+#include <alpha/TcpConnection.h>
+#include <alpha/TcpClient.h>
 #include <alpha/AsyncTcpClient.h>
 #include "CodedWriter.h"
 #include "CodecEnv.h"

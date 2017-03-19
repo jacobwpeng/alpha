@@ -11,7 +11,7 @@
  */
 
 #include "ThronesBattleSvrdTaskBroker.h"
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include <alpha/AsyncTcpConnection.h>
 #include <alpha/AsyncTcpConnectionException.h>
 
@@ -19,7 +19,9 @@ namespace ThronesBattle {
 TaskBroker::TaskBroker(alpha::AsyncTcpClient* client,
                        alpha::AsyncTcpConnectionCoroutine* co,
                        const alpha::NetAddress& fight_server_addr,
-                       uint16_t zone, uint16_t camp, const TaskCallback& cb)
+                       uint16_t zone,
+                       uint16_t camp,
+                       const TaskCallback& cb)
     : client_(client),
       co_(co),
       fight_server_addr_(fight_server_addr),
@@ -77,7 +79,8 @@ void TaskBroker::SendNonAckedTask(size_t max) {
   }
   size_t sent = 0;
   for (auto it = non_acked_tasks_.begin();
-       it != non_acked_tasks_.end() && sent < max; ++sent, ++it) {
+       it != non_acked_tasks_.end() && sent < max;
+       ++sent, ++it) {
     SendTaskToRemote(it->second);
   }
 }

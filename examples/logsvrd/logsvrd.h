@@ -16,8 +16,8 @@
 #include <memory>
 #include <atomic>
 #include <vector>
-#include "compiler.h"
-#include "slice.h"
+#include <alpha/Compiler.h>
+#include <alpha/Slice.h>
 
 namespace alpha {
 class BusManager;

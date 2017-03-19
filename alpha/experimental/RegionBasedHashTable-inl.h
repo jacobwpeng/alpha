@@ -14,8 +14,11 @@
 #error This file should only be included from RegionBasedHashTable.h
 #endif
 
-#define HashTableIteratorTypeDeclaration                            \
-  template <typename Key, typename T, typename Hash, typename Pred, \
+#define HashTableIteratorTypeDeclaration \
+  template <typename Key,                \
+            typename T,                  \
+            typename Hash,               \
+            typename Pred,               \
             typename KeyOfValue>
 #define HashTableIteratorType HashTableIterator<Key, T, Hash, Pred, KeyOfValue>
 
@@ -44,22 +47,20 @@ operator++() {
   node_ = nullptr;
   return *this;
 }
-HashTableIteratorTypeDeclaration HashTableIteratorType HashTableIteratorType::
-operator++(int) {
+HashTableIteratorTypeDeclaration HashTableIteratorType
+    HashTableIteratorType::operator++(int) {
   auto tmp = *this;
   ++*this;
   return tmp;
 }
-HashTableIteratorTypeDeclaration typename HashTableIteratorType::_Base::
-    reference
-HashTableIteratorType::
-operator*() const {
+HashTableIteratorTypeDeclaration
+    typename HashTableIteratorType::_Base::reference HashTableIteratorType::
+    operator*() const {
   return node_->val;
 }
 
 HashTableIteratorTypeDeclaration typename HashTableIteratorType::_Base::pointer
-HashTableIteratorType::
-operator->() const {
+    HashTableIteratorType::operator->() const {
   return &(operator*());
 }
 
@@ -76,8 +77,11 @@ HashTableIteratorTypeDeclaration bool HashTableIteratorType::operator!=(
 #undef HashTableIteratorType
 #undef HashTableIteratorTypeDeclaration
 
-#define HashTableIteratorTypeDeclaration                            \
-  template <typename Key, typename T, typename Hash, typename Pred, \
+#define HashTableIteratorTypeDeclaration \
+  template <typename Key,                \
+            typename T,                  \
+            typename Hash,               \
+            typename Pred,               \
             typename KeyOfValue>
 #define HashTableIteratorType \
   HashTableConstIterator<Key, T, Hash, Pred, KeyOfValue>
@@ -111,22 +115,20 @@ operator++() {
   node_ = nullptr;
   return *this;
 }
-HashTableIteratorTypeDeclaration HashTableIteratorType HashTableIteratorType::
-operator++(int) {
+HashTableIteratorTypeDeclaration HashTableIteratorType
+    HashTableIteratorType::operator++(int) {
   auto tmp = *this;
   ++*this;
   return tmp;
 }
-HashTableIteratorTypeDeclaration typename HashTableIteratorType::_Base::
-    reference
-HashTableIteratorType::
-operator*() const {
+HashTableIteratorTypeDeclaration
+    typename HashTableIteratorType::_Base::reference HashTableIteratorType::
+    operator*() const {
   return node_->val;
 }
 
 HashTableIteratorTypeDeclaration typename HashTableIteratorType::_Base::pointer
-HashTableIteratorType::
-operator->() const {
+    HashTableIteratorType::operator->() const {
   return &(operator*());
 }
 
@@ -143,12 +145,20 @@ HashTableIteratorTypeDeclaration bool HashTableIteratorType::operator!=(
 #undef HashTableIteratorType
 #undef HashTableIteratorTypeDeclaration
 
-#define HashTableType                                    \
-  RegionBasedHashTable < Key, T, Hash, Pred, KeyOfValue, \
-      typename std::enable_if < std::is_pod<T>::value && \
-          !std::is_pointer<T>::value > ::type >
-#define HashTableTypeDeclaration                                    \
-  template <typename Key, typename T, typename Hash, typename Pred, \
+#define HashTableType                                  \
+  RegionBasedHashTable<                                \
+      Key,                                             \
+      T,                                               \
+      Hash,                                            \
+      Pred,                                            \
+      KeyOfValue,                                      \
+      typename std::enable_if<std::is_pod<T>::value && \
+                              !std::is_pointer<T>::value>::type>
+#define HashTableTypeDeclaration \
+  template <typename Key,        \
+            typename T,          \
+            typename Hash,       \
+            typename Pred,       \
             typename KeyOfValue>
 
 static const uint32_t kNumPrimes = 28;
@@ -196,8 +206,8 @@ HashTableType::Create(char* data, size_t size) {
   ht->header_->magic = kMagic;
   ht->header_->element_size = sizeof(value_type);
   ht->header_->bucket_num = bucket_num;
-  ht->buckets_ = VectorType::Create(aligned_bucket_start, bucket_size,
-                                    &ht->header_->bucket_header);
+  ht->buckets_ = VectorType::Create(
+      aligned_bucket_start, bucket_size, &ht->header_->bucket_header);
   assert(ht->buckets_);
   assert(ht->buckets_->max_size() == bucket_num);
   for (size_t i = 0; i < bucket_num; ++i) {
@@ -221,8 +231,8 @@ HashTableType::Restore(char* data, size_t size) {
   auto p = data;
   auto header = reinterpret_cast<Header*>(p);
   p += sizeof(Header);
-  auto it = std::find(std::begin(kPrimeList), std::end(kPrimeList),
-                      header->bucket_num);
+  auto it = std::find(
+      std::begin(kPrimeList), std::end(kPrimeList), header->bucket_num);
   if (header->magic != kMagic || header->element_size != sizeof(value_type) ||
       it == std::end(kPrimeList)) {
     return nullptr;
@@ -235,8 +245,8 @@ HashTableType::Restore(char* data, size_t size) {
   if (size < min_size) {
     return nullptr;
   }
-  auto buckets = VectorType::Restore(aligned_bucket_start, bucket_size,
-                                     &header->bucket_header);
+  auto buckets = VectorType::Restore(
+      aligned_bucket_start, bucket_size, &header->bucket_header);
   if (buckets == nullptr) {
     return nullptr;
   }

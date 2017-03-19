@@ -14,7 +14,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <iostream>
-#include "logger.h"
+#include <alpha/Logger.h>
 
 int main(int argc, char* argv[]) {
   (void)argc;

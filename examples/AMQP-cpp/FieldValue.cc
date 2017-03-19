@@ -13,7 +13,7 @@
 #include "FieldValue.h"
 #include <cstring>
 #include <boost/preprocessor/facilities/empty.hpp>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include "MethodArgTypes.h"
 #include "FieldTable.h"
 
@@ -110,7 +110,8 @@ FieldValue::FieldValue(FieldValue::Type string_type, alpha::Slice arg) {
 }
 
 FieldValue::FieldValue(const FieldTable& arg)
-    : FieldValue(Type::kFieldTable, new FieldTable(arg),
+    : FieldValue(Type::kFieldTable,
+                 new FieldTable(arg),
                  &detail::CommonDestory<FieldTable>,
                  &detail::CommonCopy<FieldTable>) {}
 

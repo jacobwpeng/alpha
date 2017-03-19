@@ -13,7 +13,7 @@
 #ifndef __ALPHA_CODED_INPUT_STREAM_H__
 #define __ALPHA_CODED_INPUT_STREAM_H__
 
-#include "slice.h"
+#include <alpha/Slice.h>
 
 namespace alpha {
 class CodedInputStream {

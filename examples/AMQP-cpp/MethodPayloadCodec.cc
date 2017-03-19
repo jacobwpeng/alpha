@@ -14,7 +14,8 @@
 
 namespace amqp {
 
-EncoderBase::EncoderBase(ClassID class_id, MethodID method_id,
+EncoderBase::EncoderBase(ClassID class_id,
+                         MethodID method_id,
                          const CodecEnv* env)
     : env_(env) {
   AddEncodeUnit(class_id);
@@ -70,8 +71,8 @@ const DecoderBase* GenericMethodArgsDecoder::accurate_decoder() const {
 }
 
 void GenericMethodArgsDecoder::Decode(FramePtr&& frame) {
-  CHECK(frame->type() == Frame::Type::kMethod)
-      << "Invalid frame type: " << frame->type();
+  CHECK(frame->type() == Frame::Type::kMethod) << "Invalid frame type: "
+                                               << frame->type();
   alpha::Slice payload(frame->payload());
   // TODO: throw a ConnectionException
   CHECK(payload.size() >= kMinSizeToRecognize);

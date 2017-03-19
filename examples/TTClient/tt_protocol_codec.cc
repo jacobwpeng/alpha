@@ -12,16 +12,17 @@
 
 #include "tt_protocol_codec.h"
 #include <cassert>
-#include <alpha/compiler.h>
-#include <alpha/logger.h>
-#include <alpha/format.h>
+#include <alpha/Compiler.h>
+#include <alpha/Logger.h>
+#include <alpha/Format.h>
 
 #include "tt_coded_stream.h"
 
 namespace tokyotyrant {
 Int32DecodeUnit::Int32DecodeUnit(int32_t* val) : val_(val) {}
 
-CodecStatus Int32DecodeUnit::Decode(const uint8_t* buffer, int size,
+CodecStatus Int32DecodeUnit::Decode(const uint8_t* buffer,
+                                    int size,
                                     int* consumed) {
   *consumed = 0;
   if (static_cast<size_t>(size) < sizeof(int32_t)) {
@@ -38,7 +39,8 @@ CodecStatus Int32DecodeUnit::Decode(const uint8_t* buffer, int size,
 
 Int64DecodeUnit::Int64DecodeUnit(int64_t* val) : val_(val) {}
 
-CodecStatus Int64DecodeUnit::Decode(const uint8_t* buffer, int size,
+CodecStatus Int64DecodeUnit::Decode(const uint8_t* buffer,
+                                    int size,
                                     int* consumed) {
   *consumed = 0;
   if (static_cast<size_t>(size) < sizeof(int64_t)) {
@@ -58,7 +60,8 @@ LengthPrefixedDecodeUnit::LengthPrefixedDecodeUnit(std::string* val)
   val_->clear();
 }
 
-CodecStatus LengthPrefixedDecodeUnit::Decode(const uint8_t* buffer, int size,
+CodecStatus LengthPrefixedDecodeUnit::Decode(const uint8_t* buffer,
+                                             int size,
                                              int* consumed) {
   *consumed = 0;
   CodedInputStream stream(buffer, size);
@@ -78,7 +81,8 @@ KeyValuePairDecodeUnit::KeyValuePairDecodeUnit(std::string* key,
                                                std::string* val)
     : key_(key), val_(val) {}
 
-CodecStatus KeyValuePairDecodeUnit::Decode(const uint8_t* buffer, int size,
+CodecStatus KeyValuePairDecodeUnit::Decode(const uint8_t* buffer,
+                                           int size,
                                            int* consumed) {
   *consumed = 0;
   CodedInputStream stream(buffer, size);
@@ -200,7 +204,9 @@ void LengthPrefixedEncodeUnit::Reset(alpha::Slice val) {
   done_size_ = false;
 }
 
-ProtocolCodec::ProtocolCodec(int16_t magic, WriteFunctor w, LeftSpaceFunctor l,
+ProtocolCodec::ProtocolCodec(int16_t magic,
+                             WriteFunctor w,
+                             LeftSpaceFunctor l,
                              ReadFunctor r)
     : magic_(magic), w_(w), l_(l), r_(r) {}
 

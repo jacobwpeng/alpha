@@ -11,7 +11,7 @@
  */
 
 #include <cstdio>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include "ThronesBattleSvrdApp.h"
 
 int main(int argc, char* argv[]) {
@@ -20,7 +20,8 @@ int main(int argc, char* argv[]) {
             "Usage:\n"
             "   [Normal Mode]   %s conf \n"
             "   [Recovery Mode] %s conf server-id tick/tock\n",
-            argv[0], argv[0]);
+            argv[0],
+            argv[0]);
     return EXIT_FAILURE;
   }
   // alpha::Logger::set_logtostderr(true);

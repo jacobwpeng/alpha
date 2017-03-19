@@ -10,10 +10,10 @@
  * =============================================================================
  */
 
-#include "UnixErrorUtil.h"
+#include <alpha/UnixErrorUtil.h>
 #include <cstring>
-#include <alpha/compiler.h>
-#include <alpha/logger.h>
+#include <alpha/Compiler.h>
+#include <alpha/Logger.h>
 
 namespace alpha {
 std::string UnixErrorToString(int errnum) {

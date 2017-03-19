@@ -14,7 +14,7 @@
 #include <limits>
 #include <algorithm>
 #include <gtest/gtest.h>
-#include <alpha/tcp_connection_buffer.h>
+#include <alpha/TcpConnectionBuffer.h>
 
 TEST(TcpConnectionBufferTest, Append) {
   alpha::TcpConnectionBuffer buffer;

@@ -13,9 +13,9 @@
 #include "netsvrd_app.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
-#include <alpha/event_loop.h>
-#include <alpha/logger.h>
-#include <alpha/random.h>
+#include <alpha/EventLoop.h>
+#include <alpha/Logger.h>
+#include <alpha/Random.h>
 #include <alpha/FileUtil.h>
 #include "netsvrd_virtual_server.h"
 
@@ -53,8 +53,7 @@ int NetSvrdApp::Init(const char* file) {
       }
       servers_.emplace_back(std::move(virtual_server));
     }
-  }
-  catch (std::exception& e) {
+  } catch (std::exception& e) {
     LOG_ERROR << "NetSvrdApp::Init failed, file: " << file << ", " << e.what();
     return -1;
   }
@@ -72,10 +71,11 @@ int NetSvrdApp::Run() {
   }
   TrapSignals();
   bool ok = true;
-  std::for_each(std::begin(servers_), std::end(servers_),
+  std::for_each(std::begin(servers_),
+                std::end(servers_),
                 [&ok](NetSvrdVirtualServerPtr& server) {
-    if (ok) ok = server->Run();
-  });
+                  if (ok) ok = server->Run();
+                });
   loop_->set_cron_functor(std::bind(&NetSvrdApp::Cron, this));
   return ok ? loop_->Run(), 0 : -1;
 }

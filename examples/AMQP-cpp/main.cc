@@ -10,10 +10,10 @@
  * =============================================================================
  */
 
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include "Connection.h"
 #include "ConnectionMgr.h"
-#include "Channel.h"
+#include <alpha/Channel.h>
 #if 0
 
 Connection::NewChannel() {

@@ -27,8 +27,10 @@ class TaskBroker final {
       std::function<void(const FightServerProtocol::TaskResult&)>;
   TaskBroker(alpha::AsyncTcpClient* client,
              alpha::AsyncTcpConnectionCoroutine* co,
-             const alpha::NetAddress& fight_server_addr, uint16_t zone,
-             uint16_t camp, const TaskCallback& cb);
+             const alpha::NetAddress& fight_server_addr,
+             uint16_t zone,
+             uint16_t camp,
+             const TaskCallback& cb);
   ~TaskBroker();
 
   void SetOneCampWarriorRange(const UinList& uins) {

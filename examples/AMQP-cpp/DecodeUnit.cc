@@ -11,10 +11,10 @@
  */
 
 #include "DecodeUnit.h"
-#include <alpha/logger.h>
-#include <alpha/format.h>
+#include <alpha/Logger.h>
+#include <alpha/Format.h>
 #include "CodecEnv.h"
-#include "CodedInputStream.h"
+#include <alpha/CodedInputStream.h>
 
 namespace amqp {
 BooleanDecodeUnit::BooleanDecodeUnit(bool* res) : res_(res) {}

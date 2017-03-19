@@ -13,7 +13,7 @@
 #include "SectMemberCacheServerApp.h"
 #include <string>
 #include <iostream>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 
 static int Usage(const char* argv0) {
   std::cout << "Usage: " << argv0 << " ip port\n";

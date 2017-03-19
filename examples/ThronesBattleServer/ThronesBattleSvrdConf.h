@@ -15,7 +15,7 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include <alpha/net_address.h>
+#include <alpha/NetAddress.h>
 #include "ThronesBattleSvrdDef.h"
 
 namespace ThronesBattle {

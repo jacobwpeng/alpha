@@ -14,7 +14,7 @@
 #define __FIELDVALUE_H__
 
 #include <string>
-#include <alpha/slice.h>
+#include <alpha/Slice.h>
 
 namespace amqp {
 
@@ -91,7 +91,9 @@ class FieldValue {
 #undef FieldValueConstructor
 
   FieldValue() : type_(Type::kEmpty) {}
-  FieldValue(Type type, void* ptr, CustomValueDestoryFunc destory_func,
+  FieldValue(Type type,
+             void* ptr,
+             CustomValueDestoryFunc destory_func,
              CustomValueCopyFunc copy_func)
       : type_(type) {
     custom.ptr = ptr;

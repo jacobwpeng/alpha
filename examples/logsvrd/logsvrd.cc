@@ -92,8 +92,8 @@ bool LogServer::InitFromFile(const alpha::Slice& filepath) {
 
   ptree pt;
   try {
-    read_xml(filepath.ToString(), pt,
-             boost::property_tree::xml_parser::no_comments);
+    read_xml(
+        filepath.ToString(), pt, boost::property_tree::xml_parser::no_comments);
 
     bus_mgr_ = std::unique_ptr<alpha::BusManager>(
         new alpha::BusManager(pt.get_child("buses")));
@@ -144,8 +144,8 @@ void LogServer::CreateAndWaitWorkers() {
   std::vector<std::thread> threads;
   for (size_t i = 0; i < bus_ids_.size(); ++i) {
     auto bus = bus_mgr_->RestoreOrCreateBus(bus_ids_[i], true);
-    threads.emplace(threads.end(), detail::WorkerRoutine, std::move(bus),
-                    log_dir_);
+    threads.emplace(
+        threads.end(), detail::WorkerRoutine, std::move(bus), log_dir_);
   }
 
   for (auto& thread : threads) {

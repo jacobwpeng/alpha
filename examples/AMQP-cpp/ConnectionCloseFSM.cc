@@ -14,13 +14,15 @@
 
 namespace amqp {
 std::unique_ptr<ConnectionCloseFSM> ConnectionCloseFSM::ActiveClose(
-    const CodecEnv* codec_env, SendReplyFunc send_reply_func,
+    const CodecEnv* codec_env,
+    SendReplyFunc send_reply_func,
     const MethodCloseArgs& close_args) {
   auto fsm =
       std::unique_ptr<ConnectionCloseFSM>(new ConnectionCloseFSM(codec_env));
   fsm->state_ = State::kWaitingCloseOk;
   send_reply_func(
-      0, Frame::Type::kMethod,
+      0,
+      Frame::Type::kMethod,
       alpha::make_unique<MethodCloseArgsEncoder>(close_args, codec_env));
   return std::move(fsm);
 }
@@ -29,7 +31,8 @@ std::unique_ptr<ConnectionCloseFSM> ConnectionCloseFSM::PassiveClose(
     const CodecEnv* codec_env, SendReplyFunc send_reply_func) {
   auto fsm =
       std::unique_ptr<ConnectionCloseFSM>(new ConnectionCloseFSM(codec_env));
-  send_reply_func(0, Frame::Type::kMethod,
+  send_reply_func(0,
+                  Frame::Type::kMethod,
                   alpha::make_unique<MethodCloseOkArgsEncoder>(
                       MethodCloseOkArgs(), codec_env));
   fsm->state_ = State::kDone;
@@ -72,7 +75,8 @@ FSM::Status ConnectionCloseFSM::HandleFrame(FramePtr&& frame,
     state_ = State::kDone;
   } else {
     // Simultaneous Close
-    send_reply_func(0, Frame::Type::kMethod,
+    send_reply_func(0,
+                    Frame::Type::kMethod,
                     alpha::make_unique<MethodCloseOkArgsEncoder>(
                         MethodCloseOkArgs(), codec_env_));
   }

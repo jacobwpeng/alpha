@@ -11,9 +11,9 @@
  */
 
 #include <cstdio>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include <alpha/IOBuffer.h>
-#include <alpha/event_loop.h>
+#include <alpha/EventLoop.h>
 #include <alpha/AsyncTcpClient.h>
 #include <alpha/AsyncTcpConnectionException.h>
 

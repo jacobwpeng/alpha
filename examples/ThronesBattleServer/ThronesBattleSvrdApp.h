@@ -13,7 +13,7 @@
 #pragma once
 
 #include <memory>
-#include <alpha/event_loop.h>
+#include <alpha/EventLoop.h>
 #include <alpha/MMapFile.h>
 #include <alpha/AsyncTcpClient.h>
 #include <alpha/UDPSocket.h>
@@ -76,32 +76,41 @@ class ServerApp final {
   bool CreatePidFile();
   void TrapSignals();
   void RoundBattleRoutine(alpha::AsyncTcpClient* client,
-                          alpha::AsyncTcpConnectionCoroutine* co, Zone* zone,
-                          CampID one, CampID the_other);
+                          alpha::AsyncTcpConnectionCoroutine* co,
+                          Zone* zone,
+                          CampID one,
+                          CampID the_other);
 
   // 备份/恢复
-  std::string CreateBackupKey(alpha::Slice key, const char* suffix,
+  std::string CreateBackupKey(alpha::Slice key,
+                              const char* suffix,
                               const char* server_id = nullptr);
   void BackupRoutine(alpha::AsyncTcpClient* client,
                      alpha::AsyncTcpConnectionCoroutine* co,
                      bool check_last_backup_time = false);
   void RecoveryRoutine(alpha::AsyncTcpClient* client,
                        alpha::AsyncTcpConnectionCoroutine* co,
-                       const char* server_id, const char* suffix);
+                       const char* server_id,
+                       const char* suffix);
   bool RecoverOneFile(alpha::AsyncTcpConnection* conn,
-                      const std::string& backup_key, alpha::MMapFile* file);
+                      const std::string& backup_key,
+                      alpha::MMapFile* file);
   void ProcessFightTaskResult(BattleContext* ctx,
                               const FightServerProtocol::TaskResult& result);
-  void ProcessSurvivedWarrior(BattleContext* ctx, UinType winner,
+  void ProcessSurvivedWarrior(BattleContext* ctx,
+                              UinType winner,
                               UinType loser);
-  void ProcessDeadWarrior(BattleContext* ctx, UinType loser, UinType winner,
+  void ProcessDeadWarrior(BattleContext* ctx,
+                          UinType loser,
+                          UinType winner,
                           const std::string& fight_content);
   void ProcessRoundSurvivedWarrior(BattleContext* ctx, UinType winner);
 
   void DoWhenSeasonChanged();
   void DoWhenSeasonFinished();
   void DoWhenRoundFinished();
-  void ReportKillingNumToRank(uint16_t zone_id, UinType uin,
+  void ReportKillingNumToRank(uint16_t zone_id,
+                              UinType uin,
                               uint32_t killing_num);
   void DoWhenTwoCampsMatchDone(BattleContext* ctx);
   void WriteRankFeedsIfSeasonFinished(BattleContext* ctx, Camp* camp);
@@ -117,14 +126,19 @@ class ServerApp final {
   bool RecoveryMode() const;
 
   // Handlers for CGI UDP requests
-  void HandleUDPMessage(alpha::UDPSocket* socket, alpha::IOBuffer* buf,
-                        size_t buf_len, const alpha::NetAddress& peer);
-  int HandleQuerySignUp(UinType uin, const QuerySignUpRequest* req,
+  void HandleUDPMessage(alpha::UDPSocket* socket,
+                        alpha::IOBuffer* buf,
+                        size_t buf_len,
+                        const alpha::NetAddress& peer);
+  int HandleQuerySignUp(UinType uin,
+                        const QuerySignUpRequest* req,
                         QuerySignUpResponse* resp);
   int HandleSignUp(UinType uin, const SignUpRequest* req, SignUpResponse* resp);
-  int HandleQueryBattleStatus(UinType uin, const QueryBattleStatusRequest* req,
+  int HandleQueryBattleStatus(UinType uin,
+                              const QueryBattleStatusRequest* req,
                               QueryBattleStatusResponse* resp);
-  int HandlePickLuckyWarriors(UinType uin, const PickLuckyWarriorsRequest* req,
+  int HandlePickLuckyWarriors(UinType uin,
+                              const PickLuckyWarriorsRequest* req,
                               PickLuckyWarriorsResponse* resp);
   int HandleQueryLuckyWarriorReward(UinType uin,
                                     const QueryLuckyWarriorRewardRequest* req,
@@ -135,9 +149,11 @@ class ServerApp final {
   int HandleQueryGeneralInChief(UinType uin,
                                 const QueryGeneralInChiefRequest* req,
                                 QueryGeneralInChiefResponse* resp);
-  int HandleQueryRank(UinType uin, const QueryRankRequest* req,
+  int HandleQueryRank(UinType uin,
+                      const QueryRankRequest* req,
                       QueryRankResponse* resp);
-  int HandleQueryWarriorRank(UinType uin, const QueryWarriorRankRequest* req,
+  int HandleQueryWarriorRank(UinType uin,
+                             const QueryWarriorRankRequest* req,
                              QueryWarriorRankResponse* resp);
 
   // Handlers for HTTP message admin

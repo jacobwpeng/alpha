@@ -11,7 +11,7 @@
  */
 
 #include <cstdio>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include <alpha/MemoryMappedFile.h>
 #include <alpha/RingBuffer.h>
 

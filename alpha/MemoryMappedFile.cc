@@ -13,7 +13,7 @@
 #include <alpha/MemoryMappedFile.h>
 
 #include <sys/mman.h>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 
 namespace alpha {
 MemoryMappedFile::~MemoryMappedFile() {
@@ -30,7 +30,8 @@ MemoryMappedFile& MemoryMappedFile::operator=(MemoryMappedFile&& other) {
   return *this;
 }
 
-bool MemoryMappedFile::Init(alpha::Slice filepath, int64_t size,
+bool MemoryMappedFile::Init(alpha::Slice filepath,
+                            int64_t size,
                             unsigned flags) {
   CHECK(size >= 0);
   bool newly_created = false;
@@ -63,8 +64,8 @@ bool MemoryMappedFile::Init(alpha::Slice filepath, int64_t size,
     file.SetLength(size);
   }
 
-  void* mem = ::mmap(NULL, file.GetLength(), PROT_READ | PROT_WRITE, MAP_SHARED,
-                     file.fd(), 0);
+  void* mem = ::mmap(
+      NULL, file.GetLength(), PROT_READ | PROT_WRITE, MAP_SHARED, file.fd(), 0);
   if (mem == MAP_FAILED) {
     PLOG_WARNING << "mmap failed";
     return false;

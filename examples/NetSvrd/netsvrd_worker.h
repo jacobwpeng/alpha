@@ -14,7 +14,7 @@
 #define __NETSVRD_WORKER_H__
 
 #include <memory>
-#include <alpha/compiler.h>
+#include <alpha/Compiler.h>
 #include <alpha/ProcessBus.h>
 #include <alpha/Subprocess.h>
 
@@ -22,7 +22,8 @@ using ProcessBusPtr = std::unique_ptr<alpha::ProcessBus>;
 using SubprocessPtr = std::unique_ptr<alpha::Subprocess>;
 class NetSvrdWorker final {
  public:
-  NetSvrdWorker(SubprocessPtr&& subprocess, ProcessBusPtr&& bus_in,
+  NetSvrdWorker(SubprocessPtr&& subprocess,
+                ProcessBusPtr&& bus_in,
                 ProcessBusPtr&& bus_out);
   DISABLE_COPY_ASSIGNMENT(NetSvrdWorker);
 

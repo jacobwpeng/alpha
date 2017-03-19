@@ -20,8 +20,8 @@
 #include <string>
 #include <type_traits>
 #include <functional>
-#include <alpha/logger.h>
-#include <alpha/format.h>
+#include <alpha/Logger.h>
+#include <alpha/Format.h>
 #include "tt_coded_stream.h"
 
 namespace tokyotyrant {
@@ -37,7 +37,8 @@ enum CodecStatus {
 class ProtocolDecodeUnit {
  public:
   virtual ~ProtocolDecodeUnit() = default;
-  virtual CodecStatus Decode(const uint8_t* buffer, int size,
+  virtual CodecStatus Decode(const uint8_t* buffer,
+                             int size,
                              int* consumed) = 0;
 };
 
@@ -50,7 +51,8 @@ class ProtocolEncodeUnit {
 class Int32DecodeUnit final : public ProtocolDecodeUnit {
  public:
   Int32DecodeUnit(int32_t* val);
-  virtual CodecStatus Decode(const uint8_t* buffer, int size,
+  virtual CodecStatus Decode(const uint8_t* buffer,
+                             int size,
                              int* consumed) override;
 
  private:
@@ -60,7 +62,8 @@ class Int32DecodeUnit final : public ProtocolDecodeUnit {
 class Int64DecodeUnit final : public ProtocolDecodeUnit {
  public:
   Int64DecodeUnit(int64_t* val);
-  virtual CodecStatus Decode(const uint8_t* buffer, int size,
+  virtual CodecStatus Decode(const uint8_t* buffer,
+                             int size,
                              int* consumed) override;
 
  private:
@@ -70,7 +73,8 @@ class Int64DecodeUnit final : public ProtocolDecodeUnit {
 class LengthPrefixedDecodeUnit final : public ProtocolDecodeUnit {
  public:
   LengthPrefixedDecodeUnit(std::string* val);
-  virtual CodecStatus Decode(const uint8_t* buffer, int size,
+  virtual CodecStatus Decode(const uint8_t* buffer,
+                             int size,
                              int* consumed) override;
 
  private:
@@ -83,7 +87,8 @@ class RepeatedLengthPrefixedDecodeUnit final : public ProtocolDecodeUnit {
  public:
   RepeatedLengthPrefixedDecodeUnit(int32_t* knum, OutputIterator it)
       : knum_(knum), it_(it) {}
-  virtual CodecStatus Decode(const uint8_t* buffer, int size,
+  virtual CodecStatus Decode(const uint8_t* buffer,
+                             int size,
                              int* consumed) override {
     *consumed = 0;
     if (*knum_ != 0 && unit_ == nullptr) {
@@ -139,7 +144,8 @@ class RepeatedKeyValuePairDecodeUnit final : public ProtocolDecodeUnit {
   RepeatedKeyValuePairDecodeUnit(int* num, MapType* map)
       : num_(num), map_(map) {}
 
-  virtual CodecStatus Decode(const uint8_t* buffer, int size,
+  virtual CodecStatus Decode(const uint8_t* buffer,
+                             int size,
                              int* consumed) override {
     *consumed = 0;
     if (*num_ != 0 && single_unit_ == nullptr) {
@@ -180,10 +186,10 @@ class RepeatedKeyValuePairDecodeUnit final : public ProtocolDecodeUnit {
 template <typename IntegerType>
 class IntegerEncodeUnit final : public ProtocolEncodeUnit {
  public:
-  IntegerEncodeUnit(typename std::enable_if <
-                            std::is_same<IntegerType, int32_t>::value ||
-                        std::is_same<IntegerType, int64_t>::value,
-                    IntegerType > ::type val)
+  IntegerEncodeUnit(
+      typename std::enable_if<std::is_same<IntegerType, int32_t>::value ||
+                                  std::is_same<IntegerType, int64_t>::value,
+                              IntegerType>::type val)
       : val_(val) {}
 
   virtual CodecStatus Encode(CodedOutputStream* stream) {

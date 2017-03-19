@@ -13,8 +13,8 @@
 #include <string>
 #include <memory>
 #include <gtest/gtest.h>
-#include <alpha/logger.h>
-#include <alpha/compiler.h>
+#include <alpha/Logger.h>
+#include <alpha/Compiler.h>
 #include <alpha/RingBuffer.h>
 
 class RingBufferTest : public ::testing::Test {

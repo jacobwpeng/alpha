@@ -17,8 +17,8 @@
 #include <type_traits>
 #include <functional>
 #include <google/protobuf/message.h>
-#include <alpha/compiler.h>
-#include <alpha/logger.h>
+#include <alpha/Compiler.h>
+#include <alpha/Logger.h>
 #include "ThronesBattleSvrdDef.h"
 #include "proto/ThronesBattleSvrd.pb.h"
 
@@ -42,7 +42,8 @@ class MessageCallback {
  public:
   virtual ~MessageCallback() = default;
   virtual int32_t OnMessage(
-      UinType uin, const google::protobuf::Message* req,
+      UinType uin,
+      const google::protobuf::Message* req,
       ThronesBattleServerProtocol::ResponseWrapper* response_wrapper) = 0;
 };
 
@@ -59,7 +60,8 @@ class ConcreteMessageCallback : public MessageCallback {
   ConcreteMessageCallback(CallbackType cb) : cb_(cb) {}
   virtual ~ConcreteMessageCallback() = default;
   virtual int32_t OnMessage(
-      UinType uin, const google::protobuf::Message* req,
+      UinType uin,
+      const google::protobuf::Message* req,
       ThronesBattleServerProtocol::ResponseWrapper* response_wrapper) {
     auto m = dynamic_cast<const RequestType*>(req);
     ResponseType resp;
@@ -81,18 +83,20 @@ class ConcreteMessageCallback : public MessageCallback {
 class MessageDispatcher {
  public:
   int32_t Dispatch(
-      UinType uin, const google::protobuf::Message* m,
+      UinType uin,
+      const google::protobuf::Message* m,
       ThronesBattleServerProtocol::ResponseWrapper* response_wrapper);
   template <typename T, typename U>
   void Register(
       const typename ConcreteMessageCallback<T, U>::CallbackType& cb) {
-    callbacks_[std::decay<T>::type::descriptor()] =
-        alpha::make_unique<ConcreteMessageCallback<
-            typename std::decay<T>::type, typename std::decay<U>::type>>(cb);
+    callbacks_[std::decay<T>::type::descriptor()] = alpha::make_unique<
+        ConcreteMessageCallback<typename std::decay<T>::type,
+                                typename std::decay<U>::type>>(cb);
   }
 
  private:
   std::map<const google::protobuf::Descriptor*,
-           std::unique_ptr<MessageCallback>> callbacks_;
+           std::unique_ptr<MessageCallback>>
+      callbacks_;
 };
 };

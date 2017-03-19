@@ -16,8 +16,8 @@
 
 #include <algorithm>
 #include <boost/preprocessor.hpp>
-#include <alpha/logger.h>
-#include <alpha/compiler.h>
+#include <alpha/Logger.h>
+#include <alpha/Compiler.h>
 #include "DecodeUnit.h"
 #include "EncodeUnit.h"
 
@@ -90,8 +90,10 @@ struct CoderFactory<ResultType,
                         std::is_same<ResultType, LongString>::value>::type> {
   using EncoderType = typename detail::CodecTypeHelper<ResultType>::EncoderType;
   using DecoderType = typename detail::CodecTypeHelper<ResultType>::DecoderType;
-  using ResultArgType = typename std::conditional<
-      std::is_pod<ResultType>::value, ResultType, const ResultType&>::type;
+  using ResultArgType =
+      typename std::conditional<std::is_pod<ResultType>::value,
+                                ResultType,
+                                const ResultType&>::type;
   static std::unique_ptr<EncoderType> NewEncoder(ResultArgType p,
                                                  const CodecEnv*) {
     return alpha::make_unique<EncoderType>(p);
@@ -103,12 +105,15 @@ struct CoderFactory<ResultType,
 };
 
 template <typename ResultType>
-struct CoderFactory<ResultType, typename std::enable_if<std::is_same<
-                                    ResultType, FieldTable>::value>::type> {
+struct CoderFactory<ResultType,
+                    typename std::enable_if<
+                        std::is_same<ResultType, FieldTable>::value>::type> {
   using EncoderType = typename detail::CodecTypeHelper<ResultType>::EncoderType;
   using DecoderType = typename detail::CodecTypeHelper<ResultType>::DecoderType;
-  using ResultArgType = typename std::conditional<
-      std::is_pod<ResultType>::value, ResultType, const ResultType&>::type;
+  using ResultArgType =
+      typename std::conditional<std::is_pod<ResultType>::value,
+                                ResultType,
+                                const ResultType&>::type;
   static std::unique_ptr<EncoderType> NewEncoder(ResultArgType p,
                                                  const CodecEnv* env) {
     return alpha::make_unique<EncoderType>(p, env);
@@ -125,7 +130,8 @@ struct AddEncodeUnitHelper;
 template <>
 struct AddEncodeUnitHelper<true> {
   template <typename Arg>
-  static void Add(std::vector<std::unique_ptr<EncodeUnit>>* units, Arg&& arg,
+  static void Add(std::vector<std::unique_ptr<EncodeUnit>>* units,
+                  Arg&& arg,
                   const CodecEnv* env) {
     CHECK(units);
     BooleanEncodeUnit* bool_encode_unit =
@@ -144,7 +150,8 @@ struct AddEncodeUnitHelper<true> {
 template <>
 struct AddEncodeUnitHelper<false> {
   template <typename Arg>
-  static void Add(std::vector<std::unique_ptr<EncodeUnit>>* units, Arg&& arg,
+  static void Add(std::vector<std::unique_ptr<EncodeUnit>>* units,
+                  Arg&& arg,
                   const CodecEnv* env) {
     using RawArgType = typename std::remove_pointer<typename std::remove_cv<
         typename std::remove_reference<Arg>::type>::type>::type;
@@ -167,9 +174,10 @@ void EncoderBase::AddEncodeUnit(Arg&& arg, Tail&&... tail) {
 
 template <typename Arg, typename... Tail>
 void DecoderBase::AddDecodeUnit(Arg&& arg, Tail&&... tail) {
-  decode_units_.push_back(detail::CoderFactory<typename std::remove_pointer<
-      typename std::remove_reference<typename std::remove_cv<
-          Arg>::type>::type>::type>::NewDecoder(std::forward<Arg>(arg), env_));
+  decode_units_.push_back(
+      detail::CoderFactory<typename std::remove_pointer<
+          typename std::remove_reference<typename std::remove_cv<Arg>::type>::
+              type>::type>::NewDecoder(std::forward<Arg>(arg), env_));
   AddDecodeUnit(tail...);
 }
 
@@ -241,35 +249,43 @@ ArgType GenericMethodArgsDecoder::GetArg() const {
     using ResponseType = Resp;                   \
   };
 
-#define DefineRequestResponsePair(RequestType, RequestSeq, ResponseType, \
-                                  ResponseSeq)                           \
-  DefineArgsCodec(RequestType, RequestSeq);                              \
-  DefineArgsCodec(ResponseType, ResponseSeq);                            \
+#define DefineRequestResponsePair(                      \
+    RequestType, RequestSeq, ResponseType, ResponseSeq) \
+  DefineArgsCodec(RequestType, RequestSeq);             \
+  DefineArgsCodec(ResponseType, ResponseSeq);           \
   DefineRequestToResponseHelper(RequestType, ResponseType)
 
 DefineRequestResponsePair(
     MethodStartArgs,
     (version_major)(version_minor)(server_properties)(mechanisms)(locales),
-    MethodStartOkArgs, (client_properties)(mechanism)(response)(locale));
+    MethodStartOkArgs,
+    (client_properties)(mechanism)(response)(locale));
 
 DefineRequestResponsePair(MethodTuneArgs,
                           (channel_max)(frame_max)(heartbeat_delay),
                           MethodTuneOkArgs,
                           (channel_max)(frame_max)(heartbeat_delay));
-DefineRequestResponsePair(MethodOpenArgs, (vhost_path)(capabilities)(insist),
-                          MethodOpenOkArgs, BOOST_PP_SEQ_NIL);
+DefineRequestResponsePair(MethodOpenArgs,
+                          (vhost_path)(capabilities)(insist),
+                          MethodOpenOkArgs,
+                          BOOST_PP_SEQ_NIL);
 DefineRequestResponsePair(MethodCloseArgs,
                           (reply_code)(reply_text)(class_id)(method_id),
-                          MethodCloseOkArgs, BOOST_PP_SEQ_NIL);
-DefineRequestResponsePair(MethodChannelOpenArgs, (reserved),
-                          MethodChannelOpenOkArgs, BOOST_PP_SEQ_NIL);
+                          MethodCloseOkArgs,
+                          BOOST_PP_SEQ_NIL);
+DefineRequestResponsePair(MethodChannelOpenArgs,
+                          (reserved),
+                          MethodChannelOpenOkArgs,
+                          BOOST_PP_SEQ_NIL);
 DefineRequestResponsePair(MethodChannelCloseArgs,
                           (reply_code)(reply_text)(class_id)(method_id),
-                          MethodChannelCloseOkArgs, BOOST_PP_SEQ_NIL);
+                          MethodChannelCloseOkArgs,
+                          BOOST_PP_SEQ_NIL);
 DefineRequestResponsePair(MethodExchangeDeclareArgs,
                           (ticket)(exchange)(type)(passive)(durable)(
                               auto_delete)(internal)(nowait)(arguments),
-                          MethodExchangeDeclareOkArgs, BOOST_PP_SEQ_NIL);
+                          MethodExchangeDeclareOkArgs,
+                          BOOST_PP_SEQ_NIL);
 
 #undef DefineArgsToCodecHelper
 #undef DefineArgsCodec

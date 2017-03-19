@@ -13,8 +13,8 @@
 #include <map>
 #include <vector>
 #include <gtest/gtest.h>
-#include <alpha/skip_list.h>
-#include <alpha/random.h>
+#include <alpha/SkipList.h>
+#include <alpha/Random.h>
 
 class SkipListTest : public ::testing::Test {
  protected:
@@ -295,7 +295,10 @@ TEST_F(SkipListTest, Restore) {
   EXPECT_NE(newlist->end(), list_->end());
 
   EXPECT_TRUE(std::lexicographical_compare(
-      list_->begin(), list_->end(), newlist->begin(), newlist->end(),
+      list_->begin(),
+      list_->end(),
+      newlist->begin(),
+      newlist->end(),
       [](const DefaultSkipListType::value_type& lhs,
          const DefaultSkipListType::value_type& rhs) {
         return lhs.first == rhs.first && lhs.second == rhs.second;

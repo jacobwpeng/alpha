@@ -12,8 +12,8 @@
 
 #include "ThronesBattleSvrdFeedsChannel.h"
 #include <alpha/AsyncTcpConnectionException.h>
-#include <alpha/random.h>
-#include <alpha/logger.h>
+#include <alpha/Random.h>
+#include <alpha/Logger.h>
 #include "proto/feedssvrd.pb.h"
 
 namespace ThronesBattle {
@@ -45,8 +45,7 @@ void FeedsChannel::WaitAllFeedsSended() {
     DLOG_INFO << "Will wait all message sended, r: " << r;
     conn_->WaitWriteDone();
     DLOG_INFO << "Wait all message sended done, r: " << r;
-  }
-  catch (alpha::AsyncTcpConnectionException& e) {
+  } catch (alpha::AsyncTcpConnectionException& e) {
     LOG_WARNING << "Catch exception when wait write done, " << e.what();
   }
 }
@@ -66,8 +65,7 @@ void FeedsChannel::SendToRemote(NetSvrdFrame::UniquePtr&& frame) {
   }
   try {
     conn_->Write(frame->data(), frame->size());
-  }
-  catch (alpha::AsyncTcpConnectionException& e) {
+  } catch (alpha::AsyncTcpConnectionException& e) {
     ReconnectToRemote();
   }
 }

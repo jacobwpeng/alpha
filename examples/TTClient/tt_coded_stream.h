@@ -15,7 +15,7 @@
 
 #include <cstdint>
 #include <string>
-#include <alpha/slice.h>
+#include <alpha/Slice.h>
 
 namespace tokyotyrant {
 class ProtocolCodec;

@@ -10,7 +10,7 @@
  * ==============================================================================
  */
 
-#include "coroutine.h"
+#include <alpha/Coroutine.h>
 
 class PlayerCoroutine : public alpha::Coroutine {
  public:

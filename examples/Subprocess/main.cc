@@ -11,7 +11,7 @@
  */
 
 #include <iostream>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include <alpha/Subprocess.h>
 
 int main(int argc, char* argv[]) {

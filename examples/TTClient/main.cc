@@ -16,11 +16,11 @@
 #include <memory>
 #include <sstream>
 #include <gflags/gflags.h>
-#include <alpha/slice.h>
-#include <alpha/logger.h>
-#include <alpha/event_loop.h>
-#include <alpha/coroutine.h>
-#include <alpha/tcp_client.h>
+#include <alpha/Slice.h>
+#include <alpha/Logger.h>
+#include <alpha/EventLoop.h>
+#include <alpha/Coroutine.h>
+#include <alpha/TcpClient.h>
 #include "tt_client.h"
 
 DEFINE_string(server_ip, "10.6.224.81", "Remote tokyotyrant server ip");
@@ -193,7 +193,9 @@ void BackupCoroutine::Routine() {
   // MultiGet
   keys.clear();
   std::transform(
-      m.begin(), m.end(), std::back_inserter(keys),
+      m.begin(),
+      m.end(),
+      std::back_inserter(keys),
       [](const std::pair<std::string, std::string>& p) { return p.first; });
 
   std::map<std::string, std::string> restored;
@@ -247,8 +249,8 @@ void BackupCoroutine::Routine() {
          matches.end());
 
   matches.clear();
-  err = client_->GetForwardMatchKeys("f", std::numeric_limits<int32_t>::max(),
-                                     std::back_inserter(matches));
+  err = client_->GetForwardMatchKeys(
+      "f", std::numeric_limits<int32_t>::max(), std::back_inserter(matches));
   assert(!err);
   assert(matches.size() == m.size());
   for (const auto& p : m) {

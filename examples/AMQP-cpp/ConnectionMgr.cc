@@ -12,17 +12,17 @@
 
 #include "ConnectionMgr.h"
 
-#include <alpha/logger.h>
-#include <alpha/format.h>
+#include <alpha/Logger.h>
+#include <alpha/Format.h>
 #include <alpha/AsyncTcpConnectionException.h>
 #include "MethodPayloadCodec.h"
-#include "Channel.h"
+#include <alpha/Channel.h>
 #if 0
 #include "Frame.h"
 #include "ConnectionEstablishFSM.h"
 #include "ConnectionCloseFSM.h"
 #include "Connection.h"
-#include "CodedInputStream.h"
+#include <alpha/CodedInputStream.h>
 #endif
 
 namespace amqp {

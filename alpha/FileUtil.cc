@@ -10,7 +10,7 @@
  * =============================================================================
  */
 
-#include "FileUtil.h"
+#include <alpha/FileUtil.h>
 #include <unistd.h>
 
 namespace alpha {

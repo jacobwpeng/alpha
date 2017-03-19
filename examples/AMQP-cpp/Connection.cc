@@ -12,7 +12,7 @@
 
 #include "Connection.h"
 #include "CodecEnv.h"
-#include "Channel.h"
+#include <alpha/Channel.h>
 #include "ConnectionMgr.h"
 #include "MethodPayloadCodec.h"
 

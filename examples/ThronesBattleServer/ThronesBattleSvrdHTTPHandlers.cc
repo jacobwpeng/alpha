@@ -138,8 +138,7 @@ void ServerApp::HandleHTTPMessage(alpha::TcpConnectionPtr conn,
     if (it != params.end()) {
       try {
         uin = std::stoul(it->second);
-      }
-      catch (std::exception& e) {
+      } catch (std::exception& e) {
         LOG_INFO << "Invalid uin: " << it->second;
       }
     }

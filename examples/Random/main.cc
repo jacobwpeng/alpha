@@ -11,8 +11,8 @@
  */
 
 #include <iostream>
-#include <alpha/random.h>
-#include <alpha/logger.h>
+#include <alpha/Random.h>
+#include <alpha/Logger.h>
 
 int main(int argc, char* argv[]) {
   alpha::Logger::Init(argv[0]);

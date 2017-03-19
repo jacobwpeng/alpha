@@ -11,7 +11,7 @@
  */
 
 #include <iterator>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include "ThronesBattleSvrdRankVector.h"
 
 namespace ThronesBattle {

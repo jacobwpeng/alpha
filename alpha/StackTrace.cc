@@ -10,7 +10,7 @@
  * =============================================================================
  */
 
-#include "StackTrace.h"
+#include <alpha/StackTrace.h>
 #include <execinfo.h>
 
 namespace alpha {

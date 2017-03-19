@@ -29,8 +29,11 @@ class Channel final : public std::enable_shared_from_this<Channel> {
   bool closed() const { return closed_; }
   ChannelID id() const { return id_; }
 
-  void ExchangeDeclare(alpha::Slice exchange_name, alpha::Slice exchange_type,
-                       bool passive, bool durable, bool auto_delete,
+  void ExchangeDeclare(alpha::Slice exchange_name,
+                       alpha::Slice exchange_type,
+                       bool passive,
+                       bool durable,
+                       bool auto_delete,
                        const FieldTable& arguments = FieldTable());
 
  private:

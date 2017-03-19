@@ -10,10 +10,10 @@
  * =============================================================================
  */
 
-#include <alpha/logger.h>
-#include <alpha/tcp_connector.h>
-#include <alpha/event_loop.h>
-#include <alpha/net_address.h>
+#include <alpha/Logger.h>
+#include <alpha/TcpConnector.h>
+#include <alpha/EventLoop.h>
+#include <alpha/NetAddress.h>
 #include <alpha/ScopedGeneric.h>
 
 int main(int argc, char* argv[]) {

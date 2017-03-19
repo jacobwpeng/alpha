@@ -12,12 +12,12 @@
 
 #include "tt_client.h"
 #include <arpa/inet.h>
-#include <alpha/logger.h>
-#include <alpha/event_loop.h>
-#include <alpha/tcp_client.h>
-#include <alpha/coroutine.h>
-#include <alpha/net_address.h>
-#include <alpha/format.h>
+#include <alpha/Logger.h>
+#include <alpha/EventLoop.h>
+#include <alpha/TcpClient.h>
+#include <alpha/Coroutine.h>
+#include <alpha/NetAddress.h>
+#include <alpha/Format.h>
 
 namespace tokyotyrant {
 Client::Client(alpha::EventLoop* loop)
@@ -300,7 +300,8 @@ void Client::Next(Iterator* it) {
 std::unique_ptr<ProtocolCodec> Client::CreateCodec(int magic) {
   using namespace std::placeholders;
   return std::unique_ptr<ProtocolCodec>(
-      new ProtocolCodec(magic, std::bind(&Client::Write, this, _1, _2),
+      new ProtocolCodec(magic,
+                        std::bind(&Client::Write, this, _1, _2),
                         std::bind(&Client::MaxBytesCanWrite, this),
                         std::bind(&Client::Read, this)));
 }

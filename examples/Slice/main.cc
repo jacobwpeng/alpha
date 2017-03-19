@@ -13,7 +13,7 @@
 #include <cassert>
 #include <iostream>
 #include <type_traits>
-#include "slice.h"
+#include <alpha/Slice.h>
 
 struct PODType {
   int val;

@@ -12,7 +12,7 @@
 
 #pragma once
 #include <unistd.h>
-#include "logger.h"
+#include <alpha/Logger.h>
 
 namespace alpha {
 template <typename T, typename Traits>

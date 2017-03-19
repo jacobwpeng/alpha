@@ -10,9 +10,9 @@
  * =============================================================================
  */
 
-#include "logger.h"
-#include "event_loop.h"
-#include "tcp_client.h"
+#include <alpha/Logger.h>
+#include <alpha/EventLoop.h>
+#include <alpha/TcpClient.h>
 
 class PingPongClient {
  public:

@@ -13,9 +13,9 @@
 #include "netsvrd_virtual_server.h"
 #include <sstream>
 #include <boost/algorithm/string.hpp>
-#include <alpha/logger.h>
-#include <alpha/event_loop.h>
-#include <alpha/tcp_server.h>
+#include <alpha/Logger.h>
+#include <alpha/EventLoop.h>
+#include <alpha/TcpServer.h>
 #include <alpha/IOBuffer.h>
 #include <alpha/UDPServer.h>
 #include "netsvrd_frame.h"
@@ -46,8 +46,7 @@ bool NetSvrdAddressParser::Parse(const std::string& addr) {
   }
   try {
     server_address_ = alpha::NetAddress(parts[1], stoul(parts[2]));
-  }
-  catch (std::exception& e) {
+  } catch (std::exception& e) {
     LOG_ERROR << "Convert " << parts[2] << " to integer failed, " << e.what();
     return false;
   }
@@ -183,7 +182,8 @@ void NetSvrdVirtualServer::OnClose(alpha::TcpConnectionPtr conn) {
 }
 
 void NetSvrdVirtualServer::OnUDPMessage(alpha::UDPSocket* socket,
-                                        alpha::IOBuffer* buf, size_t buf_len,
+                                        alpha::IOBuffer* buf,
+                                        size_t buf_len,
                                         const alpha::NetAddress& address) {
   auto header = NetSvrdFrame::CastHeaderOnly(buf->data(), buf_len);
   if (header == nullptr) {
@@ -196,7 +196,8 @@ void NetSvrdVirtualServer::OnUDPMessage(alpha::UDPSocket* socket,
   }
   // TODO: OnFrame with local frame
   auto frame = NetSvrdFrame::CreateUnique(header->payload_size);
-  memcpy(frame->payload, buf->data() + NetSvrdFrame::kHeaderSize,
+  memcpy(frame->payload,
+         buf->data() + NetSvrdFrame::kHeaderSize,
          header->payload_size);
   OnFrame(0, std::move(frame));
 }
@@ -245,13 +246,14 @@ NetSvrdWorkerPtr NetSvrdVirtualServer::SpawnWorker(int worker_id) {
       alpha::ProcessBus::RestoreOrCreate(bus_out_path, kProcessBusSize, true);
   CHECK(bus_out);
   DLOG_INFO << "Create worker , path: " << worker_path_;
-  std::vector<std::string> argv = {worker_path_, std::to_string(net_server_id_),
-                                   bus_in_path,  bus_out_path};
+  std::vector<std::string> argv = {
+      worker_path_, std::to_string(net_server_id_), bus_in_path, bus_out_path};
   alpha::Subprocess::Options options;
   options.CloseOtherFds();
   return alpha::make_unique<NetSvrdWorker>(
       alpha::make_unique<alpha::Subprocess>(argv, nullptr, options),
-      std::move(bus_in), std::move(bus_out));
+      std::move(bus_in),
+      std::move(bus_out));
 }
 
 void NetSvrdVirtualServer::PollWorkers() {

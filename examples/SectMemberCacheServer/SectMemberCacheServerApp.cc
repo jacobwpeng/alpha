@@ -11,8 +11,8 @@
  */
 
 #include "SectMemberCacheServerApp.h"
-#include <alpha/logger.h>
-#include <alpha/random.h>
+#include <alpha/Logger.h>
+#include <alpha/Random.h>
 
 static const int kServerUnknownSect = -10001;
 static const int kServerNoMatchedMember = -10002;

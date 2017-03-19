@@ -10,9 +10,9 @@
  * =============================================================================
  */
 
-#include "AsyncTcpClient.h"
-#include "event_loop.h"
-#include "logger.h"
+#include <alpha/AsyncTcpClient.h>
+#include <alpha/EventLoop.h>
+#include <alpha/Logger.h>
 
 namespace alpha {
 using namespace std::placeholders;
@@ -111,10 +111,11 @@ void AsyncTcpClient::MapConnecting(const NetAddress& addr,
 AsyncTcpClient::ConnectingArray::iterator AsyncTcpClient::FindConnecting(
     const NetAddress& addr) {
   // Always find the first pair that matches this addr to simulate FIFO
-  auto it = std::find_if(connecting_.begin(), connecting_.end(),
+  auto it = std::find_if(connecting_.begin(),
+                         connecting_.end(),
                          [&addr](const ConnectingArray::value_type& v) {
-    return v.first == addr;
-  });
+                           return v.first == addr;
+                         });
   CHECK(it != connecting_.end());
   return it;
 }
@@ -147,7 +148,8 @@ void AsyncTcpClient::RemoveConnected(TcpConnection* conn) {
 void AsyncTcpClient::RemoveCoroutine(AsyncTcpConnectionCoroutine* co) {
   CHECK(!coroutines_.empty());
   auto it = std::find_if(
-      coroutines_.begin(), coroutines_.end(),
+      coroutines_.begin(),
+      coroutines_.end(),
       [co](std::unique_ptr<AsyncTcpConnectionCoroutine>& coroutine) {
         return coroutine.get() == co;
       });

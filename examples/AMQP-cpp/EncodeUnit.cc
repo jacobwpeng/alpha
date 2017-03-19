@@ -12,7 +12,7 @@
 
 #include "EncodeUnit.h"
 #include <limits>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include "CodecEnv.h"
 #include "CodedWriter.h"
 #include "CodedOutputStream.h"

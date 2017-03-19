@@ -12,7 +12,7 @@
 
 #include "MethodArgTypes.h"
 #include <cstring>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 
 namespace amqp {
 

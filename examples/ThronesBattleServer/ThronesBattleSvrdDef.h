@@ -157,7 +157,8 @@ class CampMatchups {
 
   MatchupData* MatchupDataForRound(uint16_t battle_round);
   void Reset();
-  void SetBattleResult(CampID camp, bool win,
+  void SetBattleResult(CampID camp,
+                       bool win,
                        uint32_t final_living_warriors_num);
   void ForeachMatchup(uint16_t battle_round, MatchupFunc func);
   void UnfinishedBattle(uint16_t battle_round, MatchupFunc func);
@@ -206,8 +207,11 @@ bool operator<(const Camp& lhs, const Camp& rhs);
 
 class Zone final {
  public:
-  Zone(uint16_t id, CampMatchups* matchups, CampLeaderList* leaders,
-       LuckyWarriorList* lucky_warriors, GeneralInChiefList* generals);
+  Zone(uint16_t id,
+       CampMatchups* matchups,
+       CampLeaderList* leaders,
+       LuckyWarriorList* lucky_warriors,
+       GeneralInChiefList* generals);
   uint16_t id() const { return id_; }
   Camp* GetCamp(uint16_t camp_id);
   CampMatchups* matchups() { return matchups_; }
@@ -336,7 +340,9 @@ struct Reward final {
 
 class ZoneConf final {
  public:
-  ZoneConf(uint16_t zone_id, unsigned max_camp_warriors_num, unsigned max_level,
+  ZoneConf(uint16_t zone_id,
+           unsigned max_camp_warriors_num,
+           unsigned max_level,
            const std::string& name);
 
   uint16_t zone_id() const { return zone_id_; }

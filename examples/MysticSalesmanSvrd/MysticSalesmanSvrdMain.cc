@@ -11,7 +11,7 @@
  */
 
 #include <cstdio>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include "MysticSalesmanSvrdApp.h"
 
 static int Usage(const char* prog) {

@@ -14,7 +14,7 @@
 #include <iostream>
 #include <chrono>
 #include "bus/process_bus.h"
-#include "logger/logger.h"
+#include "logger/Logger.h"
 
 static size_t bytes = 0;
 static size_t records = 0;

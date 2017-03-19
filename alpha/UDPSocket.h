@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include <alpha/net_address.h>
+#include <alpha/NetAddress.h>
 #include <alpha/IOBuffer.h>
 
 namespace alpha {

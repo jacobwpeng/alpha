@@ -10,7 +10,7 @@
  * =============================================================================
  */
 
-#include "IOBuffer.h"
+#include <alpha/IOBuffer.h>
 
 namespace alpha {
 IOBuffer::IOBuffer() : data_(nullptr) {}

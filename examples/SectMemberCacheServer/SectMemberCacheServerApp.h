@@ -15,8 +15,8 @@
 #include <ctime>
 #include <map>
 #include <set>
-#include <alpha/slice.h>
-#include <alpha/event_loop.h>
+#include <alpha/Slice.h>
+#include <alpha/EventLoop.h>
 #include <alpha/UDPServer.h>
 #include "proto/SectMemberCacheServer.pb.h"
 
@@ -45,8 +45,10 @@ class SectMemberCacheServerApp {
   SectMemberCacheServerApp(alpha::Slice ip, int port);
   int Run();
 
-  void HandleUDPMessage(alpha::UDPSocket* socket, alpha::IOBuffer* buf,
-                        size_t buf_len, const alpha::NetAddress& peer);
+  void HandleUDPMessage(alpha::UDPSocket* socket,
+                        alpha::IOBuffer* buf,
+                        size_t buf_len,
+                        const alpha::NetAddress& peer);
   int HandleReportSectMember(
       unsigned uin, const SectMemberCacheServerApi::ReportSectMember& r);
   int HandlePickMember(unsigned uin,
@@ -55,9 +57,11 @@ class SectMemberCacheServerApp {
 
  private:
   static const size_t kMaxNumForOneLevel = 1024;
-  const UserInfoLite* PickFromMemberMap(unsigned uin, unsigned init_level,
+  const UserInfoLite* PickFromMemberMap(unsigned uin,
+                                        unsigned init_level,
                                         const SectMemberMap& m);
-  const UserInfoLite* PickFromMemberMapInLevel(unsigned uin, unsigned level,
+  const UserInfoLite* PickFromMemberMapInLevel(unsigned uin,
+                                               unsigned level,
                                                const SectMemberMap& m);
   const UserInfoLite* PickFromUserInfoSet(unsigned uin,
                                           const UserInfoLiteSet& v);

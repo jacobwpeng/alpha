@@ -11,8 +11,8 @@
  */
 
 #include <iostream>
-#include <alpha/event_loop.h>
-#include <alpha/logger.h>
+#include <alpha/EventLoop.h>
+#include <alpha/Logger.h>
 #include "netsvrd_app.h"
 
 int main(int argc, char* argv[]) {

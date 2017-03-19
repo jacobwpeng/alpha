@@ -14,9 +14,9 @@
 #include <unistd.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <google/protobuf/descriptor.h>
-#include <alpha/format.h>
-#include <alpha/logger.h>
-#include <alpha/random.h>
+#include <alpha/Format.h>
+#include <alpha/Logger.h>
+#include <alpha/Random.h>
 #include <alpha/Endian.h>
 #include <alpha/IOBuffer.h>
 #include <alpha/FileUtil.h>
@@ -262,8 +262,8 @@ int ServerApp::InitNormalMode() {
   message_dispatcher_.Register<ReqType, RespType>(                  \
       std::bind(&ServerApp::Handler, this, _1, _2, _3));
 
-  THRONES_BATTLE_REGISTER_HANDLER(QuerySignUpRequest, QuerySignUpResponse,
-                                  HandleQuerySignUp);
+  THRONES_BATTLE_REGISTER_HANDLER(
+      QuerySignUpRequest, QuerySignUpResponse, HandleQuerySignUp);
   THRONES_BATTLE_REGISTER_HANDLER(SignUpRequest, SignUpResponse, HandleSignUp);
   THRONES_BATTLE_REGISTER_HANDLER(QueryBattleStatusRequest,
                                   QueryBattleStatusResponse,
@@ -280,8 +280,8 @@ int ServerApp::InitNormalMode() {
   THRONES_BATTLE_REGISTER_HANDLER(QueryGeneralInChiefRequest,
                                   QueryGeneralInChiefResponse,
                                   HandleQueryGeneralInChief);
-  THRONES_BATTLE_REGISTER_HANDLER(QueryRankRequest, QueryRankResponse,
-                                  HandleQueryRank);
+  THRONES_BATTLE_REGISTER_HANDLER(
+      QueryRankRequest, QueryRankResponse, HandleQueryRank);
   THRONES_BATTLE_REGISTER_HANDLER(QueryWarriorRankRequest,
                                   QueryWarriorRankResponse,
                                   HandleQueryWarriorRank);
@@ -341,7 +341,9 @@ void ServerApp::TrapSignals() {
 
 void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
                                    alpha::AsyncTcpConnectionCoroutine* co,
-                                   Zone* zone, CampID one, CampID the_other) {
+                                   Zone* zone,
+                                   CampID one,
+                                   CampID the_other) {
   LOG_INFO << "Perform battle between camps, Zone: " << zone->id()
            << ", one camp: " << one << ", the other camp: " << the_other
            << "coroutine id: " << co->id();
@@ -392,8 +394,12 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
         ctx->the_other->RandomChooseLivingWarriors(battle_warrior_size);
 
     // 进行战斗
-    TaskBroker broker(client, co, conf_->fight_server_addr(), ctx->zone->id(),
-                      ctx->one->id(), warrior_fight_result_callback);
+    TaskBroker broker(client,
+                      co,
+                      conf_->fight_server_addr(),
+                      ctx->zone->id(),
+                      ctx->one->id(),
+                      warrior_fight_result_callback);
     broker.SetOneCampWarriorRange(one_camp_choosen_warriors);
     broker.SetTheOtherCampWarriorRange(the_other_camp_choosen_warriors);
     broker.Wait();
@@ -410,7 +416,8 @@ void ServerApp::RoundBattleRoutine(alpha::AsyncTcpClient* client,
   ctx->feeds_channel->WaitAllFeedsSended();
 }
 
-std::string ServerApp::CreateBackupKey(alpha::Slice key, const char* suffix,
+std::string ServerApp::CreateBackupKey(alpha::Slice key,
+                                       const char* suffix,
                                        const char* server_id) {
   // Key: ##KEY##-##SERVERID##-##SUFFIX##
   std::ostringstream oss;
@@ -452,7 +459,8 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
 
   LOG_INFO << "Starting backup, server id: " << server_id_;
   auto put = [](std::shared_ptr<alpha::AsyncTcpConnection> conn,
-                alpha::Slice key, alpha::Slice val) {
+                alpha::Slice key,
+                alpha::Slice val) {
     uint8_t kTTProtocolPutMagicFirst = 0xC8;
     uint8_t kTTProtocolPutMagicSecond = 0x10;
     uint32_t szkey = alpha::HostToBigEndian(static_cast<uint32_t>(key.size()));
@@ -479,20 +487,24 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
 
     // 把瞬间状态保存到内存中
     alpha::IOBufferWithSize battle_data(battle_data_underlying_file_->size());
-    memcpy(battle_data.data(), battle_data_underlying_file_->start(),
+    memcpy(battle_data.data(),
+           battle_data_underlying_file_->start(),
            battle_data.size());
 
     alpha::IOBufferWithSize warriors_data(
         warriors_data_underlying_file_->size());
-    memcpy(warriors_data.data(), warriors_data_underlying_file_->start(),
+    memcpy(warriors_data.data(),
+           warriors_data_underlying_file_->start(),
            warriors_data.size());
 
     alpha::IOBufferWithSize rewards_data(rewards_data_underlying_file_->size());
-    memcpy(rewards_data.data(), rewards_data_underlying_file_->start(),
+    memcpy(rewards_data.data(),
+           rewards_data_underlying_file_->start(),
            rewards_data.size());
 
     alpha::IOBufferWithSize rank_data(rank_data_underlying_file_->size());
-    memcpy(rank_data.data(), rank_data_underlying_file_->start(),
+    memcpy(rank_data.data(),
+           rank_data_underlying_file_->start(),
            rank_data.size());
 
     auto key = CreateBackupKey(kBattleDataKey, suffix);
@@ -502,8 +514,8 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
     LOG_INFO << "Backup battle data done, key: " << key;
 
     key = CreateBackupKey(kWarriorsDataKey, suffix);
-    err = put(conn, key,
-              alpha::Slice(warriors_data.data(), warriors_data.size()));
+    err = put(
+        conn, key, alpha::Slice(warriors_data.data(), warriors_data.size()));
     if (err) return;
     LOG_INFO << "Backup warriors data done, key: " << key;
 
@@ -523,15 +535,15 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
     backup_suffix_index = 1 - backup_suffix_index;
     last_backup_time_ = alpha::Now();
     conn->Close();
-  }
-  catch (alpha::AsyncTcpConnectionException& e) {
+  } catch (alpha::AsyncTcpConnectionException& e) {
     LOG_WARNING << "Backup failed, " << e.what();
   }
 }
 
 void ServerApp::RecoveryRoutine(alpha::AsyncTcpClient* client,
                                 alpha::AsyncTcpConnectionCoroutine* co,
-                                const char* server_id, const char* suffix) {
+                                const char* server_id,
+                                const char* suffix) {
   LOG_INFO << "Recovery started, server id: " << server_id
            << ", suffix: " << suffix;
   try {
@@ -558,8 +570,7 @@ void ServerApp::RecoveryRoutine(alpha::AsyncTcpClient* client,
 
     LOG_INFO << "Recovery done, server id: " << server_id
              << ", suffix: " << suffix;
-  }
-  catch (alpha::AsyncTcpConnectionException& e) {
+  } catch (alpha::AsyncTcpConnectionException& e) {
     LOG_ERROR << "Recovery failed, " << e.what();
   }
   loop_.Quit();
@@ -602,8 +613,7 @@ bool ServerApp::RecoverOneFile(alpha::AsyncTcpConnection* conn,
     LOG_INFO << "Recovery done, backup key: " << backup_key
              << ", backup size: " << szval;
     return true;
-  }
-  catch (alpha::AsyncTcpConnectionException& e) {
+  } catch (alpha::AsyncTcpConnectionException& e) {
     LOG_ERROR << "RecoverOneFile catch AsyncTcpConnectionException, "
               << e.what();
     return false;
@@ -637,7 +647,8 @@ void ServerApp::ProcessFightTaskResult(
   }
 }
 
-void ServerApp::ProcessSurvivedWarrior(BattleContext* ctx, UinType winner,
+void ServerApp::ProcessSurvivedWarrior(BattleContext* ctx,
+                                       UinType winner,
                                        UinType loser) {
   auto it = warriors_->find(winner);
   if (it == warriors_->end()) {
@@ -649,8 +660,8 @@ void ServerApp::ProcessSurvivedWarrior(BattleContext* ctx, UinType winner,
   warrior.add_killing_num();
   warrior.set_last_killed_warrior(loser);
   ReportKillingNumToRank(ctx->zone->id(), winner, warrior.season_killing_num());
-  ctx->zone->leaders()->Notify(camp->id(), winner,
-                               warrior.season_killing_num());
+  ctx->zone->leaders()->Notify(
+      camp->id(), winner, warrior.season_killing_num());
 }
 
 void ServerApp::ProcessRoundSurvivedWarrior(BattleContext* ctx, UinType uin) {
@@ -768,20 +779,23 @@ void ServerApp::WriteRankFeedsIfSeasonFinished(BattleContext* ctx, Camp* camp) {
     // 冠军阵营领军人记为大将军
     if (rank == 1) {
       ctx->zone->generals()->AddGeneralInChief(
-          camp->id(), ctx->zone->leaders()->GetLeader(camp->id()).uin,
+          camp->id(),
+          ctx->zone->leaders()->GetLeader(camp->id()).uin,
           battle_data_->CurrentSeason());
     }
   }
 }
 
-void ServerApp::ReportKillingNumToRank(uint16_t zone_id, UinType uin,
+void ServerApp::ReportKillingNumToRank(uint16_t zone_id,
+                                       UinType uin,
                                        uint32_t killing_num) {
   auto it = season_ranks_.find(zone_id);
   CHECK(it != season_ranks_.end());
   it->second->Report(uin, killing_num);
 }
 
-void ServerApp::ProcessDeadWarrior(BattleContext* ctx, UinType loser,
+void ServerApp::ProcessDeadWarrior(BattleContext* ctx,
+                                   UinType loser,
                                    UinType winner,
                                    const std::string& fight_content) {
   auto it = warriors_->find(loser);
@@ -811,7 +825,7 @@ void ServerApp::AddTimerForChangeSeason() {
       DoWhenSeasonChanged();
     } else {
       LOG_WARNING
-      << "Change season failed, maybe multiple timers for season change";
+          << "Change season failed, maybe multiple timers for season change";
     }
   });
 }
@@ -900,7 +914,11 @@ std::vector<BattleTask> ServerApp::GetAllUnfinishedTasks() {
 
 void ServerApp::RunBattleTask(BattleTask task) {
   async_tcp_client_.RunInCoroutine(std::bind(&ServerApp::RoundBattleRoutine,
-                                             this, _1, _2, task.zone, task.one,
+                                             this,
+                                             _1,
+                                             _2,
+                                             task.zone,
+                                             task.one,
                                              task.the_other));
 }
 
@@ -960,7 +978,8 @@ int ServerApp::Run() {
   return EXIT_SUCCESS;
 }
 
-void ServerApp::HandleUDPMessage(alpha::UDPSocket* socket, alpha::IOBuffer* buf,
+void ServerApp::HandleUDPMessage(alpha::UDPSocket* socket,
+                                 alpha::IOBuffer* buf,
                                  size_t buf_len,
                                  const alpha::NetAddress& peer) {
   DLOG_INFO << "Receive UDP message, size: " << buf_len;
@@ -1002,8 +1021,8 @@ void ServerApp::HandleUDPMessage(alpha::UDPSocket* socket, alpha::IOBuffer* buf,
   ResponseWrapper response_wrapper;
   response_wrapper.set_ctx(request_wrapper.ctx());
   response_wrapper.set_uin(request_wrapper.uin());
-  auto rc = message_dispatcher_.Dispatch(request_wrapper.uin(), message.get(),
-                                         &response_wrapper);
+  auto rc = message_dispatcher_.Dispatch(
+      request_wrapper.uin(), message.get(), &response_wrapper);
   response_wrapper.set_rc(rc);
   DLOG_INFO << "Dispatch returns " << rc;
   alpha::IOBufferWithSize out(response_wrapper.ByteSize());
@@ -1020,7 +1039,8 @@ void ServerApp::HandleUDPMessage(alpha::UDPSocket* socket, alpha::IOBuffer* buf,
   }
 }
 
-int ServerApp::HandleQuerySignUp(UinType uin, const QuerySignUpRequest* req,
+int ServerApp::HandleQuerySignUp(UinType uin,
+                                 const QuerySignUpRequest* req,
                                  QuerySignUpResponse* resp) {
   if (unlikely(uin == 0)) {
     return Error::kInvalidArgument;
@@ -1034,7 +1054,8 @@ int ServerApp::HandleQuerySignUp(UinType uin, const QuerySignUpRequest* req,
   return Error::kOk;
 }
 
-int ServerApp::HandleSignUp(UinType uin, const SignUpRequest* req,
+int ServerApp::HandleSignUp(UinType uin,
+                            const SignUpRequest* req,
                             SignUpResponse* resp) {
   if (unlikely(uin == 0)) {
     return Error::kInvalidArgument;
@@ -1050,18 +1071,18 @@ int ServerApp::HandleSignUp(UinType uin, const SignUpRequest* req,
   }
   std::vector<Zone*> zones;
   battle_data_->ForeachZone([&zones](Zone& zone) { zones.push_back(&zone); });
-  std::sort(zones.begin(), zones.end(),
-            [this](const Zone* lhs, const Zone* rhs) {
-    auto lhs_conf = conf_->GetZoneConf(lhs);
-    auto rhs_conf = conf_->GetZoneConf(rhs);
-    return lhs_conf->max_level() < rhs_conf->max_level();
-  });
+  std::sort(
+      zones.begin(), zones.end(), [this](const Zone* lhs, const Zone* rhs) {
+        auto lhs_conf = conf_->GetZoneConf(lhs);
+        auto rhs_conf = conf_->GetZoneConf(rhs);
+        return lhs_conf->max_level() < rhs_conf->max_level();
+      });
   auto user_level = req->level();
-  auto it = std::find_if(zones.begin(), zones.end(),
-                         [this, user_level](const Zone* zone) {
-    auto zone_conf = conf_->GetZoneConf(zone);
-    return user_level <= zone_conf->max_level();
-  });
+  auto it = std::find_if(
+      zones.begin(), zones.end(), [this, user_level](const Zone* zone) {
+        auto zone_conf = conf_->GetZoneConf(zone);
+        return user_level <= zone_conf->max_level();
+      });
   if (it == zones.end()) {
     return Error::kServerInternalError;
   }
@@ -1082,8 +1103,8 @@ int ServerApp::HandleSignUp(UinType uin, const SignUpRequest* req,
       ++it;
       continue;
     }
-    auto camps = alpha::Random::Sample(candidate_camps.begin(),
-                                       candidate_camps.end(), 1);
+    auto camps = alpha::Random::Sample(
+        candidate_camps.begin(), candidate_camps.end(), 1);
     CHECK(camps.size() == 1u);
     camp = *camps.front();
     break;
@@ -1192,7 +1213,8 @@ int ServerApp::HandleQueryBattleStatus(UinType uin,
       auto lucky_warriors = zone->lucky_warriors()->Get(camp->id());
       auto lucky_warriors_proto = resp->add_lucky_warriors();
       lucky_warriors_proto->set_camp(camp->id());
-      std::copy(std::begin(lucky_warriors), std::end(lucky_warriors),
+      std::copy(std::begin(lucky_warriors),
+                std::end(lucky_warriors),
                 google::protobuf::RepeatedFieldBackInserter(
                     lucky_warriors_proto->mutable_lucky_warrior()));
     }
@@ -1315,7 +1337,8 @@ int ServerApp::HandlePickLuckyWarriors(UinType uin,
 }
 
 int ServerApp::HandleQueryLuckyWarriorReward(
-    UinType uin, const QueryLuckyWarriorRewardRequest* req,
+    UinType uin,
+    const QueryLuckyWarriorRewardRequest* req,
     QueryLuckyWarriorRewardResponse* resp) {
   if (unlikely(uin == 0)) {
     return Error::kInvalidArgument;
@@ -1417,21 +1440,24 @@ int ServerApp::HandleQueryGeneralInChief(UinType uin,
   auto generals = zone->generals()->Get(req->start(), req->num());
   DLOG_INFO << "generals.size() =  " << generals.size();
   resp->set_total(zone->generals()->Size());
-  std::transform(generals.begin(), generals.end(),
-                 google::protobuf::AllocatedRepeatedPtrFieldBackInserter(
-                     resp->mutable_general()),
-                 [](const ThronesBattle::General& general) {
-    auto general_proto =
-        alpha::make_unique<ThronesBattleServerProtocol::General>();
-    general_proto->set_uin(general.uin);
-    general_proto->set_camp(general.camp);
-    general_proto->set_season(general.season);
-    return general_proto.release();
-  });
+  std::transform(
+      generals.begin(),
+      generals.end(),
+      google::protobuf::AllocatedRepeatedPtrFieldBackInserter(
+          resp->mutable_general()),
+      [](const ThronesBattle::General& general) {
+        auto general_proto =
+            alpha::make_unique<ThronesBattleServerProtocol::General>();
+        general_proto->set_uin(general.uin);
+        general_proto->set_camp(general.camp);
+        general_proto->set_season(general.season);
+        return general_proto.release();
+      });
   return Error::kOk;
 }
 
-int ServerApp::HandleQueryRank(UinType uin, const QueryRankRequest* req,
+int ServerApp::HandleQueryRank(UinType uin,
+                               const QueryRankRequest* req,
                                QueryRankResponse* resp) {
   if (unlikely(uin == 0)) {
     return Error::kInvalidArgument;
@@ -1483,15 +1509,16 @@ int ServerApp::HandleQueryRank(UinType uin, const QueryRankRequest* req,
   resp->set_self_rank(rank->Rank(uin));
   resp->set_total(rank->Size());
   auto v = rank->GetRange(req->start(), req->num());
-  std::transform(v.begin(), v.end(),
+  std::transform(v.begin(),
+                 v.end(),
                  google::protobuf::AllocatedRepeatedPtrFieldBackInserter(
                      resp->mutable_warriors()),
                  [](const RankVectorUnit& u) {
-    auto rank_unit = alpha::make_unique<RankUnit>();
-    rank_unit->set_uin(u.uin);
-    rank_unit->set_val(u.val);
-    return rank_unit.release();
-  });
+                   auto rank_unit = alpha::make_unique<RankUnit>();
+                   rank_unit->set_uin(u.uin);
+                   rank_unit->set_val(u.val);
+                   return rank_unit.release();
+                 });
   return Error::kOk;
 }
 

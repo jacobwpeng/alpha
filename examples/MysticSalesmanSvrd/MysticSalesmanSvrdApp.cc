@@ -15,8 +15,8 @@
 #include <map>
 #include <sstream>
 #include <boost/algorithm/string.hpp>
-#include <alpha/logger.h>
-#include <alpha/format.h>
+#include <alpha/Logger.h>
+#include <alpha/Format.h>
 #include <alpha/HTTPResponseBuilder.h>
 #include "proto/MysticSalesmanSvrd.pb.h"
 

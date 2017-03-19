@@ -14,12 +14,13 @@
 #error This file may only be included from DecodeUnit.h.
 #endif
 
-#include <alpha/compiler.h>
-#include <alpha/logger.h>
+#include <alpha/Compiler.h>
+#include <alpha/Logger.h>
 
 namespace amqp {
 
-template <typename UnderlyingDecodeUnitType, typename ValueCppType,
+template <typename UnderlyingDecodeUnitType,
+          typename ValueCppType,
           typename DecodeUnitArgType>
 std::unique_ptr<FieldValueDecodeUnit> FieldValueDecodeUnit::Create() {
   auto res = alpha::make_unique<FieldValueDecodeUnit>();

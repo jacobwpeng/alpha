@@ -14,7 +14,7 @@
 
 #include <vector>
 #include <algorithm>
-#include <alpha/slice.h>
+#include <alpha/Slice.h>
 
 namespace alpha {
 class HTTPHeaders {

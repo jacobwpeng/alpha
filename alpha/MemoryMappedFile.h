@@ -12,9 +12,9 @@
 
 #pragma once
 
-#include <alpha/slice.h>
+#include <alpha/Slice.h>
 #include <alpha/File.h>
-#include <alpha/compiler.h>
+#include <alpha/Compiler.h>
 
 namespace alpha {
 

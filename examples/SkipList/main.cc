@@ -12,9 +12,9 @@
 
 #include <map>
 #include <vector>
-#include <alpha/skip_list.h>
-#include <alpha/logger.h>
-#include <alpha/random.h>
+#include <alpha/SkipList.h>
+#include <alpha/Logger.h>
+#include <alpha/Random.h>
 
 int main(int argc, char* argv[]) {
   std::vector<char> buf(1 << 27);

@@ -14,8 +14,8 @@
 
 #include <cstdint>
 #include <memory>
-#include <alpha/slice.h>
-#include <alpha/event_loop.h>
+#include <alpha/Slice.h>
+#include <alpha/EventLoop.h>
 #include <alpha/UDPServer.h>
 #include <alpha/SimpleHTTPServer.h>
 #include <alpha/MemoryMappedFile.h>

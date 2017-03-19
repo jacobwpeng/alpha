@@ -21,7 +21,8 @@ namespace amqp {
 class ConnectionCloseFSM final : public FSM {
  public:
   static std::unique_ptr<ConnectionCloseFSM> ActiveClose(
-      const CodecEnv* codec_env, SendReplyFunc send_reply_func,
+      const CodecEnv* codec_env,
+      SendReplyFunc send_reply_func,
       const MethodCloseArgs& close_args);
   static std::unique_ptr<ConnectionCloseFSM> PassiveClose(
       const CodecEnv* codec_env, SendReplyFunc send_reply_func);

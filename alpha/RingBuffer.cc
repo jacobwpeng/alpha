@@ -10,7 +10,7 @@
  * ==============================================================================
  */
 
-#include "RingBuffer.h"
+#include <alpha/RingBuffer.h>
 #include <cassert>
 #include <cstring>
 
@@ -203,7 +203,8 @@ int RingBuffer::NextBufferLength() const {
     ptrdiff_t offset = end_ - front;
     auto *len_addr = reinterpret_cast<uint8_t *>(&len);
     memcpy(len_addr, front, offset);
-    memcpy(len_addr + offset, data_start_,
+    memcpy(len_addr + offset,
+           data_start_,
            RingBuffer::kBufferHeaderLength - offset);
   }
   return len;

@@ -13,7 +13,7 @@
 #include "tt_coded_stream.h"
 #include <arpa/inet.h>
 #include <cassert>
-#include <alpha/compiler.h>
+#include <alpha/Compiler.h>
 #include "tt_protocol_codec.h"
 
 namespace tokyotyrant {

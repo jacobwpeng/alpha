@@ -13,8 +13,8 @@
 #ifndef __TT_CLIENT_H__
 #define __TT_CLIENT_H__
 
-#include <alpha/slice.h>
-#include <alpha/tcp_connection.h>
+#include <alpha/Slice.h>
+#include <alpha/TcpConnection.h>
 #include "tt_protocol_codec.h"
 
 namespace alpha {
@@ -132,7 +132,8 @@ int Client::MultiGet(InputIterator first, InputIterator last, MapType* map) {
 }
 
 template <typename OutputIterator>
-int Client::GetForwardMatchKeys(alpha::Slice prefix, int32_t max,
+int Client::GetForwardMatchKeys(alpha::Slice prefix,
+                                int32_t max,
                                 OutputIterator out) {
   if (state_ == ConnectionState::kDisconnected) {
     return kInvalidOperation;

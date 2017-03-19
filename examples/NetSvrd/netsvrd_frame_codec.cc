@@ -12,7 +12,7 @@
 
 #include "netsvrd_frame_codec.h"
 #include <alpha/Endian.h>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include <alpha/CodedInputStream.h>
 
 NetSvrdFrameCodec::NetSvrdFrameCodec()

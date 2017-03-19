@@ -12,7 +12,7 @@
 
 #include <unistd.h>
 #include <iostream>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 #include <alpha/ProcessBus.h>
 #include "netsvrd_frame.h"
 

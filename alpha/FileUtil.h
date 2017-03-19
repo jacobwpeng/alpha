@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include <alpha/slice.h>
+#include <alpha/Slice.h>
 
 namespace alpha {
 bool DeleteFile(alpha::Slice path);

@@ -10,7 +10,7 @@
  * ==============================================================================
  */
 
-#include "HTTPHeaders.h"
+#include <alpha/HTTPHeaders.h>
 
 namespace alpha {
 HTTPHeaders::HTTPHeaders() {
@@ -30,18 +30,20 @@ void HTTPHeaders::Set(alpha::Slice name, alpha::Slice value) {
 
 bool HTTPHeaders::Remove(alpha::Slice target) {
   bool removed = false;
-  std::for_each(header_names_.begin(), header_names_.end(),
+  std::for_each(header_names_.begin(),
+                header_names_.end(),
                 [&removed, &target](std::string& name) {
-    if (name == target.ToString()) {
-      name.clear();
-      removed = true;
-    }
-  });
+                  if (name == target.ToString()) {
+                    name.clear();
+                    removed = true;
+                  }
+                });
   return removed;
 }
 
 bool HTTPHeaders::Exists(alpha::Slice name) const {
-  return std::find(header_names_.begin(), header_names_.end(),
+  return std::find(header_names_.begin(),
+                   header_names_.end(),
                    name.ToString()) != header_names_.end();
 }
 

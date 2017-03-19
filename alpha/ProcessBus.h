@@ -20,10 +20,7 @@ namespace alpha {
 class ProcessBus {
  public:
   static const size_t kMaxBufferBodyLength = RingBuffer::kMaxBufferBodyLength;
-  enum class QueueOrder {
-    kReadFirst = 0,
-    kWriteFirst = 1
-  };
+  enum class QueueOrder { kReadFirst = 0, kWriteFirst = 1 };
 
   ProcessBus() = default;
 
@@ -35,7 +32,9 @@ class ProcessBus {
 
   bool RestoreFrom(alpha::Slice filepath, QueueOrder order);
 
-  bool RestoreOrCreate(alpha::Slice filepath, int64_t size, QueueOrder order,
+  bool RestoreOrCreate(alpha::Slice filepath,
+                       int64_t size,
+                       QueueOrder order,
                        bool force = false);
 
   bool Write(const void* buf, int len);

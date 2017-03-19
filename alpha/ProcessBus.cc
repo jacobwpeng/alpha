@@ -13,7 +13,7 @@
 #include <alpha/ProcessBus.h>
 
 #include <cassert>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 
 namespace alpha {
 
@@ -24,11 +24,12 @@ ProcessBus& ProcessBus::operator=(ProcessBus&& other) {
   return *this;
 }
 
-bool ProcessBus::CreateFrom(alpha::Slice filepath, int64_t size,
+bool ProcessBus::CreateFrom(alpha::Slice filepath,
+                            int64_t size,
                             QueueOrder order) {
   MemoryMappedFile mapped_file;
-  if (!mapped_file.Init(filepath, size,
-                        MemoryMappedFlags::kCreateIfNotExists)) {
+  if (!mapped_file.Init(
+          filepath, size, MemoryMappedFlags::kCreateIfNotExists)) {
     return false;
   }
 
@@ -86,8 +87,10 @@ bool ProcessBus::RestoreFrom(alpha::Slice filepath, QueueOrder order) {
   return true;
 }
 
-bool ProcessBus::RestoreOrCreate(alpha::Slice filepath, int64_t size,
-                                 QueueOrder order, bool force) {
+bool ProcessBus::RestoreOrCreate(alpha::Slice filepath,
+                                 int64_t size,
+                                 QueueOrder order,
+                                 bool force) {
   if (RestoreFrom(filepath, order)) {
     return true;
   } else if (force) {

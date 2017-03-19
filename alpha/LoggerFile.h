@@ -13,7 +13,7 @@
 #pragma once
 
 #include <string>
-#include <alpha/slice.h>
+#include <alpha/Slice.h>
 #include <alpha/TimeUtil.h>
 #include <alpha/File.h>
 
@@ -21,7 +21,8 @@ namespace alpha {
 class Slice;
 class LoggerFile {
  public:
-  LoggerFile(const std::string& path, const std::string& prog_name,
+  LoggerFile(const std::string& path,
+             const std::string& prog_name,
              const std::string& log_level_name);
   void Write(const char* content, int len);
 

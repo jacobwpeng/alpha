@@ -17,7 +17,7 @@
 #include <vector>
 #include <string>
 #include <boost/operators.hpp>
-#include <alpha/slice.h>
+#include <alpha/Slice.h>
 
 namespace alpha {
 class SubprocessError : public std::exception {
@@ -93,7 +93,8 @@ class Subprocess {
   pid_t pid() const { return pid_; }
 
  private:
-  int PrepareChild(const std::vector<std::string>& argv, const char* executable,
+  int PrepareChild(const std::vector<std::string>& argv,
+                   const char* executable,
                    const Options& options);
   pid_t pid_;
   ProcessReturnCode return_code_;

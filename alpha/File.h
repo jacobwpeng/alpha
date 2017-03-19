@@ -16,8 +16,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <alpha/compiler.h>
-#include <alpha/slice.h>
+#include <alpha/Compiler.h>
+#include <alpha/Slice.h>
 #include <alpha/IOBuffer.h>
 
 namespace alpha {

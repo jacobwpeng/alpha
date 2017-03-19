@@ -23,8 +23,9 @@ class RegionBasedAllocator;
 
 template <typename T>
 class RegionBasedAllocator<
-    T, typename std::enable_if<std::is_pod<T>::value &&
-                               !std::is_pointer<T>::value>::type> {
+    T,
+    typename std::enable_if<std::is_pod<T>::value &&
+                            !std::is_pointer<T>::value>::type> {
  public:
   using NodeID = uint32_t;
   static const NodeID kInvalidNodeID;
@@ -35,7 +36,8 @@ class RegionBasedAllocator<
     NodeID free;
     NodeID free_list;
   };
-  static std::unique_ptr<RegionBasedAllocator> Create(char* data, size_t size,
+  static std::unique_ptr<RegionBasedAllocator> Create(char* data,
+                                                      size_t size,
                                                       Header* header = nullptr);
   static std::unique_ptr<RegionBasedAllocator> Restore(
       char* data, size_t size, Header* header = nullptr);

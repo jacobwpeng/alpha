@@ -13,8 +13,8 @@
 #include "ThronesBattleSvrdDef.h"
 #include <cstring>
 #include <algorithm>
-#include <alpha/logger.h>
-#include <alpha/random.h>
+#include <alpha/Logger.h>
+#include <alpha/Random.h>
 
 namespace ThronesBattle {
 bool ValidCampID(uint16_t camp_id) {
@@ -25,7 +25,8 @@ bool ValidZoneID(uint16_t zone_id) {
   return zone_id >= 1 && zone_id <= kCurrentZoneNum;
 }
 
-void GeneralInChiefList::AddGeneralInChief(CampID camp, UinType uin,
+void GeneralInChiefList::AddGeneralInChief(CampID camp,
+                                           UinType uin,
                                            uint32_t season) {
   CHECK(next_index_ < kMaxGeneralNum);
   generals_[next_index_] = {.camp = camp, .uin = uin, .season = season};
@@ -157,7 +158,8 @@ void CampMatchups::Reset() {
   }
 }
 
-void CampMatchups::SetBattleResult(CampID camp, bool win,
+void CampMatchups::SetBattleResult(CampID camp,
+                                   bool win,
                                    uint32_t final_living_warriors_num) {
   auto matchup_data = FindMatchupData(current_battle_round_, camp);
   matchup_data->UpdateBattleInfo(win, final_living_warriors_num);
@@ -273,14 +275,16 @@ bool CampMatchups::StartNextRound() {
   } else if (current_battle_round_ == 1) {
     // Camps are devided into 2 groups, in each group winners of last round
     // fight each other
-    std::copy(RoundMatchupsDataBegin(1), RoundMatchupsDataEnd(1),
+    std::copy(RoundMatchupsDataBegin(1),
+              RoundMatchupsDataEnd(1),
               RoundMatchupsDataBegin(2));
     auto begin = RoundMatchupsDataBegin(2);
     auto end = std::next(begin, 4);
     auto cmp = [](const MatchupData& d) { return d.win; };
     std::stable_partition(begin, end, cmp);
     std::stable_partition(end, RoundMatchupsDataEnd(2), cmp);
-    std::for_each(RoundMatchupsDataBegin(2), RoundMatchupsDataEnd(2),
+    std::for_each(RoundMatchupsDataBegin(2),
+                  RoundMatchupsDataEnd(2),
                   [](MatchupData& d) { d.ClearExceptCamp(); });
   } else if (current_battle_round_ == 2) {
     // Match between groups by game_log
@@ -296,13 +300,13 @@ bool CampMatchups::StartNextRound() {
       auto game_log = GetGameLog(camp, 2);
       s.insert(TupleType(game_log, kCampIDMax - i, camp));
     }
-    std::transform(s.begin(), s.end(), RoundMatchupsDataBegin(3),
-                   [](const TupleType& p) {
-      MatchupData d;
-      d.camp = std::get<2>(p);
-      d.ClearExceptCamp();
-      return d;
-    });
+    std::transform(
+        s.begin(), s.end(), RoundMatchupsDataBegin(3), [](const TupleType& p) {
+          MatchupData d;
+          d.camp = std::get<2>(p);
+          d.ClearExceptCamp();
+          return d;
+        });
   }
 
   ++current_battle_round_;
@@ -313,9 +317,10 @@ MatchupData* CampMatchups::FindMatchupData(uint16_t battle_round, CampID camp) {
   CHECK(battle_round != 0 && battle_round <= kMaxRoundID)
       << "Invalid battle round: " << battle_round;
   auto index = battle_round - 1;
-  auto it = std::find_if(
-      std::begin(matchups_data_[index]), std::end(matchups_data_[index]),
-      [&camp](const MatchupData& d) { return d.camp == camp; });
+  auto it =
+      std::find_if(std::begin(matchups_data_[index]),
+                   std::end(matchups_data_[index]),
+                   [&camp](const MatchupData& d) { return d.camp == camp; });
   CHECK(it != std::end(matchups_data_[index]));
   return &*it;
 }
@@ -335,14 +340,14 @@ MatchupData* CampMatchups::RoundMatchupsDataEnd(uint16_t battle_round) {
   return std::end(matchups_data_[battle_round - 1]);
 }
 
-const MatchupData* CampMatchups::RoundMatchupsDataBegin(uint16_t battle_round)
-    const {
+const MatchupData* CampMatchups::RoundMatchupsDataBegin(
+    uint16_t battle_round) const {
   CHECK(battle_round != 0 && battle_round <= kMaxRoundID);
   return std::begin(matchups_data_[battle_round - 1]);
 }
 
-const MatchupData* CampMatchups::RoundMatchupsDataEnd(uint16_t battle_round)
-    const {
+const MatchupData* CampMatchups::RoundMatchupsDataEnd(
+    uint16_t battle_round) const {
   CHECK(battle_round != 0 && battle_round <= kMaxRoundID);
   return std::end(matchups_data_[battle_round - 1]);
 }
@@ -372,7 +377,8 @@ UinList Camp::RandomChooseLivingWarriors(size_t num) const {
   UinList choosen_warriors;
   auto choosen_warrior_iters = alpha::Random::Sample(
       living_warriors_.begin(), living_warriors_.end(), num);
-  std::transform(choosen_warrior_iters.begin(), choosen_warrior_iters.end(),
+  std::transform(choosen_warrior_iters.begin(),
+                 choosen_warrior_iters.end(),
                  std::back_inserter(choosen_warriors),
                  [](const UinSet::const_iterator& it) { return *it; });
   return choosen_warriors;
@@ -386,8 +392,11 @@ size_t Camp::WarriorsNum() const { return warriors_.size(); }
 
 bool operator<(const Camp& lhs, const Camp& rhs) { return lhs.id() < rhs.id(); }
 
-Zone::Zone(uint16_t id, CampMatchups* matchups, CampLeaderList* leaders,
-           LuckyWarriorList* lucky_warriors, GeneralInChiefList* generals)
+Zone::Zone(uint16_t id,
+           CampMatchups* matchups,
+           CampLeaderList* leaders,
+           LuckyWarriorList* lucky_warriors,
+           GeneralInChiefList* generals)
     : id_(id),
       matchups_(matchups),
       leaders_(leaders),
@@ -615,8 +624,10 @@ bool Reward::Empty() const {
   return next_goods_reward_index == 0 && battle_point == 0;
 }
 
-ZoneConf::ZoneConf(uint16_t id, unsigned max_camp_warriors_num,
-                   unsigned max_level, const std::string& name)
+ZoneConf::ZoneConf(uint16_t id,
+                   unsigned max_camp_warriors_num,
+                   unsigned max_level,
+                   const std::string& name)
     : zone_id_(id),
       max_camp_warriors_num_(max_camp_warriors_num),
       max_level_(max_level),

@@ -17,9 +17,11 @@
 #include "RegionBasedHelper.h"
 #include <cassert>
 
-#define AllocatorType                                                          \
-  RegionBasedAllocator < T, typename std::enable_if < std::is_pod<T>::value && \
-                                !std::is_pointer<T>::value > ::type >
+#define AllocatorType                                  \
+  RegionBasedAllocator<                                \
+      T,                                               \
+      typename std::enable_if<std::is_pod<T>::value && \
+                              !std::is_pointer<T>::value>::type>
 
 namespace alpha {
 
@@ -27,7 +29,8 @@ template <typename T>
 const typename AllocatorType::NodeID AllocatorType::kInvalidNodeID = 0;
 
 template <typename T>
-std::unique_ptr<AllocatorType> AllocatorType::Create(char* data, size_t size,
+std::unique_ptr<AllocatorType> AllocatorType::Create(char* data,
+                                                     size_t size,
                                                      Header* header) {
   static_assert(
       alignof(Header) <= kAlignmentRequired && alignof(T) <= kAlignmentRequired,
@@ -58,7 +61,8 @@ std::unique_ptr<AllocatorType> AllocatorType::Create(char* data, size_t size,
 }
 
 template <typename T>
-std::unique_ptr<AllocatorType> AllocatorType::Restore(char* data, size_t size,
+std::unique_ptr<AllocatorType> AllocatorType::Restore(char* data,
+                                                      size_t size,
                                                       Header* header) {
   if (CheckAligned(data) == false) {
     return nullptr;

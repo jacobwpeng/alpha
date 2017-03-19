@@ -45,7 +45,8 @@ class ConnectionEstablishState final {
 
 class ConnectionEstablishFSM : public FSM {
  public:
-  ConnectionEstablishFSM(const CodecEnv* env, const PlainAuthorization& auth,
+  ConnectionEstablishFSM(const CodecEnv* env,
+                         const PlainAuthorization& auth,
                          const ConnectionParameters& params);
   virtual bool done() const override;
   virtual Status HandleFrame(FramePtr&& frame,

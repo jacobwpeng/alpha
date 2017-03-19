@@ -10,9 +10,9 @@
  * =============================================================================
  */
 
-#include "CodedInputStream.h"
-#include "logger.h"
-#include "Endian.h"
+#include <alpha/CodedInputStream.h>
+#include <alpha/Logger.h>
+#include <alpha/Endian.h>
 
 namespace alpha {
 CodedInputStream::CodedInputStream(alpha::Slice data)

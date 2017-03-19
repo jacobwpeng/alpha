@@ -15,7 +15,7 @@
 
 #include <cstdint>
 #include <memory>
-#include <alpha/slice.h>
+#include <alpha/Slice.h>
 #include "MethodArgTypes.h"
 
 namespace amqp {

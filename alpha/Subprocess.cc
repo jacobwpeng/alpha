@@ -10,11 +10,11 @@
  * =============================================================================
  */
 
-#include "Subprocess.h"
+#include <alpha/Subprocess.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <algorithm>
-#include "logger.h"
+#include <alpha/Logger.h>
 
 namespace alpha {
 ProcessReturnCode::State ProcessReturnCode::state() const {
@@ -156,7 +156,9 @@ int Subprocess::PrepareChild(const std::vector<std::string>& argv,
   }
   std::vector<char*> args;
   std::transform(
-      std::begin(argv), std::end(argv), std::back_inserter(args),
+      std::begin(argv),
+      std::end(argv),
+      std::back_inserter(args),
       [](const std::string& arg) { return const_cast<char*>(arg.data()); });
   args.push_back(nullptr);
   int rc = execv(executable, args.data());

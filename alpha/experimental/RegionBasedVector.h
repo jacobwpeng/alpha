@@ -23,8 +23,9 @@ class RegionBasedVector;
 
 template <typename T>
 class RegionBasedVector<
-    T, typename std::enable_if<std::is_pod<T>::value &&
-                               !std::is_pointer<T>::value>::type> {
+    T,
+    typename std::enable_if<std::is_pod<T>::value &&
+                            !std::is_pointer<T>::value>::type> {
  public:
   struct Header {
     uint64_t magic;
@@ -35,9 +36,11 @@ class RegionBasedVector<
   using iterator = T*;
   using const_iterator = const T*;
   static const uint32_t kHeaderSize = sizeof(Header);
-  static std::unique_ptr<RegionBasedVector> Create(char* data, size_t size,
+  static std::unique_ptr<RegionBasedVector> Create(char* data,
+                                                   size_t size,
                                                    Header* header = nullptr);
-  static std::unique_ptr<RegionBasedVector> Restore(char* data, size_t size,
+  static std::unique_ptr<RegionBasedVector> Restore(char* data,
+                                                    size_t size,
                                                     Header* header = nullptr);
   RegionBasedVector(const RegionBasedVector&) = delete;
   RegionBasedVector& operator=(const RegionBasedVector&) = delete;

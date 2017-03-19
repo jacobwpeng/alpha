@@ -9,9 +9,9 @@
  *
  * ==============================================================================
  */
-#include "HTTPMessage.h"
+#include <alpha/HTTPMessage.h>
 #include <ctime>
-#include <alpha/logger.h>
+#include <alpha/Logger.h>
 
 namespace alpha {
 std::string HTTPMessage::FormatDate(alpha::TimeStamp time) {

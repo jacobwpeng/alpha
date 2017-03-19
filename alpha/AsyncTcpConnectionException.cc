@@ -10,7 +10,7 @@
  * =============================================================================
  */
 
-#include "AsyncTcpConnectionException.h"
+#include <alpha/AsyncTcpConnectionException.h>
 
 namespace alpha {
 AsyncTcpConnectionException::AsyncTcpConnectionException(const char* what)

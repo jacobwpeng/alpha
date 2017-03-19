@@ -10,10 +10,10 @@
  * =============================================================================
  */
 
-#include "UDPServer.h"
-#include <alpha/logger.h>
-#include <alpha/channel.h>
-#include <alpha/event_loop.h>
+#include <alpha/UDPServer.h>
+#include <alpha/Logger.h>
+#include <alpha/Channel.h>
+#include <alpha/EventLoop.h>
 
 namespace alpha {
 UDPServer::UDPServer(EventLoop* loop) : loop_(loop) {}

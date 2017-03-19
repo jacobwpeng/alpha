@@ -29,8 +29,8 @@ static const unsigned kThronesBattleLose = 450;
 static const unsigned kThronesBattleWin = 451;
 static const unsigned kThronesBattleBye = 452;
 static const unsigned kThronesBattleEventType = 22;
-static const unsigned kThronesBattleCampRank[kCampIDMax] = {453, 454, 455, 456,
-                                                            456, 456, 456, 456};
+static const unsigned kThronesBattleCampRank[kCampIDMax] = {
+    453, 454, 455, 456, 456, 456, 456, 456};
 class FeedsChannel final {
  public:
   FeedsChannel(alpha::AsyncTcpClient* async_tcp_client,

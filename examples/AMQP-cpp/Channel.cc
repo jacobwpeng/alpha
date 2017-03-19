@@ -10,9 +10,9 @@
  * =============================================================================
  */
 
-#include "Channel.h"
-#include <alpha/compiler.h>
-#include <alpha/logger.h>
+#include <alpha/Channel.h>
+#include <alpha/Compiler.h>
+#include <alpha/Logger.h>
 #include "Connection.h"
 #include "MethodArgs.h"
 
@@ -48,8 +48,10 @@ FramePtr Channel::PopCachedFrame() {
 std::shared_ptr<Connection> Channel::CheckConnection() { return conn_.lock(); }
 
 void Channel::ExchangeDeclare(alpha::Slice exchange_name,
-                              alpha::Slice exchange_type, bool passive,
-                              bool durable, bool auto_delete,
+                              alpha::Slice exchange_type,
+                              bool passive,
+                              bool durable,
+                              bool auto_delete,
                               const FieldTable& arguments) {
   MethodExchangeDeclareArgs args;
   args.ticket = 0;
