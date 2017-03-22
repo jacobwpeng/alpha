@@ -1,4 +1,4 @@
-set(PROG "ThronesBattleSvrd")
+set(PROG "example_thrones_battle_svrd")
 
 list(APPEND THRONES_BATTLE_SVRD_SRCS
   "ThronesBattleSvrdRankVector.cc"
