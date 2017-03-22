@@ -13,6 +13,7 @@
 #pragma once
 
 #include <cstddef>
+#include <alpha/Compiler.h>
 
 namespace alpha {
 class IOBuffer {
@@ -48,22 +49,23 @@ class WrappedIOBuffer : public IOBuffer {
   virtual ~WrappedIOBuffer() override;
 };
 
-#if 0
 class GrowableIOBuffer : public IOBuffer {
  public:
   GrowableIOBuffer();
+  virtual ~GrowableIOBuffer() override;
+  DISABLE_COPY_ASSIGNMENT(GrowableIOBuffer);
 
   void set_offset(size_t offset);
-  size_t offset() const { return offset_; }
+  size_t offset() const;
 
-  void SetCapacity(size_t capacity);
-  size_t capacity() const { return capacity_; }
+  void set_capacity(size_t capacity);
+  size_t capacity() const;
+
+  char* StartOfBuffer() const;
 
  private:
-  ~GrowableIOBuffer() override;
   char* real_data_;
   size_t capacity_;
   size_t offset_;
 };
-#endif
 }
