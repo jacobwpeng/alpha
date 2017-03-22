@@ -17,6 +17,10 @@
 #include <alpha/MemoryMappedFile.h>
 
 namespace alpha {
+// 使用基于文件的mmap的共享内存来进行跨进程通信封装
+// 内部使用单生产者，单消费者无锁的RingBuffer接口收发消息
+// ProcessBus将整个文件映射的内存区域均分为两个部分
+// 每个部分对应一个RingBuffer，A进程读消息，B进程写消息
 class ProcessBus {
  public:
   static const size_t kMaxBufferBodyLength = RingBuffer::kMaxBufferBodyLength;
@@ -32,10 +36,11 @@ class ProcessBus {
 
   bool RestoreFrom(alpha::Slice filepath, QueueOrder order);
 
+  // 如果force为true, 则在restore失败的时候会自动truncate+清零对应文件
   bool RestoreOrCreate(alpha::Slice filepath,
                        int64_t size,
                        QueueOrder order,
-                       bool force = false);
+                       bool force = true);
 
   bool Write(const void* buf, int len);
 
