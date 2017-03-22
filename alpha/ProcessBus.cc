@@ -27,9 +27,12 @@ ProcessBus& ProcessBus::operator=(ProcessBus&& other) {
 bool ProcessBus::CreateFrom(alpha::Slice filepath,
                             int64_t size,
                             QueueOrder order) {
+  DLOG_INFO << "Create ProcessBus, filepath: " << filepath << ", size: " << size
+            << ", order: " << order;
   MemoryMappedFile mapped_file;
-  if (!mapped_file.Init(
-          filepath, size, MemoryMappedFlags::kCreateIfNotExists)) {
+  auto flags = MemoryMappedFlags::kCreateIfNotExists |
+               MemoryMappedFlags::kTruncate | MemoryMappedFlags::kZeroClear;
+  if (!mapped_file.Init(filepath, size, flags)) {
     return false;
   }
 
@@ -57,8 +60,10 @@ bool ProcessBus::CreateFrom(alpha::Slice filepath,
 }
 
 bool ProcessBus::RestoreFrom(alpha::Slice filepath, QueueOrder order) {
+  DLOG_INFO << "Restore ProcessBus, filepath: " << filepath
+            << ", order: " << order;
   MemoryMappedFile mapped_file;
-  if (!mapped_file.Init(filepath, 0, MemoryMappedFlags::kCreateIfNotExists)) {
+  if (!mapped_file.Init(filepath, 0)) {
     return false;
   }
 
