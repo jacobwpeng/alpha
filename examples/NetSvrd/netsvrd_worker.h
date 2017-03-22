@@ -12,30 +12,20 @@
 
 #pragma once
 
-#include <memory>
 #include <alpha/Compiler.h>
 #include <alpha/ProcessBus.h>
 #include <alpha/Subprocess.h>
 
-using ProcessBusPtr = std::unique_ptr<alpha::ProcessBus>;
-using SubprocessPtr = std::unique_ptr<alpha::Subprocess>;
 class NetSvrdWorker final {
  public:
-  NetSvrdWorker(SubprocessPtr&& subprocess,
-                ProcessBusPtr&& bus_in,
-                ProcessBusPtr&& bus_out);
+  NetSvrdWorker(const alpha::Subprocess& subprocess, alpha::ProcessBus&& bus);
   DISABLE_COPY_ASSIGNMENT(NetSvrdWorker);
 
-  alpha::Subprocess* Process() { return subprocess_.get(); }
-  alpha::ProcessBus* BusIn() { return bus_in_.get(); }
-  alpha::ProcessBus* BusOut() { return bus_out_.get(); }
-  ProcessBusPtr&& ReleaseBusIn() { return std::move(bus_in_); }
-  ProcessBusPtr&& ReleaseBusOut() { return std::move(bus_out_); }
+  alpha::Subprocess* Process() { return &subprocess_; }
+  alpha::ProcessBus* bus() { return &bus_; }
 
  private:
-  SubprocessPtr subprocess_;
-  ProcessBusPtr bus_in_;
-  ProcessBusPtr bus_out_;
+  alpha::Subprocess subprocess_;
+  alpha::ProcessBus bus_;
 };
 using NetSvrdWorkerPtr = std::unique_ptr<NetSvrdWorker>;
-

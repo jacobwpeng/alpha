@@ -57,6 +57,7 @@ int NetSvrdApp::Init(const char* file) {
     LOG_ERROR << "NetSvrdApp::Init failed, file: " << file << ", " << e.what();
     return -1;
   }
+  LOG_INFO << "Virtual servers: " << servers_.size();
   return 0;
 }
 

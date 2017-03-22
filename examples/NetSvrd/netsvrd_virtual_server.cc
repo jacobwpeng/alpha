@@ -101,10 +101,12 @@ bool NetSvrdVirtualServer::AddInterface(const std::string& addr) {
 bool NetSvrdVirtualServer::Run() {
   for (auto& server : tcp_servers_) {
     if (!server->Run()) return false;
+    LOG_INFO << "Listening tcp at: " << server->listening_address();
   }
 
   for (auto& p : udp_servers_) {
     if (!p.second->Run(p.first)) return false;
+    LOG_INFO << "Listening udp at: " << p.first;
   }
 
   for (auto i = 0u; i < max_worker_num_; ++i) {
@@ -119,7 +121,7 @@ void NetSvrdVirtualServer::FlushWorkersOutput() {
   int len = 0;
   for (auto& worker : workers_) {
     do {
-      data = worker->BusOut()->Read(&len);
+      data = static_cast<char*>(worker->bus()->Read(&len));
       if (data) {
         DLOG_INFO << "Data len from worker: " << len;
         auto internal_frame = reinterpret_cast<NetSvrdInternalFrame*>(data);
@@ -211,8 +213,7 @@ void NetSvrdVirtualServer::OnFrame(uint64_t connection_id,
   internal_frame->net_server_id = net_server_id_;
   auto worker = NextWorker();
   CHECK(worker);
-  bool ok = worker->BusIn()->Write(reinterpret_cast<const char*>(frame->data()),
-                                   frame->size());
+  bool ok = worker->bus()->Write(frame->data(), frame->size());
   LOG_WARNING_IF(!ok) << "Write to worker input bus failed, drop it";
 }
 
@@ -232,28 +233,20 @@ void NetSvrdVirtualServer::StopMonitorWorkers() {
 
 NetSvrdWorkerPtr NetSvrdVirtualServer::SpawnWorker(int worker_id) {
   std::ostringstream oss;
-  oss << bus_dir_ << '/' << "worker_" << worker_id << "_in.bus";
-  std::string bus_in_path = oss.str();
-  oss.str("");
-  oss << bus_dir_ << '/' << "worker_" << worker_id << "_out.bus";
-  std::string bus_out_path = oss.str();
+  oss << bus_dir_ << "/worker_" << worker_id << ".bus";
+  auto bus_path = oss.str();
 
   static const size_t kProcessBusSize = 1 << 20;
-  auto bus_in =
-      alpha::ProcessBus::RestoreOrCreate(bus_in_path, kProcessBusSize, true);
-  CHECK(bus_in);
-  auto bus_out =
-      alpha::ProcessBus::RestoreOrCreate(bus_out_path, kProcessBusSize, true);
-  CHECK(bus_out);
-  DLOG_INFO << "Create worker , path: " << worker_path_;
+  alpha::ProcessBus bus;
+  bool ok = bus.RestoreOrCreate(
+      bus_path, kProcessBusSize, alpha::ProcessBus::QueueOrder::kReadFirst);
+  CHECK(ok);
   std::vector<std::string> argv = {
-      worker_path_, std::to_string(net_server_id_), bus_in_path, bus_out_path};
+      worker_path_, std::to_string(net_server_id_), bus_path};
   alpha::Subprocess::Options options;
   options.CloseOtherFds();
   return alpha::make_unique<NetSvrdWorker>(
-      alpha::make_unique<alpha::Subprocess>(argv, nullptr, options),
-      std::move(bus_in),
-      std::move(bus_out));
+      alpha::Subprocess(argv, nullptr, options), std::move(bus));
 }
 
 void NetSvrdVirtualServer::PollWorkers() {

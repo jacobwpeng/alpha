@@ -12,9 +12,6 @@
 
 #include "netsvrd_worker.h"
 
-NetSvrdWorker::NetSvrdWorker(SubprocessPtr&& subprocess,
-                             ProcessBusPtr&& bus_in,
-                             ProcessBusPtr&& bus_out)
-    : subprocess_(std::move(subprocess)),
-      bus_in_(std::move(bus_in)),
-      bus_out_(std::move(bus_out)) {}
+NetSvrdWorker::NetSvrdWorker(const alpha::Subprocess& subprocess,
+                             alpha::ProcessBus&& bus)
+    : subprocess_(subprocess), bus_(std::move(bus)) {}
