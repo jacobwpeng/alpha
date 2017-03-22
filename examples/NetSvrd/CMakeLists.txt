@@ -15,3 +15,8 @@ set(ECHO_WORKER "example_net_svrd_echo_worker")
 list(APPEND EXAMPLE_NET_SVRD_ECHO_WORKER_SRCS "netsvrd_echo_worker.cc")
 add_executable(${ECHO_WORKER} ${EXAMPLE_NET_SVRD_ECHO_WORKER_SRCS})
 target_link_libraries(${ECHO_WORKER} "alpha")
+
+set(ECHO_CLIENT "example_net_svrd_echo_client")
+list(APPEND EXAMPLE_NET_SVRD_ECHO_CLIENT_SRCS "netsvrd_echo_client.cc")
+add_executable(${ECHO_CLIENT} ${EXAMPLE_NET_SVRD_ECHO_CLIENT_SRCS})
+target_link_libraries(${ECHO_CLIENT} "alpha")
