@@ -14,6 +14,7 @@
 #include <cstring>
 #include <cassert>
 #include <vector>
+#include <ostream>
 
 namespace alpha {
 
@@ -137,5 +138,10 @@ bool operator<(const Slice& lhs, const Slice& rhs) {
 bool operator==(const Slice& lhs, const Slice& rhs) {
   return lhs.size() == rhs.size() and
          memcmp(lhs.data(), rhs.data(), lhs.size()) == 0;
+}
+
+std::ostream& operator<<(std::ostream& os, const Slice& s) {
+  os.write(s.data(), s.size());
+  return os;
 }
 }

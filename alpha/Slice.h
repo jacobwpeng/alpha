@@ -77,4 +77,5 @@ class Slice {
 
 bool operator<(const Slice& lhs, const Slice& rhs);
 bool operator==(const Slice& lhs, const Slice& rhs);
+std::ostream& operator<<(std::ostream& os, const Slice& s);
 }
