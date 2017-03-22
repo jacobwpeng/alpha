@@ -10,10 +10,6 @@
  * =============================================================================
  */
 
-#ifndef __ALPHA_REGION_BASED_ALLOCATOR_H__
-#error This file should only be included from RegionBasedAllocator.h
-#endif
-
 #include "RegionBasedHelper.h"
 #include <cassert>
 

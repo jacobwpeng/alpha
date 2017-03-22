@@ -10,10 +10,6 @@
  * =============================================================================
  */
 
-#ifndef __ALPHA_REGION_BASED_HASH_TABLE_H__
-#error This file should only be included from RegionBasedHashTable.h
-#endif
-
 #define HashTableIteratorTypeDeclaration \
   template <typename Key,                \
             typename T,                  \

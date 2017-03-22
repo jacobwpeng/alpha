@@ -10,10 +10,6 @@
  * =============================================================================
  */
 
-#ifndef __ALPHA_REGION_BASED_VECTOR_H__
-#error This file should only be included from RegionBasedVector.h
-#endif
-
 #include "RegionBasedHelper.h"
 #include <cassert>
 #include <algorithm>
