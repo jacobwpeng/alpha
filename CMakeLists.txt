@@ -12,29 +12,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
 include(CheckCXXCompilerFlag)
 
-check_cxx_compiler_flag(-Og FLAG_SUPPORT_DEBUG_OPTIMIZE)
-if (FLAG_SUPPORT_DEBUG_OPTIMIZE)
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og")
-endif()
-
 check_cxx_compiler_flag(-fno-reorder-blocks FLAG_SUPPORT_NO_REORDER_BLOCKS)
 if (FLAG_SUPPORT_NO_REORDER_BLOCKS)
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-reorder-blocks")
-endif()
-
-check_cxx_compiler_flag(-Wunused-parameter FLAG_SUPPORT_UNUSED_PARAMETER)
-if(FLAG_SUPPORT_UNUSED_PARAMETER)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
-endif()
-
-check_cxx_compiler_flag(-Wunused-const-variable FLAG_SUPPORT_UNUSED_CONST_VARIABLE)
-if(FLAG_SUPPORT_UNUSED_CONST_VARIABLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-const-variable")
-endif()
-
-check_cxx_compiler_flag(-Wunused-private-field FLAG_SUPPORT_UNUSED_PRIVATE_FIELD)
-if(FLAG_SUPPORT_UNUSED_PRIVATE_FIELD)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-private-field")
 endif()
 
 option(STATIC_LINK "Static link all libs" OFF)

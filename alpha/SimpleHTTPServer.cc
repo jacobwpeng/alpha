@@ -89,5 +89,5 @@ void SimpleHTTPServer::OnConnected(TcpConnectionPtr conn) {
   conn->SetContext(codec);
 }
 
-void SimpleHTTPServer::OnClose(TcpConnectionPtr conn) {}
+void SimpleHTTPServer::OnClose(TcpConnectionPtr conn) { (void)conn; }
 }
