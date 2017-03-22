@@ -60,6 +60,7 @@ class GrowableIOBuffer : public IOBuffer {
 
   void set_capacity(size_t capacity);
   size_t capacity() const;
+  size_t RemainingCapacity() const;
 
   char* StartOfBuffer() const;
 

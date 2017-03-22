@@ -61,5 +61,10 @@ void GrowableIOBuffer::set_capacity(size_t capacity) {
 
 size_t GrowableIOBuffer::capacity() const { return capacity_; }
 
+size_t GrowableIOBuffer::RemainingCapacity() const {
+  CHECK(offset_ <= capacity_);
+  return capacity_ - offset_;
+}
+
 char* GrowableIOBuffer::StartOfBuffer() const { return real_data_; }
 }
