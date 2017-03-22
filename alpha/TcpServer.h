@@ -43,13 +43,15 @@ class TcpServer {
     new_connection_callback_ = cb;
   }
 
+  const NetAddress& listening_address() const { return listening_address_; }
+
  private:
   void OnNewConnection(int fd);
   void OnConnectionClose(int fd);
   using TcpConnectionMap = std::map<int, TcpConnectionPtr>;
 
   EventLoop* loop_;
-  NetAddress listen_addr_;
+  NetAddress listening_address_;
   std::unique_ptr<TcpAcceptor> acceptor_;
   ReadCallback read_callback_;
   CloseCallback close_callback_;
@@ -57,4 +59,3 @@ class TcpServer {
   TcpConnectionMap connections_;
 };
 }
-

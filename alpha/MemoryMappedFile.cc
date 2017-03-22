@@ -67,7 +67,7 @@ bool MemoryMappedFile::Init(alpha::Slice filepath,
   void* mem = ::mmap(
       NULL, file.GetLength(), PROT_READ | PROT_WRITE, MAP_SHARED, file.fd(), 0);
   if (mem == MAP_FAILED) {
-    PLOG_WARNING << "mmap failed";
+    PLOG_WARNING << "mmap failed, file size: " << file.GetLength();
     return false;
   }
 

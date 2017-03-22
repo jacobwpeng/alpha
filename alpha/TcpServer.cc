@@ -20,7 +20,7 @@
 
 namespace alpha {
 TcpServer::TcpServer(EventLoop* loop, const NetAddress& addr)
-    : loop_(loop), listen_addr_(addr) {
+    : loop_(loop), listening_address_(addr) {
   assert(loop_);
 }
 
@@ -31,7 +31,7 @@ bool TcpServer::Run() {
   acceptor_.reset(new TcpAcceptor(loop_));
   acceptor_->SetOnNewConnection(
       std::bind(&TcpServer::OnNewConnection, this, _1));
-  if (!acceptor_->Bind(listen_addr_)) {
+  if (!acceptor_->Bind(listening_address_)) {
     return false;
   } else {
     loop_->QueueInLoop(std::bind(&TcpAcceptor::Listen, acceptor_.get()));
