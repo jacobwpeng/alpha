@@ -14,7 +14,7 @@
 
 #include <memory>
 #include <alpha/EventLoop.h>
-#include <alpha/MMapFile.h>
+#include <alpha/MemoryMappedFile.h>
 #include <alpha/AsyncTcpClient.h>
 #include <alpha/UDPSocket.h>
 #include <alpha/UDPServer.h>
@@ -94,7 +94,7 @@ class ServerApp final {
                        const char* suffix);
   bool RecoverOneFile(alpha::AsyncTcpConnection* conn,
                       const std::string& backup_key,
-                      alpha::MMapFile* file);
+                      alpha::MemoryMappedFile* file);
   void ProcessFightTaskResult(BattleContext* ctx,
                               const FightServerProtocol::TaskResult& result);
   void ProcessSurvivedWarrior(BattleContext* ctx,
@@ -161,10 +161,10 @@ class ServerApp final {
                          const alpha::HTTPMessage& message);
   alpha::EventLoop loop_;
   std::unique_ptr<ServerConf> conf_;
-  std::unique_ptr<alpha::MMapFile> battle_data_underlying_file_;
-  std::unique_ptr<alpha::MMapFile> warriors_data_underlying_file_;
-  std::unique_ptr<alpha::MMapFile> rewards_data_underlying_file_;
-  std::unique_ptr<alpha::MMapFile> rank_data_underlying_file_;
+  alpha::MemoryMappedFile battle_data_file_;
+  alpha::MemoryMappedFile warriors_data_file_;
+  alpha::MemoryMappedFile rewards_data_file_;
+  alpha::MemoryMappedFile rank_data_file_;
   std::unique_ptr<BattleData> battle_data_;
   std::unique_ptr<WarriorMap> warriors_;
   std::unique_ptr<RewardMap> rewards_;

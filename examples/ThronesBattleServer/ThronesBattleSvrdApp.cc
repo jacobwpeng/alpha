@@ -33,29 +33,28 @@
 using namespace std::placeholders;
 namespace ThronesBattle {
 namespace detail {
-std::unique_ptr<alpha::MMapFile> OpenMemoryMapedFile(alpha::Slice path,
-                                                     uint32_t size) {
-  auto open_flags = alpha::MMapFile::kCreateIfNotExists;
-  auto file = alpha::MMapFile::Open(path, size, open_flags);
-  if (file == nullptr) {
-    LOG_ERROR << "Open memory maped file failed, path: " << path.ToString();
-    return nullptr;
+alpha::MemoryMappedFile OpenMemoryMappedFile(alpha::Slice path, uint32_t size) {
+  auto flags = alpha::kCreateIfNotExists;
+  alpha::MemoryMappedFile file;
+  if (!file.Init(path, size, flags)) {
+    LOG_ERROR << "Init MemoryMappedFile failed, path: " << path.data();
+    return alpha::MemoryMappedFile();
   }
   return std::move(file);
 }
 
-void CopyMemoryMapedFileToMemory(alpha::MMapFile* file,
-                                 alpha::IOBufferWithSize* buf) {
+void CopyMemoryMappedFileToMemory(alpha::MemoryMappedFile* file,
+                                  alpha::IOBufferWithSize* buf) {
   CHECK(file && buf);
-  CHECK(buf->size() == file->size());
-  memcpy(buf->data(), file->start(), file->size());
+  CHECK(static_cast<int64_t>(buf->size()) == file->size());
+  memcpy(buf->data(), file->mapped_start(), file->size());
 }
 
 template <typename T>
-std::unique_ptr<T> MakeFromMemoryMapedFile(alpha::MMapFile* file) {
+std::unique_ptr<T> MakeFromMemoryMappedFile(alpha::MemoryMappedFile* file) {
   const char* op;
   std::unique_ptr<T> result;
-  char* start = reinterpret_cast<char*>(file->start());
+  char* start = reinterpret_cast<char*>(file->mapped_start());
   if (file->newly_created()) {
     op = "Create";
     result = T::Create(start, file->size());
@@ -112,27 +111,27 @@ int ServerApp::Init(int argc, char* argv[]) {
   LOG_INFO << "Backup server addr: " << conf_->backup_server_addr();
   LOG_INFO << "Backup interval(seconds): " << conf_->backup_interval();
 
-  battle_data_underlying_file_ = detail::OpenMemoryMapedFile(
+  battle_data_file_ = detail::OpenMemoryMappedFile(
       conf_->battle_data_file(), conf_->battle_data_file_size());
-  if (battle_data_underlying_file_ == nullptr) {
+  if (!battle_data_file_) {
     return EXIT_FAILURE;
   }
 
-  warriors_data_underlying_file_ = detail::OpenMemoryMapedFile(
+  warriors_data_file_ = detail::OpenMemoryMappedFile(
       conf_->warriors_data_file(), conf_->warriors_data_file_size());
-  if (warriors_data_underlying_file_ == nullptr) {
+  if (!warriors_data_file_) {
     return EXIT_FAILURE;
   }
 
-  rewards_data_underlying_file_ = detail::OpenMemoryMapedFile(
+  rewards_data_file_ = detail::OpenMemoryMappedFile(
       conf_->rewards_data_file(), conf_->rewards_data_file_size());
-  if (rewards_data_underlying_file_ == nullptr) {
+  if (!rewards_data_file_) {
     return EXIT_FAILURE;
   }
 
-  rank_data_underlying_file_ = detail::OpenMemoryMapedFile(
-      conf_->rank_data_file(), conf_->rank_data_file_size());
-  if (rank_data_underlying_file_ == nullptr) {
+  rank_data_file_ = detail::OpenMemoryMappedFile(conf_->rank_data_file(),
+                                                 conf_->rank_data_file_size());
+  if (!rank_data_file_) {
     return EXIT_FAILURE;
   }
 
@@ -142,24 +141,22 @@ int ServerApp::Init(int argc, char* argv[]) {
 int ServerApp::InitNormalMode() {
   const char* op;
   BattleDataSaved* battle_data_saved = nullptr;
-  if (battle_data_underlying_file_->newly_created()) {
+  if (battle_data_file_.newly_created()) {
     op = "Create";
-    battle_data_saved =
-        BattleDataSaved::Create(battle_data_underlying_file_->start(),
-                                battle_data_underlying_file_->size());
+    battle_data_saved = BattleDataSaved::Create(
+        battle_data_file_.mapped_start(), battle_data_file_.size());
   } else {
     op = "Restore";
-    battle_data_saved =
-        BattleDataSaved::Restore(battle_data_underlying_file_->start(),
-                                 battle_data_underlying_file_->size());
+    battle_data_saved = BattleDataSaved::Restore(
+        battle_data_file_.mapped_start(), battle_data_file_.size());
   }
   if (battle_data_saved == nullptr) {
     LOG_ERROR << op << " data from battle data file failed";
     return EXIT_FAILURE;
   }
 
-  warriors_ = detail::MakeFromMemoryMapedFile<WarriorMap>(
-      warriors_data_underlying_file_.get());
+  warriors_ =
+      detail::MakeFromMemoryMappedFile<WarriorMap>(&warriors_data_file_);
   if (warriors_ == nullptr) {
     LOG_ERROR << "Make warriors data failed";
     return EXIT_FAILURE;
@@ -167,8 +164,7 @@ int ServerApp::InitNormalMode() {
   LOG_INFO << "WarriorMap capacity: " << warriors_->max_size()
            << ", current size: " << warriors_->size();
 
-  rewards_ = detail::MakeFromMemoryMapedFile<RewardMap>(
-      rewards_data_underlying_file_.get());
+  rewards_ = detail::MakeFromMemoryMappedFile<RewardMap>(&rewards_data_file_);
 
   if (rewards_ == nullptr) {
     LOG_ERROR << "Make rewards data failed";
@@ -181,8 +177,9 @@ int ServerApp::InitNormalMode() {
     return EXIT_FAILURE;
   }
 
-  if (rank_data_underlying_file_->size() <
-      2 * kMaxZoneNum * (kRankDataRegionSize + kRankDataPaddingSize)) {
+  static const int64_t kMinRankDataFileSize =
+      2 * kMaxZoneNum * (kRankDataRegionSize + kRankDataPaddingSize);
+  if (rank_data_file_.size() < kMinRankDataFileSize) {
     LOG_ERROR << "Rank data file size is too small";
     return EXIT_FAILURE;
   }
@@ -190,18 +187,18 @@ int ServerApp::InitNormalMode() {
   // 恢复本届排行榜
   size_t offset = 0;
   auto const file_start =
-      reinterpret_cast<char*>(rank_data_underlying_file_->start());
+      reinterpret_cast<char*>(rank_data_file_.mapped_start());
   for (uint16_t i = 0; i < kMaxZoneNum; ++i) {
     auto zone_id = i + 1;
-    CHECK(offset + kRankDataRegionSize < rank_data_underlying_file_->size())
+    CHECK(static_cast<int64_t>(offset + kRankDataRegionSize) <
+          rank_data_file_.size())
         << "Invalid offset: " << offset
-        << ", file size: " << rank_data_underlying_file_->size();
+        << ", file size: " << rank_data_file_.size();
     auto data = file_start + offset;
     auto rank = alpha::make_unique<RankVector>(kRankMax);
     CHECK(rank);
-    CHECK(data + kRankDataRegionSize <=
-          file_start + rank_data_underlying_file_->size());
-    if (rank_data_underlying_file_->newly_created()) {
+    CHECK(data + kRankDataRegionSize <= file_start + rank_data_file_.size());
+    if (rank_data_file_.newly_created()) {
       bool ok = rank->CreateFrom(data, kRankDataRegionSize);
       if (!ok) {
         LOG_ERROR << "Create rank failed, zone: " << zone_id;
@@ -224,10 +221,11 @@ int ServerApp::InitNormalMode() {
     auto data = file_start + offset;
     auto rank = alpha::make_unique<RankVector>(kRankMax);
     CHECK(rank);
-    CHECK(offset + kRankDataRegionSize < rank_data_underlying_file_->size())
+    CHECK(static_cast<int64_t>(offset + kRankDataRegionSize) <
+          rank_data_file_.size())
         << "Invalid offset: " << offset
-        << ", file size: " << rank_data_underlying_file_->size();
-    if (rank_data_underlying_file_->newly_created()) {
+        << ", file size: " << rank_data_file_.size();
+    if (rank_data_file_.newly_created()) {
       bool ok = rank->CreateFrom(data, kRankDataRegionSize);
       if (!ok) {
         LOG_ERROR << "Create rank failed, zone: " << zone_id;
@@ -472,8 +470,9 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
     conn->Write(key);
     conn->Write(val);
     LOG_INFO << "Try read response code";
-    auto data = conn->Read(1);
-    uint8_t rc = data[0];
+    uint8_t rc = 0xFF;
+    alpha::WrappedIOBuffer buffer(&rc);
+    conn->ReadFull(&buffer, sizeof(rc));
     LOG_WARNING_IF(rc != 0) << "Failed response for put, rc: " << rc
                             << ", key: " << key.ToString();
     return rc;
@@ -486,26 +485,23 @@ void ServerApp::BackupRoutine(alpha::AsyncTcpClient* client,
     auto conn = client->ConnectTo(conf_->backup_server_addr(), co);
 
     // 把瞬间状态保存到内存中
-    alpha::IOBufferWithSize battle_data(battle_data_underlying_file_->size());
+    alpha::IOBufferWithSize battle_data(battle_data_file_.size());
     memcpy(battle_data.data(),
-           battle_data_underlying_file_->start(),
+           battle_data_file_.mapped_start(),
            battle_data.size());
 
-    alpha::IOBufferWithSize warriors_data(
-        warriors_data_underlying_file_->size());
+    alpha::IOBufferWithSize warriors_data(warriors_data_file_.size());
     memcpy(warriors_data.data(),
-           warriors_data_underlying_file_->start(),
+           warriors_data_file_.mapped_start(),
            warriors_data.size());
 
-    alpha::IOBufferWithSize rewards_data(rewards_data_underlying_file_->size());
+    alpha::IOBufferWithSize rewards_data(rewards_data_file_.size());
     memcpy(rewards_data.data(),
-           rewards_data_underlying_file_->start(),
+           rewards_data_file_.mapped_start(),
            rewards_data.size());
 
-    alpha::IOBufferWithSize rank_data(rank_data_underlying_file_->size());
-    memcpy(rank_data.data(),
-           rank_data_underlying_file_->start(),
-           rank_data.size());
+    alpha::IOBufferWithSize rank_data(rank_data_file_.size());
+    memcpy(rank_data.data(), rank_data_file_.mapped_start(), rank_data.size());
 
     auto key = CreateBackupKey(kBattleDataKey, suffix);
     auto err =
@@ -550,22 +546,22 @@ void ServerApp::RecoveryRoutine(alpha::AsyncTcpClient* client,
     auto conn = client->ConnectTo(conf_->backup_server_addr(), co);
     auto ok = RecoverOneFile(conn.get(),
                              CreateBackupKey(kBattleDataKey, suffix, server_id),
-                             battle_data_underlying_file_.get());
+                             &battle_data_file_);
     if (!ok) return;
 
     ok = RecoverOneFile(conn.get(),
                         CreateBackupKey(kWarriorsDataKey, suffix, server_id),
-                        warriors_data_underlying_file_.get());
+                        &warriors_data_file_);
     if (!ok) return;
 
     ok = RecoverOneFile(conn.get(),
                         CreateBackupKey(kRewardsDataKey, suffix, server_id),
-                        rewards_data_underlying_file_.get());
+                        &rewards_data_file_);
     if (!ok) return;
 
     ok = RecoverOneFile(conn.get(),
                         CreateBackupKey(kRankDataKey, suffix, server_id),
-                        rank_data_underlying_file_.get());
+                        &rank_data_file_);
     if (!ok) return;
 
     LOG_INFO << "Recovery done, server id: " << server_id
@@ -578,7 +574,7 @@ void ServerApp::RecoveryRoutine(alpha::AsyncTcpClient* client,
 
 bool ServerApp::RecoverOneFile(alpha::AsyncTcpConnection* conn,
                                const std::string& backup_key,
-                               alpha::MMapFile* file) {
+                               alpha::MemoryMappedFile* file) {
   const uint8_t kTTProtocolGetMagicFirst = 0xC8;
   const uint8_t kTTProtocolGetMagicSecond = 0x30;
   try {
@@ -590,25 +586,43 @@ bool ServerApp::RecoverOneFile(alpha::AsyncTcpConnection* conn,
     conn->Write(alpha::Slice(&szkey));
     conn->Write(backup_key);
 
-    auto data = conn->Read(1);
-    uint8_t rc = data[0];
+    alpha::GrowableIOBuffer buffer;
+    buffer.set_capacity(1 + sizeof(uint32_t));
+    auto n = conn->ReadFull(&buffer, 1);
+    if (n != 1) {
+      LOG_ERROR << "Read rc error";
+      return false;
+    }
+    uint8_t rc = *buffer.data();
     if (rc != 0) {
       LOG_ERROR << "Failed response, code: " << rc;
       return false;
     }
 
-    data = conn->Read(sizeof(uint32_t));
-    uint32_t szval =
-        alpha::BigEndianToHost(*reinterpret_cast<const uint32_t*>(data.data()));
+    buffer.set_offset(1);
+    n = conn->ReadFull(&buffer, sizeof(uint32_t));
+    if (n != sizeof(uint32_t)) {
+      LOG_ERROR << "Read value size error";
+      return false;
+    }
+    uint32_t szval = alpha::BigEndianToHost(
+        *reinterpret_cast<const uint32_t*>(buffer.data()));
     LOG_INFO << "Backup value size: " << szval;
 
+    buffer.set_offset(buffer.capacity());
+    buffer.set_capacity(buffer.capacity() + szval);
+
     if (szval > file->size()) {
-      LOG_ERROR << "MMapFile size is too small, expect: " << szval
+      LOG_ERROR << "MemoryMappedFile size is too small, expect: " << szval
                 << ", actual: " << file->size();
       return false;
     }
-    data = conn->Read(szval);
-    memcpy(file->start(), data.data(), szval);
+    n = conn->ReadFull(&buffer, szval);
+    if (n != szval) {
+      LOG_ERROR << "Read value error";
+      return false;
+    }
+    memcpy(file->mapped_start(), buffer.StartOfBuffer(), buffer.capacity());
 
     LOG_INFO << "Recovery done, backup key: " << backup_key
              << ", backup size: " << szval;

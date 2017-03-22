@@ -188,17 +188,31 @@ size_t TaskBroker::HandleIncomingData(int idle_time, bool all) {
   }
   size_t received = 0;
   do {
-    auto data = conn_->Read(NetSvrdFrame::kHeaderSize, idle_time);
-    auto header = NetSvrdFrame::CastHeaderOnly(data.data(), data.size());
+    alpha::GrowableIOBuffer buffer;
+    buffer.set_capacity(NetSvrdFrame::kHeaderSize);
+    auto n = conn_->ReadFull(&buffer, NetSvrdFrame::kHeaderSize, idle_time);
+    if (n != NetSvrdFrame::kHeaderSize) {
+      LOG_WARNING << "Early exit read, expect " << NetSvrdFrame::kHeaderSize
+                  << " bytes, "
+                  << "got " << n << " bytes";
+      return received;
+    }
+    auto header =
+        NetSvrdFrame::CastHeaderOnly(buffer.data(), NetSvrdFrame::kHeaderSize);
     if (header == nullptr) {
       LOG_WARNING << "Cast NetSvrdFrame header failed";
       // TODO: 关闭连接
       return received;
     }
-    auto payload = conn_->Read(header->payload_size, idle_time);
-    CHECK(payload.size() == header->payload_size);
-    data.append(payload);
-    auto frame = reinterpret_cast<const NetSvrdFrame*>(data.data());
+    buffer.set_offset(NetSvrdFrame::kHeaderSize);
+    buffer.set_capacity(buffer.capacity() + header->payload_size);
+    n = conn_->ReadFull(&buffer, header->payload_size, idle_time);
+    if (n != header->payload_size) {
+      LOG_WARNING << "Read payload, expect " << header->payload_size
+                  << " bytes, got " << n << " bytes";
+      return received;
+    }
+    auto frame = reinterpret_cast<const NetSvrdFrame*>(buffer.StartOfBuffer());
     bool ok = HandleReplyFrame(frame);
     if (ok) received += 1;
     if (non_acked_tasks_.empty()) {

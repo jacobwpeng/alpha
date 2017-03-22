@@ -16,4 +16,4 @@ set(THRONES_BATTLE_PROTO_LIB "ThronesBattleProto")
 add_subdirectory(proto)
 
 add_executable(${PROG} ${THRONES_BATTLE_SVRD_SRCS})
-target_link_libraries(${PROG} "alpha" "libprotobuf.a" "pthread" ${THRONES_BATTLE_PROTO_LIB})
+target_link_libraries(${PROG} ${THRONES_BATTLE_PROTO_LIB} "alpha" "protobuf" "pthread")
