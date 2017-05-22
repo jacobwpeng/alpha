@@ -37,10 +37,16 @@ File::File(alpha::Slice path, int flags, mode_t mode) : File() {
   }
 }
 
-File::File(File&& other) { swap(other); }
+File::File(File&& other) {
+  owns_fd_ = other.owns_fd_;
+  fd_ = other.fd_;
+  other.Release();
+}
 
 File& File::operator=(File&& other) {
-  swap(other);
+  owns_fd_ = other.owns_fd_;
+  fd_ = other.fd_;
+  other.Release();
   return *this;
 }
 
