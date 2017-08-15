@@ -141,7 +141,7 @@ TimerManager::TimerFunctorList TimerManager::Impl::Step(alpha::TimeStamp now) {
                  });
   timers_.erase(timers_.begin(), pend);
   timers_.insert(periodical_timers.begin(), periodical_timers.end());
-  return std::move(functors);
+  return functors;
 }
 
 TimerManager::Impl::Timer* TimerManager::Impl::Insert(
@@ -176,7 +176,7 @@ TimerManager::TimerId TimerManager::AddPeriodicalTimer(
 void TimerManager::RemoveTimer(TimerId id) { return impl_->RemoveTimer(id); }
 
 TimerManager::TimerFunctorList TimerManager::Step(alpha::TimeStamp now) {
-  return std::move(impl_->Step(now));
+  return impl_->Step(now);
 }
 
 bool TimerManager::Expired(TimerId id) const { return impl_->Expired(id); }

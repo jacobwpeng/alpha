@@ -110,7 +110,7 @@ TcpConnector::ConnectingFDInfo TcpConnector::CheckRemoveConnectingFD(
     loop_->RemoveTimer(info.timeout_timer_id);
     info.timeout_timer_id = 0;
   }
-  return std::move(info);
+  return info;
 }
 
 void TcpConnector::AddConnectingFd(alpha::ScopedFD fd, const NetAddress& addr) {
@@ -118,8 +118,8 @@ void TcpConnector::AddConnectingFd(alpha::ScopedFD fd, const NetAddress& addr) {
   LOG_INFO << "Add connecting fd: " << raw_fd;
   using namespace std::placeholders;
   auto it = connecting_fds_.find(raw_fd);
-  CHECK(it == connecting_fds_.end()) << "Same fd in connecting map, fd: "
-                                     << raw_fd;
+  CHECK(it == connecting_fds_.end())
+      << "Same fd in connecting map, fd: " << raw_fd;
   ConnectingFDInfo info;
   info.channel = alpha::make_unique<Channel>(loop_, raw_fd);
   info.channel->set_error_callback(
