@@ -24,6 +24,8 @@ ssize_t WrapNoInt(F f, Args... args) {
   } while (r == -1 && errno == EINTR);
   return r;
 }
+
+static int flock(int fd, int op) { return ::flock(fd, op); }
 }
 File::File() : owns_fd_(false), fd_(-1) {}
 
@@ -172,12 +174,12 @@ bool File::SetLength(int64_t length) {
 
 void File::Lock() {
   assert(Valid());
-  detail::WrapNoInt(flock, fd_, LOCK_EX);
+  detail::WrapNoInt(detail::flock, fd_, LOCK_EX);
 }
 
 bool File::TryLock() {
   assert(Valid());
-  int rc = detail::WrapNoInt(flock, fd_, LOCK_EX | LOCK_NB);
+  int rc = detail::WrapNoInt(detail::flock, fd_, LOCK_EX | LOCK_NB);
   if (rc == -1 && errno == EWOULDBLOCK) return false;
   assert(rc == 0);
   return true;
@@ -185,17 +187,17 @@ bool File::TryLock() {
 
 void File::UnLock() {
   assert(Valid());
-  detail::WrapNoInt(flock, fd_, LOCK_UN);
+  detail::WrapNoInt(detail::flock, fd_, LOCK_UN);
 }
 
 void File::LockShared() {
   assert(Valid());
-  detail::WrapNoInt(flock, fd_, LOCK_SH);
+  detail::WrapNoInt(detail::flock, fd_, LOCK_SH);
 }
 
 bool File::TryLockShared() {
   assert(Valid());
-  int rc = detail::WrapNoInt(flock, fd_, LOCK_SH | LOCK_NB);
+  int rc = detail::WrapNoInt(detail::flock, fd_, LOCK_SH | LOCK_NB);
   if (rc == -1 && errno == EWOULDBLOCK) return false;
   assert(rc == 0);
   return true;
