@@ -7,6 +7,7 @@ message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
 include_directories(${PROJECT_SOURCE_DIR})
 add_library(${ALPHA} STATIC ${LIB_ALPHA_SRCS})
+add_dependencies(${ALPHA} Boost)
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/alpha
         DESTINATION include
         FILES_MATCHING PATTERN "*.h")
