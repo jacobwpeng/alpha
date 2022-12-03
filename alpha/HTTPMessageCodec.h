@@ -13,6 +13,7 @@
 #pragma once
 
 #include <map>
+#include <limits>
 #include <string>
 #include <alpha/Slice.h>
 #include <alpha/TcpConnection.h>
@@ -61,4 +62,4 @@ class HTTPMessageCodec {
   std::string data_to_peer_;
   HTTPMessage http_message_;
 };
-}
+}  // namespace alpha

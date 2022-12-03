@@ -31,6 +31,14 @@ Slice::Slice(const Slice& slice) {
   len_ = slice.len_;
 }
 
+Slice& Slice::operator=(const Slice& rhs) {
+  if (this != &rhs) {
+    buf_ = rhs.buf_;
+    len_ = rhs.len_;
+  }
+  return *this;
+}
+
 Slice Slice::subslice(size_t pos, size_t len) {
   if (pos == len_) {
     return Slice();
@@ -144,4 +152,4 @@ std::ostream& operator<<(std::ostream& os, const Slice& s) {
   os.write(s.data(), s.size());
   return os;
 }
-}
+}  // namespace alpha

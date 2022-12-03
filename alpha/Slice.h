@@ -30,6 +30,8 @@ class Slice {
   Slice(const std::string& str);
   Slice(const Slice& slice);
 
+  Slice& operator=(const Slice& rhs);
+
   template <typename T>
   Slice(const T* t,
         typename std::enable_if<std::is_pod<T>::value &&
@@ -78,4 +80,4 @@ class Slice {
 bool operator<(const Slice& lhs, const Slice& rhs);
 bool operator==(const Slice& lhs, const Slice& rhs);
 std::ostream& operator<<(std::ostream& os, const Slice& s);
-}
+}  // namespace alpha

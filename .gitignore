@@ -1,5 +1,8 @@
-tags
 build/
+.cache/
+Debug/
+Release/
+tags
 GPATH
 GRTAGS
 GTAGS

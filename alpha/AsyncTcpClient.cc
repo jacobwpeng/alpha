@@ -13,6 +13,7 @@
 #include <alpha/AsyncTcpClient.h>
 #include <alpha/EventLoop.h>
 #include <alpha/Logger.h>
+#include <algorithm>
 
 namespace alpha {
 using namespace std::placeholders;
@@ -156,4 +157,4 @@ void AsyncTcpClient::RemoveCoroutine(AsyncTcpConnectionCoroutine* co) {
   CHECK(it != coroutines_.end());
   coroutines_.erase(it);
 }
-}
+}  // namespace alpha
