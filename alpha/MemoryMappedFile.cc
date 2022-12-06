@@ -41,7 +41,7 @@ bool MemoryMappedFile::Init(alpha::Slice filepath,
       PLOG_WARNING << "Open file failed, filepath: [" << filepath.ToString()
                    << "]";
       return false;
-    } else if (flags && kCreateIfNotExists == 0) {
+    } else if ((flags & kCreateIfNotExists) == 0) {
       return false;
     } else {
       // 创建文件
@@ -60,7 +60,7 @@ bool MemoryMappedFile::Init(alpha::Slice filepath,
   }
   CHECK(file.Valid());
 
-  if ((flags && kTruncate) || newly_created) {
+  if ((flags & kTruncate) || newly_created) {
     file.SetLength(size);
   }
 
@@ -92,4 +92,4 @@ void* MemoryMappedFile::mapped_start() { return mapped_start_; }
 int64_t MemoryMappedFile::size() const { return file_.GetLength(); }
 
 std::string MemoryMappedFile::filepath() const { return filepath_; }
-}
+}  // namespace alpha
